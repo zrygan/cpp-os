@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+project(prosched)
+add_executable(prosched src/main.cpp)
+target_include_directories(prosched PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)
