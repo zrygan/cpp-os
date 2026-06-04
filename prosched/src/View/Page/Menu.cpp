@@ -1,7 +1,6 @@
 #include "Menu.h"
 #include <iostream>
 
-#ifdef _WIN32
 #include <windows.h>
 static HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 static void setColor(int color) {
@@ -21,7 +20,6 @@ static void setColor(int color) {
     break;
   }
 }
-#endif
 
 void welcome() {
   std::cout << R"(
