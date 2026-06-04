@@ -1,5 +1,5 @@
 #include "View.h"
-#include "Page/Menu.h"
+#include "page/Menu.h"
 #include <cstdlib>
 
 void View::displayMenu() { welcome(); }

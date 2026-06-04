@@ -1,8 +1,8 @@
 #include <iostream>
 #include <stdio.h>
 
-#include "Controller/Controller.h"
-#include "prosched/config.h"
+#include "controller/Controller.h"
+#include "config.h"
 
 using namespace std;
 
