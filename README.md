@@ -1,26 +1,47 @@
-# Process Scheduler Simulator
+# Monorepo for Operating Systems Projects
 
 **By**: Stephen Borja, Erin Chua, Zhean Ganituen, and Aaron Go.
 
-## How To
+## Setup
 
-Simply run:
-
-```bash
-# Build project
-make b
-
-# Run project
-make r
-
-# Build then run project
-make br
-```
-
-You can also do it manually via:
+Simply execute the code below:
 
 ```bash
-cmake -S . -B build
-cmake --build build
-./build/prosched
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y build-essential cmake
 ```
+
+## Running Projects
+
+**Important.** See the specific requirements/dependencies for each
+project on their respective section.
+
+To run any project, use the script `s.sh`:
+
+```bash
+chmod +x s.sh
+./s.sh r
+# then select the project from the menu
+```
+
+## Projects List
+
+Below is a list of projects included in this monorepo. If this is not
+updated, see [`CMakeLists.txt`](/CMakeLists.txt).
+
+### osmock
+
+GUI-based OS Mockup using [ImGui](https://github.com/ocornut/imgui).
+
+**Setup**
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y xorg-dev libgl1-mesa-dev libglu1-mesa-dev libglfw3-dev 
+```
+
+### prosched
+
+Process Scheduler.
+
+**Requiremnts**: none.
