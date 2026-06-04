@@ -6,7 +6,7 @@
 #include <iostream>
 
 int main() {
-  std::cout << "Hello from osmock!" << std::endl;
+  std::cout << "Hello from mockos!" << std::endl;
 
   if (!glfwInit())
     return -1;
@@ -56,7 +56,7 @@ int main() {
     glfwSwapBuffers(window);
   }
 
-  osmock::cleanup(window);
+  mockos::cleanup(window);
 
   return 0;
 }

@@ -29,7 +29,7 @@ chmod +x s.sh
 Below is a list of projects included in this monorepo. If this is not
 updated, see [`CMakeLists.txt`](/CMakeLists.txt).
 
-### osmock
+### mockos
 
 GUI-based OS Mockup using [ImGui](https://github.com/ocornut/imgui).
 
