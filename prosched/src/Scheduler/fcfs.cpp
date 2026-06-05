@@ -3,7 +3,7 @@
 #include <queue>
 #include <bits/stdc++.h>
 
-#include "../../include/config.h"
+#include "../config.h"
 #include "Process.h"
 #include "Process.cpp"
 
