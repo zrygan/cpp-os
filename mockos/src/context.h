@@ -17,7 +17,7 @@ struct Flags {
   bool kill = false;
 };
 
-struct OS {
+struct Context {
   GLFWwindow *window;
   ImGuiIO *io;
   Flags flags;
@@ -36,14 +36,14 @@ struct OS {
 const bool kSaveIni = false;
 
 /**
- * Initializes the environment for the OS, and returns a struct of
- * the important OS variables.
+ * Initializes the environment for the Context, and returns a struct of
+ * the important Context variables.
  */
-inline OS *Init() {
+inline Context *Init() {
   if (!glfwInit())
     throw std::runtime_error("Failed to initialize GLFW.");
 
-  OS *this_os = new OS();
+  Context *this_ctx = new Context();
 
   // ************
   // (TUI) print the system info (like bios?)
@@ -60,53 +60,53 @@ inline OS *Init() {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-  this_os->window = glfwCreateWindow(1280, 720, "mockos", nullptr, nullptr);
-  if (!this_os->window) {
+  this_ctx->window = glfwCreateWindow(1280, 720, "mockos", nullptr, nullptr);
+  if (!this_ctx->window) {
     glfwTerminate();
-    delete this_os;
+    delete this_ctx;
     throw std::runtime_error("GLFW Error: Window cannot be created.");
   }
 
-  glfwMakeContextCurrent(this_os->window);
+  glfwMakeContextCurrent(this_ctx->window);
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  this_os->io = &ImGui::GetIO();
+  this_ctx->io = &ImGui::GetIO();
 
   // ImGui::StyleColorsDark();
 
-  ImGui_ImplGlfw_InitForOpenGL(this_os->window, true);
+  ImGui_ImplGlfw_InitForOpenGL(this_ctx->window, true);
   ImGui_ImplOpenGL3_Init("#version 130");
 
-  return this_os;
+  return this_ctx;
 }
 
-inline void Cleanup(OS *this_os) {
-  if (!this_os)
+inline void Cleanup(Context *this_ctx) {
+  if (!this_ctx)
     return;
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
 
-  if (this_os->window) {
-    glfwDestroyWindow(this_os->window);
+  if (this_ctx->window) {
+    glfwDestroyWindow(this_ctx->window);
   }
   glfwTerminate();
 
-  delete this_os;
+  delete this_ctx;
 }
 
 /**
  * This gets the system clock and formats it. This puts the time
- * inplace at the OS parameter.
+ * inplace at the Context parameter.
  */
-inline void GetTimeString(OS *this_os) {
+inline void GetTimeString(Context *this_ctx) {
   auto now = std::chrono::system_clock::now();
   std::time_t time_now = std::chrono::system_clock::to_time_t(now);
   std::tm *local_time = std::localtime(&time_now);
   char buf[16];
   std::strftime(buf, sizeof(buf), "%I:%M %p", local_time);
-  this_os->system_clock = buf;
+  this_ctx->system_clock = buf;
 }
 } // namespace mockos

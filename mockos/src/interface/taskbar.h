@@ -1,8 +1,8 @@
 #pragma once
 
+#include "context.h"
 #include "imgui.h"
 #include "interface/util.h"
-#include "os.h"
 #include <array>
 #include <functional>
 #include <string>
@@ -15,22 +15,24 @@ const ImGuiWindowFlags kTaskbarFlags =
 
 struct TaskbarButton {
   std::string label;
-  std::function<void(mockos::OS *)> action_on_press;
+  std::function<void(mockos::Context *)> action_on_press;
 };
 
 const std::array<TaskbarButton, 5> kTaskbarButtons = {
-    {{"PWR", [](mockos::OS *os) { os->flags.kill = true; }},
+    {{"PWR", [](mockos::Context *os) { os->flags.kill = true; }},
      {"Task Manager",
-      [](mockos::OS *os) { os->flags.show_taskbar = !os->flags.show_taskbar; }},
+      [](mockos::Context *os) {
+        os->flags.show_taskbar = !os->flags.show_taskbar;
+      }},
      {"Info",
-      [](mockos::OS *os) { os->flags.show_info = !os->flags.show_info; }},
+      [](mockos::Context *os) { os->flags.show_info = !os->flags.show_info; }},
      {"Text Editor",
-      [](mockos::OS *os) {
+      [](mockos::Context *os) {
         os->flags.show_text_editor = !os->flags.show_text_editor;
       }},
-     {"PLACEHOLDER 2", [](mockos::OS *os) {}}}};
+     {"PLACEHOLDER 2", [](mockos::Context *os) {}}}};
 
-inline ImVec2 GetButtonSize(mockos::OS *this_os) {
+inline ImVec2 GetButtonSize(mockos::Context *this_ctx) {
   return ImVec2(100.0f, 30.0f);
 }
 
@@ -38,12 +40,12 @@ inline ImVec2 GetButtonSize(mockos::OS *this_os) {
  * This is the taskbar. The taskbar has three buttons and the task
  * manager button.
  *
- * This handled flag logic using its OS parameter. That is,
+ * This handled flag logic using its Context parameter. That is,
  * if any button on the Taskbar is clicked. It will change the flags
  * in-place. Hence its return type is void while also being able to
  * change the system state.
  */
-inline void MakeTaskbar(mockos::OS *this_os) {
+inline void MakeTaskbar(mockos::Context *this_ctx) {
   const ImGuiViewport *viewport = ImGui::GetMainViewport();
   const float taskbar_height = 45.0f;
 
@@ -60,8 +62,8 @@ inline void MakeTaskbar(mockos::OS *this_os) {
         ImGui::SameLine();
 
       if (ImGui::Button(kTaskbarButtons[i].label.c_str(),
-                        GetButtonSize(this_os))) {
-        kTaskbarButtons[i].action_on_press(this_os);
+                        GetButtonSize(this_ctx))) {
+        kTaskbarButtons[i].action_on_press(this_ctx);
       }
     }
 
@@ -71,7 +73,7 @@ inline void MakeTaskbar(mockos::OS *this_os) {
     float system_clock_width = 110.0f;
     ImGui::SameLine(ImGui::GetWindowWidth() - system_clock_width);
 
-    ImGui::Text("%s", this_os->system_clock.c_str());
+    ImGui::Text("%s", this_ctx->system_clock.c_str());
   }
   ImGui::End();
 
