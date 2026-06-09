@@ -15,12 +15,23 @@ public:
     int network;
   };
 
-public:
   std::vector<ProcessDetail> pds;
+
+public: 
+  struct PerformanceMetrics {
+    float cpu = 0;
+    float memory = 0;
+    float gpu = 0;
+    float disk = 0;
+    float network = 0;
+  };
+
+  PerformanceMetrics performance;
 
 public:
   void randomize();
   void initialize();
+  void updateMetrics();
 };
 
 #endif
@@ -32,6 +43,7 @@ public:
 namespace mockos {
   inline void MakeTaskManager(mockos::Context *this_ctx, TaskManager &taskManager) {
     if(ImGui::Begin("Task Manager", &this_ctx->flags.show_task_manager)) {
+      ImGui::TextWrapped("Processes");
       if (ImGui::BeginTable("taskManagerTable", 6,
             ImGuiTableFlags_Resizable | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
 
@@ -55,6 +67,26 @@ namespace mockos {
 
         ImGui::EndTable();
       }
+
+      ImGui::Separator();
+      ImGui::TextWrapped("Performance");
+      auto &m = taskManager.performance;
+      struct {const char *label; float val;} bars[] = {
+        { "CPU", m.cpu},
+        { "Memory", m.memory},
+        { "GPU", m.gpu},
+        { "Disk", m.disk},
+        { "Network", m.network},
+      };
+
+      for (auto &b : bars) {
+        char overlay[16];
+        snprintf(overlay, sizeof(overlay), "%.1f%%", b.val * 100);
+        ImGui::Text("%-8s", b.label);
+        ImGui::SameLine();
+        ImGui::ProgressBar(b.val, ImVec2(-1, 0), overlay);
+      }
+
     }
     ImGui::End();
   }

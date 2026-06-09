@@ -21,6 +21,7 @@ inline void NewFrame() {
 
 inline void Update(mockos::Context *ctx, TaskManager &taskManager) {
   taskManager.randomize();
+  taskManager.updateMetrics();
 
   int h;
   glfwGetWindowSize(ctx->window, nullptr, &h);
