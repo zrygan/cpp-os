@@ -13,6 +13,17 @@ struct OS {
 };
 
 /**
+ * The imgui.ini file will ALWAYS be generated. This will save
+ * the state of the GUI after termination.
+ *
+ * This is very unsafe for debugging and formatting the GUI since the
+ * cached settings may overwrite the updated code/behavior.
+ *
+ * By default this should always be FALSE.
+ */
+const bool kSaveIni = false;
+
+/**
  * Initializes the environment for the OS, and returns a struct of
  * the important OS variables.
  */

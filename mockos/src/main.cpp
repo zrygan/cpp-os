@@ -1,5 +1,7 @@
 #include "apps/task_manager.h"
 #include "game_loop.h"
+#include "interface/debug.h"
+#include "interface/taskbar.h"
 #include "os.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -26,8 +28,17 @@ int main() {
     glfwPollEvents();
     mockos::NewFrame();
 
+    // **********
+    // TASKMANAGER STUFF
+    // **********
     taskManager.randomize();
     taskManager.display();
+
+    // **********
+    // INTERFACE STUFF
+    // **********
+    mockos::MakeTaskbar();
+    mockos::MakeDebug(this_os);
 
     ImGui::Render();
     int display_w, display_h;
