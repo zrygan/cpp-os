@@ -19,7 +19,6 @@ inline void NewFrame() {
 }
 
 inline void Update(mockos::Context *ctx, TaskManager &taskManager) {
-  mockos::GetTimeString(ctx);
   taskManager.randomize();
 
   int h;

@@ -1,11 +1,11 @@
 #pragma once
 
+#include "clock.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "interface/startup.h"
 #include <GLFW/glfw3.h>
-#include <chrono>
-#include <ctime>
 #include <stdexcept>
 #include <string>
 namespace mockos {
@@ -22,7 +22,9 @@ struct Context {
   GLFWwindow *window;
   ImGuiIO *io;
   Flags flags;
-  std::string system_clock;
+  std::string system_clock = mockos::GetTimeString();
+  std::string bios_version = "CSOPESY-MO2";
+  std::string bios_date = "June 9, 2026";
 };
 
 /**
@@ -40,23 +42,9 @@ const bool kSaveIni = false;
  * Initializes the environment for the Context, and returns a struct of
  * the important Context variables.
  */
-inline Context *Init() {
+inline void *Init(Context *this_ctx) {
   if (!glfwInit())
     throw std::runtime_error("Failed to initialize GLFW.");
-
-  Context *this_ctx = new Context();
-
-  // ************
-  // (TUI) print the system info (like bios?)
-  // ************
-
-  // ************
-  // (TUI) then start up screen
-  // ************
-
-  // ************
-  // GUI init
-  // ************
 
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
@@ -98,16 +86,4 @@ inline void Cleanup(Context *this_ctx) {
   delete this_ctx;
 }
 
-/**
- * This gets the system clock and formats it. This puts the time
- * inplace at the Context parameter.
- */
-inline void GetTimeString(Context *this_ctx) {
-  auto now = std::chrono::system_clock::now();
-  std::time_t time_now = std::chrono::system_clock::to_time_t(now);
-  std::tm *local_time = std::localtime(&time_now);
-  char buf[16];
-  std::strftime(buf, sizeof(buf), "%I:%M %p", local_time);
-  this_ctx->system_clock = buf;
-}
 } // namespace mockos
