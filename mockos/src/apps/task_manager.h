@@ -80,11 +80,15 @@ namespace mockos {
       };
 
       for (auto &b : bars) {
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 1.0f, 0.0f, 0.5f));
+
         char overlay[16];
         snprintf(overlay, sizeof(overlay), "%.1f%%", b.val * 100);
         ImGui::Text("%-8s", b.label);
         ImGui::SameLine();
         ImGui::ProgressBar(b.val, ImVec2(-1, 0), overlay);
+
+        ImGui::PopStyleColor(1);
       }
 
     }
