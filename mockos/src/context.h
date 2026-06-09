@@ -22,11 +22,10 @@ struct Context {
   GLFWwindow *window;
   ImGuiIO *io;
   Flags flags;
-  std::string system_clock = mockos::GetTimeString();
   std::string bios_version = "CSOPESY-MO2";
   std::string bios_date = "June 9, 2026";
+  std::string GetSystemClock() const { return mockos::GetTimeString(true); }
 };
-
 /**
  * The imgui.ini file will ALWAYS be generated. This will save
  * the state of the GUI after termination.

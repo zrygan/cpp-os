@@ -7,7 +7,7 @@
 int main() {
   mockos::Context *this_ctx = new mockos::Context;
   mockos::RunStartUp(this_ctx->bios_version, this_ctx->bios_date,
-                     this_ctx->system_clock);
+                     this_ctx->GetSystemClock());
   mockos::Init(this_ctx);
 
   // @OutForMilks move this into a TaskManager init function
