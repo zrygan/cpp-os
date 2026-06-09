@@ -7,32 +7,11 @@
 #include <iostream>
 
 int main() {
-  std::cout << "Hello from mockos!" << std::endl;
-
-  if (!glfwInit())
-    return -1;
-
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-  GLFWwindow *window =
-      glfwCreateWindow(1280, 720, "mockos", nullptr, nullptr);
-  if (!window) {
-    glfwTerminate();
-    return -1;
-  }
-  glfwMakeContextCurrent(window);
-
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGuiIO &io = ImGui::GetIO();
-  (void)io;
-
-  ImGui::StyleColorsDark();
-
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init("#version 130");
-
+  mockos::OS* this_os = mockos::init();
+    
+  // @OutForMilks add this to a taskmanager init function
+  // so that we dont bloat up the main loop
+  // if needed, use inline for that function
   TaskManager taskManager;
   taskManager.initialize({
       {"System",       80, 60, 50, 30, 20},
@@ -42,7 +21,7 @@ int main() {
       {"antivirus.exe",60, 55, 40, 20, 35},
   });
 
-  while (!glfwWindowShouldClose(window)) {
+  while (!glfwWindowShouldClose(this_os->window)) {
     glfwPollEvents();
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -54,16 +33,16 @@ int main() {
 
     ImGui::Render();
     int display_w, display_h;
-    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glfwGetFramebufferSize(this_os->window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(this_os->window);
   }
 
-  mockos::cleanup(window);
+  mockos::cleanup(this_os);
 
   return 0;
 }
