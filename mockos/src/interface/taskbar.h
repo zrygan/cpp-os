@@ -10,6 +10,15 @@ const ImGuiWindowFlags taskbar_flags =
     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
+/**
+ * This is the taskbar. The taskbar has three buttons and the task
+ * manager button.
+ * 
+ * This handled flag logic using its OS parameter. That is,
+ * if any button on the Taskbar is clicked. It will change the flags
+ * in-place. Hence its return type is void while also being able to
+ * change the system state.
+ */
 inline void MakeTaskbar(mockos::OS *this_os) {
   const ImGuiViewport *viewport = ImGui::GetMainViewport();
   const float taskbar_height = 45.0f;
