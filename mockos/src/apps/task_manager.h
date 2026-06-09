@@ -20,6 +20,7 @@ class TaskManager {
 
     public:
         void display();
+        void randomize();
         void initialize(std::vector<ProcessDetail> inputVector);
 };
 
