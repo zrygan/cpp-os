@@ -1,0 +1,26 @@
+#ifndef TASK_MANAGER_H
+#define TASK_MANAGER_H
+
+#include <vector>
+#include <string>
+
+class TaskManager {
+    public:
+        struct ProcessDetail {
+            std::string processName;
+            int cpu;
+            int memory;
+            int gpu;
+            int disk;
+            int network;
+        };
+
+    private:
+        std::vector<ProcessDetail> pds;
+
+    public:
+        void display();
+        void initialize(std::vector<ProcessDetail> inputVector);
+};
+
+#endif
