@@ -76,7 +76,7 @@ inline void MakeTaskbar(mockos::Context *this_ctx) {
     float system_clock_width = 110.0f;
     ImGui::SameLine(ImGui::GetWindowWidth() - system_clock_width);
 
-    ImGui::Text("%s", this_ctx->system_clock.c_str());
+    ImGui::Text("%s", this_ctx->GetSystemClock().c_str());
   }
   ImGui::End();
 
