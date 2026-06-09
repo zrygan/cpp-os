@@ -7,9 +7,16 @@
 #include <stdexcept>
 namespace mockos {
 
+  
+struct Flags {
+  bool show_debug = false;
+  bool kill = false;
+};
+
 struct OS {
   GLFWwindow *window;
   ImGuiIO *io;
+  Flags flags;
 };
 
 /**

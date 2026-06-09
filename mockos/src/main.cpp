@@ -8,7 +8,7 @@
 
 int main() {
   mockos::OS *this_os = mockos::Init();
-
+  
   // @OutForMilks add this to a taskmanager init function
   // so that we dont bloat up the main loop
   // if needed, use inline for that function
@@ -24,7 +24,8 @@ int main() {
   // ********************
   // GAME LOOP
   // ********************
-  while (!glfwWindowShouldClose(this_os->window)) {
+  while (!glfwWindowShouldClose(this_os->window) && !this_os->flags.kill) {
+
     glfwPollEvents();
     mockos::NewFrame();
 
@@ -37,8 +38,14 @@ int main() {
     // **********
     // INTERFACE STUFF
     // **********
-    mockos::MakeTaskbar();
-    mockos::MakeDebug(this_os);
+    mockos::MakeTaskbar(this_os);
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Backslash)) 
+      this_os->flags.show_debug = 
+      !this_os->flags.show_debug;
+
+    if (this_os->flags.show_debug) 
+      mockos::MakeDebug(this_os);
 
     ImGui::Render();
     int display_w, display_h;

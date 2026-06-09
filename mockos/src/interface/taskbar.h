@@ -1,6 +1,8 @@
 #pragma once
 
 #include "imgui.h"
+#include "os.h"
+#include "interface/util.h"
 
 namespace mockos {
 const ImGuiWindowFlags taskbar_flags =
@@ -8,7 +10,7 @@ const ImGuiWindowFlags taskbar_flags =
     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-inline void MakeTaskbar() {
+inline void MakeTaskbar(mockos::OS *this_os) {
   const ImGuiViewport *viewport = ImGui::GetMainViewport();
   const float taskbar_height = 45.0f;
 
@@ -20,16 +22,17 @@ inline void MakeTaskbar() {
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
   if (ImGui::Begin("##Taskbar", nullptr, taskbar_flags)) {
-    if (ImGui::Button("Start", ImVec2(60, 30))) {
-      // Toggle start menu state here
+    if (ImGui::Button("PWR", ImVec2(60, 30))) {
+      this_os->flags.kill = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Task Manager", ImVec2(100, 30))) {
       // Code to open your taskManager window
     }
+    
 
     ImGui::SameLine();
-    ImGui::TextDisabled("|");
+    mockos::MakeVerticalSeparator();
 
     // Align the system clock to the far right side
     float system_clock_width = 80.0f;
