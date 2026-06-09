@@ -2190,11 +2190,11 @@ void ImDrawList::AddImageRounded(ImTextureRef tex_ref, const ImVec2 &p_min,
   if ((col & IM_COL32_A_MASK) == 0)
     return;
 
-  IM_ASSERT(
-      (flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags "
-                             "values!"); // If this assert triggers on legacy
-                                         // code: see comments in
-                                         // ImDrawList::PathRect().
+  IM_ASSERT((flags & 0x0F) == 0 &&
+            "Misuse of legacy hardcoded ImDrawCornerFlags "
+            "values!"); // If this assert triggers on legacy
+                        // code: see comments in
+                        // ImDrawList::PathRect().
   if ((flags & ImDrawFlags_RoundCornersMask_) == 0)
     flags |= ImDrawFlags_RoundCornersAll;
 
@@ -6550,11 +6550,11 @@ ImFontBaked *ImFontAtlasBakedGetOrAdd(ImFontAtlas *atlas, ImFont *font,
     if (baked != NULL)
       return baked;
     if (atlas->Locked) {
-      IM_ASSERT(
-          !atlas->Locked && "Cannot use dynamic font size with a locked "
-                            "ImFontAtlas!"); // Locked because rendering backend
-                                             // does not support
-                                             // ImGuiBackendFlags_RendererHasTextures!
+      IM_ASSERT(!atlas->Locked &&
+                "Cannot use dynamic font size with a locked "
+                "ImFontAtlas!"); // Locked because rendering backend
+                                 // does not support
+                                 // ImGuiBackendFlags_RendererHasTextures!
       return NULL;
     }
   }

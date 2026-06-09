@@ -4,6 +4,4 @@
 
 void View::displayMenu() { welcome(); }
 
-void View::displayClear() {
-  system("cls");
-}
+void View::displayClear() { system("cls"); }

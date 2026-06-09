@@ -2068,8 +2068,8 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags, float thickness) {
     // order to handle scaling we need to scale separator thickness and it would
     // not makes sense to have a disparity depending on height.
     ////float thickness_for_layout = (thickness == 1.0f) ? 0.0f : thickness; //
-    ///FIXME: See 1.70/1.71 Separator() change: makes legacy 1-px separator not
-    ///affect layout yet. Should change.
+    /// FIXME: See 1.70/1.71 Separator() change: makes legacy 1-px separator not
+    /// affect layout yet. Should change.
     const ImRect bb(ImVec2(x1, window->DC.CursorPos.y),
                     ImVec2(x2, window->DC.CursorPos.y + thickness));
     ItemSize(ImVec2(0.0f, thickness));
@@ -9946,7 +9946,7 @@ static ImRect CalcScopeRect(ImGuiMultiSelectTempData *ms, ImGuiWindow *window) {
                   ImMax(window->DC.CursorMaxPos, ms->ScopeRectMin));
   } else {
     //// When a table, pull HostClipRect, which allows us to predict ClipRect
-    ///before first row/layout is performed. (#7970)
+    /// before first row/layout is performed. (#7970)
     ImRect scope_rect = window->InnerClipRect;
     // if (g.CurrentTable != NULL)
     //     scope_rect = g.CurrentTable->HostClipRect;
@@ -11878,9 +11878,11 @@ bool ImGui::BeginMenuEx(const char *label, const char *icon, bool enabled) {
     OpenPopup(label);
   } else if (want_open) {
     menu_is_open = true;
-    OpenPopup(label, ImGuiPopupFlags_NoReopen); // | (want_open_nav_init ?
-                                                // ImGuiPopupFlags_NoReopenAlwaysNavInit
-                                                // : 0));
+    OpenPopup(
+        label,
+        ImGuiPopupFlags_NoReopen); // | (want_open_nav_init ?
+                                   // ImGuiPopupFlags_NoReopenAlwaysNavInit
+                                   // : 0));
   }
 
   if (menu_is_open) {

@@ -210,9 +210,10 @@ struct ImGuiColorMod; // Stacked color modifier, backup of modified data so we
 struct ImGuiContext;  // Main Dear ImGui context
 struct ImGuiContextHook;  // Hook for extensions like ImGuiTestEngine
 struct ImGuiDataTypeInfo; // Type information associated to a ImGuiDataType enum
-struct ImGuiDeactivatedItemData; // Data for
-                                 // IsItemDeactivated()/IsItemDeactivatedAfterEdit()
-                                 // function.
+struct
+    ImGuiDeactivatedItemData; // Data for
+                              // IsItemDeactivated()/IsItemDeactivatedAfterEdit()
+                              // function.
 struct ImGuiErrorRecoveryState; // Storage of stack sizes for error handling and
                                 // recovery
 struct ImGuiGroupData;      // Stacked storage data for BeginGroup()/EndGroup()
@@ -1698,10 +1699,9 @@ enum ImGuiItemFlagsPrivate_ {
   ImGuiItemFlags_NoMarkEdited =
       1 << 16, // false     // Skip calling MarkItemEdited()
   ImGuiItemFlags_NoFocus =
-      1
-      << 17, // false     // [EXPERIMENTAL: Not very well specced] Clicking
-             // doesn't take focus. Automatically sets ImGuiButtonFlags_NoFocus
-             // + ImGuiButtonFlags_NoNavFocus in ButtonBehavior().
+      1 << 17, // false     // [EXPERIMENTAL: Not very well specced] Clicking
+  // doesn't take focus. Automatically sets ImGuiButtonFlags_NoFocus
+  // + ImGuiButtonFlags_NoNavFocus in ButtonBehavior().
 
   // Controlled by widget code
   ImGuiItemFlags_Inputable =
@@ -2580,15 +2580,14 @@ struct ImGuiKeyOwnerData {
 enum ImGuiInputFlagsPrivate_ {
   // Flags for IsKeyPressed(), IsKeyChordPressed(), IsMouseClicked(), Shortcut()
   // - Repeat mode: Repeat rate selection
-  ImGuiInputFlags_RepeatRateDefault = 1 << 1, // Repeat rate: Regular (default)
-  ImGuiInputFlags_RepeatRateNavMove = 1 << 2, // Repeat rate: Fast
-  ImGuiInputFlags_RepeatRateNavTweak =
-      1 << 3, // Repeat rate: Faster
-              // - Repeat mode: Specify when repeating key pressed can be
-              // interrupted.
-              // - In theory ImGuiInputFlags_RepeatUntilOtherKeyPress may be a
-              // desirable default, but it would break too many behavior so
-              // everything is opt-in.
+  ImGuiInputFlags_RepeatRateDefault = 1 << 1,  // Repeat rate: Regular (default)
+  ImGuiInputFlags_RepeatRateNavMove = 1 << 2,  // Repeat rate: Fast
+  ImGuiInputFlags_RepeatRateNavTweak = 1 << 3, // Repeat rate: Faster
+  // - Repeat mode: Specify when repeating key pressed can be
+  // interrupted.
+  // - In theory ImGuiInputFlags_RepeatUntilOtherKeyPress may be a
+  // desirable default, but it would break too many behavior so
+  // everything is opt-in.
   ImGuiInputFlags_RepeatUntilRelease =
       1 << 4, // Stop repeating when released (default for all functions except
               // Shortcut). This only exists to allow overriding Shortcut()

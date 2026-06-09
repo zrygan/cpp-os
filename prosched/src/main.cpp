@@ -1,8 +1,8 @@
 #include <iostream>
 #include <stdio.h>
 
-#include "controller/Controller.h"
 #include "config.h"
+#include "controller/Controller.h"
 
 using namespace std;
 

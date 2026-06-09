@@ -317,9 +317,9 @@ struct ImGuiSelectionBasicStorage; // Optional helper to store multi-selection
 struct ImGuiSelectionExternalStorage; // Optional helper to apply
                                       // multi-selection requests to existing
                                       // randomly accessible storage.
-struct ImGuiSelectionRequest; // A selection request (stored in
-                              // ImGuiMultiSelectIO)
-struct ImGuiSizeCallbackData; // Callback data when using
+struct ImGuiSelectionRequest;         // A selection request (stored in
+                                      // ImGuiMultiSelectIO)
+struct ImGuiSizeCallbackData;         // Callback data when using
                               // SetNextWindowSizeConstraints() (rare/advanced
                               // use)
 struct ImGuiStorage; // Helper for key->value storage (container sorted by key)
@@ -3729,7 +3729,7 @@ enum ImGuiCol_ {
   ImGuiCol_TabDimmedSelected, // Tab background, when tab-bar is unfocused & tab
                               // is selected
   ImGuiCol_TabDimmedSelectedOverline, //..horizontal overline, when tab-bar is
-                                      //unfocused & tab is selected
+                                      // unfocused & tab is selected
   ImGuiCol_PlotLines,
   ImGuiCol_PlotLinesHovered,
   ImGuiCol_PlotHistogram,
@@ -4198,10 +4198,9 @@ enum ImGuiTableFlags_ {
       1 << 13, // Columns default to _WidthFixed or _WidthAuto (if resizable or
                // not resizable), matching contents width.
   ImGuiTableFlags_SizingFixedSame =
-      2
-      << 13, // Columns default to _WidthFixed or _WidthAuto (if resizable or
-             // not resizable), matching the maximum contents width of all
-             // columns. Implicitly enable ImGuiTableFlags_NoKeepColumnsVisible.
+      2 << 13, // Columns default to _WidthFixed or _WidthAuto (if resizable or
+               // not resizable), matching the maximum contents width of all
+  // columns. Implicitly enable ImGuiTableFlags_NoKeepColumnsVisible.
   ImGuiTableFlags_SizingStretchProp =
       3 << 13, // Columns default to _WidthStretch with default weights
                // proportional to each columns contents widths.
@@ -5202,8 +5201,8 @@ struct ImGuiIO {
                                        // an error message popup when multiple
                                        // items have conflicting identifiers.
   bool ConfigDebugHighlightIdConflictsShowItemPicker; //=true // Show "Item
-                                                      //Picker" button in
-                                                      //aforementioned popup.
+                                                      // Picker" button in
+                                                      // aforementioned popup.
 
   // Tools to test correct Begin/End and BeginChild/EndChild behaviors.
   // - Presently Begin()/End() and BeginChild()/EndChild() needs to ALWAYS be
@@ -5582,8 +5581,8 @@ struct ImGuiInputTextCallbackData {
                   // string.length()
   int BufSize;    // Buffer size (in bytes) = capacity+1  // Read-only    //
                   // [Resize,Completion,History,Always] Include zero-terminator
-               // storage. In C land: == ARRAYSIZE(my_char_array), in C++ land:
-               // string.capacity()+1
+  // storage. In C land: == ARRAYSIZE(my_char_array), in C++ land:
+  // string.capacity()+1
   int CursorPos; //                                      // Read-write   //
                  //                                      [Completion,History,Always,CharFilter]
   int SelectionStart; //                                      // Read-write   //
@@ -6323,7 +6322,7 @@ enum ImGuiMultiSelectFlags_ {
 // code, 'app'=application/user code.
 struct ImGuiMultiSelectIO {
   //------------------------------------------// BeginMultiSelect /
-  //EndMultiSelect
+  // EndMultiSelect
   ImVector<ImGuiSelectionRequest>
       Requests; //  ms:w, app:r     /  ms:w  app:r   // Requests to apply to
                 //  your selection data.
@@ -6344,8 +6343,8 @@ struct ImGuiMultiSelectIO {
                       //        ResetSrcItem (e.g. if deleted selection).
   int ItemsCount;     //  ms:w, app:r     /        app:r   // 'int items_count'
                       //  parameter to BeginMultiSelect() is copied here for
-                  //  convenience, allowing simpler calls to your ApplyRequests
-                  //  handler. Not used internally.
+  //  convenience, allowing simpler calls to your ApplyRequests
+  //  handler. Not used internally.
 };
 
 // Selection request type
@@ -6368,7 +6367,7 @@ enum ImGuiSelectionRequestType {
 // Selection request item
 struct ImGuiSelectionRequest {
   //------------------------------------------// BeginMultiSelect /
-  //EndMultiSelect
+  // EndMultiSelect
   ImGuiSelectionRequestType
       Type; //  ms:w, app:r     /  ms:w, app:r   // Request type. You'll most
             //  often receive 1 Clear + 1 SetRange with a single-item range.
@@ -7039,7 +7038,7 @@ struct ImDrawList {
     // SWAPPED.
   inline void PushTextureID(ImTextureRef tex_ref) {
     PushTexture(tex_ref);
-  }                                            // RENAMED in 1.92.0
+  } // RENAMED in 1.92.0
   inline void PopTextureID() { PopTexture(); } // RENAMED in 1.92.0
 #else
   void AddRect(const ImVec2 &p_min, const ImVec2 &p_max, ImU32 col,
@@ -7209,9 +7208,10 @@ struct ImTextureData {
   int UniqueID; // w    -   // [DEBUG] Sequential index to facilitate
                 // identifying a texture when debugging/printing. Unique per
                 // atlas.
-  ImTextureStatus Status; // rw   rw  //
-                          // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy.
-                          // Always use SetStatus() to modify!
+  ImTextureStatus
+      Status; // rw   rw  //
+              // ImTextureStatus_OK/_WantCreate/_WantUpdates/_WantDestroy.
+              // Always use SetStatus() to modify!
   void *BackendUserData; // -    rw  // Convenience storage for backend. Some
                          // backends may have enough with TexID.
   ImTextureID TexID; // r    w   // Backend-specific texture identifier. Always
@@ -7308,17 +7308,18 @@ struct ImFontConfig {
                   // multiple inputs font into one ImFont (e.g. ASCII font +
                   // icons + Japanese glyphs). You may want to use GlyphOffset.y
                   // when merge font of different heights.
-  bool PixelSnapH;  // false    // Align every glyph AdvanceX to pixel
-                    // boundaries. Prevents fractional font size from working
-                    // correctly! Useful e.g. if you are merging a non-pixel
-                    // aligned font with the default font. If enabled,
-                    // OversampleH/V will default to 1.
-  ImS8 OversampleH; // 0 (2)    // Rasterize at higher quality for sub-pixel
-                    // positioning. 0 == auto == 1 or 2 depending on size. Note
-                    // the difference between 2 and 3 is minimal. You can reduce
-                    // this to 1 for large glyphs save memory. Read
-                    // https://github.com/nothings/stb/blob/master/tests/oversample/README.md
-                    // for details.
+  bool PixelSnapH; // false    // Align every glyph AdvanceX to pixel
+                   // boundaries. Prevents fractional font size from working
+                   // correctly! Useful e.g. if you are merging a non-pixel
+                   // aligned font with the default font. If enabled,
+                   // OversampleH/V will default to 1.
+  ImS8
+      OversampleH; // 0 (2)    // Rasterize at higher quality for sub-pixel
+                   // positioning. 0 == auto == 1 or 2 depending on size. Note
+                   // the difference between 2 and 3 is minimal. You can reduce
+                   // this to 1 for large glyphs save memory. Read
+                   // https://github.com/nothings/stb/blob/master/tests/oversample/README.md
+                   // for details.
   ImS8 OversampleV; // 0 (1)    // Rasterize at higher quality for sub-pixel
                     // positioning. 0 == auto == 1. This is not really useful as
                     // we don't use sub-pixel positions on the Y axis.
@@ -7444,16 +7445,17 @@ struct ImFontGlyphRangesBuilder {
     int off = (int)(n >> 5);
     ImU32 mask = 1u << (n & 31);
     UsedChars[off] |= mask;
-  }                                             // Set bit n in the array
+  } // Set bit n in the array
   inline void AddChar(ImWchar c) { SetBit(c); } // Add character
   IMGUI_API void AddText(
       const char *text,
       const char *text_end =
           NULL); // Add string (each character of the UTF-8 string are added)
-  IMGUI_API void
-  AddRanges(const ImWchar *ranges); // Add ranges, e.g.
-                                    // builder.AddRanges(ImFontAtlas::GetGlyphRangesDefault())
-                                    // to force add all of ASCII/Latin+Ext
+  IMGUI_API void AddRanges(
+      const ImWchar
+          *ranges); // Add ranges, e.g.
+                    // builder.AddRanges(ImFontAtlas::GetGlyphRangesDefault())
+                    // to force add all of ASCII/Latin+Ext
   IMGUI_API void
   BuildRanges(ImVector<ImWchar> *out_ranges); // Output new ranges
 };
@@ -8347,7 +8349,7 @@ GetWindowContentRegionMax(); // Content boundaries max for the window (roughly
 // Renamed in 1.77, renamed back in 1.79. Sorry!
 //-- OBSOLETED in 1.78 (from June 2020): Old drag/sliders functions that took a
 //'float power > 1.0f' argument instead of ImGuiSliderFlags_Logarithmic. See
-//github.com/ocornut/imgui/issues/3361 for details. IMGUI_API bool
+// github.com/ocornut/imgui/issues/3361 for details. IMGUI_API bool
 // DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float
 // v_speed, const void* p_min, const void* p_max, const char* format, float
 // power = 1.0f)                                                            //
@@ -8495,7 +8497,7 @@ const           { return X != 0xFFFF; }
 };*/
 
 //-- OBSOLETED in 1.82 (from Mars 2021): flags for AddRect(), AddRectFilled(),
-//AddImageRounded(), PathRect() typedef ImDrawFlags ImDrawCornerFlags; enum
+// AddImageRounded(), PathRect() typedef ImDrawFlags ImDrawCornerFlags; enum
 // ImDrawCornerFlags_
 //{
 //    ImDrawCornerFlags_None      = ImDrawFlags_RoundCornersNone,         // Was

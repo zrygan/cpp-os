@@ -12940,10 +12940,11 @@ bool ImGui::IsMouseReleased(ImGuiMouseButton button) {
   ImGuiContext &g = *GImGui;
   IM_ASSERT(button >= 0 && button < IM_COUNTOF(g.IO.MouseDown));
   return g.IO.MouseReleased[button] &&
-         TestKeyOwner(MouseButtonToKey(button),
-                      ImGuiKeyOwner_Any); // Should be same as
-                                          // IsKeyReleased(MouseButtonToKey(button),
-                                          // ImGuiKeyOwner_Any)
+         TestKeyOwner(
+             MouseButtonToKey(button),
+             ImGuiKeyOwner_Any); // Should be same as
+                                 // IsKeyReleased(MouseButtonToKey(button),
+                                 // ImGuiKeyOwner_Any)
 }
 
 bool ImGui::IsMouseReleased(ImGuiMouseButton button, ImGuiID owner_id) {
@@ -13369,7 +13370,7 @@ static ImGuiWindow *FindBestWheelingWindow(const ImVec2 &wheel) {
         // - a child window doesn't allow any scrolling.
         // - a child window has the ImGuiWindowFlags_NoScrollWithMouse flag.
         //// - a child window doesn't need scrolling because it is already at
-        ///the edge for the direction we are going in (FIXME-WIP)
+        /// the edge for the direction we are going in (FIXME-WIP)
         const bool has_scrolling = (window->ScrollMax[axis] != 0.0f);
         const bool inputs_disabled =
             (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) &&
@@ -18257,18 +18258,20 @@ static float ImGui::NavUpdatePageUpPageDown() {
                                     // request the down direction (so we can
                                     // always land on the last item)
       g.NavMoveClipDir = ImGuiDir_Up;
-      g.NavMoveFlags = ImGuiNavMoveFlags_AllowCurrentNavId |
-                       ImGuiNavMoveFlags_IsPageMove; // ImGuiNavMoveFlags_AlsoScoreVisibleSet
-                                                     // may be added later
+      g.NavMoveFlags =
+          ImGuiNavMoveFlags_AllowCurrentNavId |
+          ImGuiNavMoveFlags_IsPageMove; // ImGuiNavMoveFlags_AlsoScoreVisibleSet
+                                        // may be added later
     } else if (IsKeyPressed(ImGuiKey_PageDown, true)) {
       nav_scoring_rect_offset_y = +page_offset_y;
       g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset down, we
                                   // request the up direction (so we can always
                                   // land on the last item)
       g.NavMoveClipDir = ImGuiDir_Down;
-      g.NavMoveFlags = ImGuiNavMoveFlags_AllowCurrentNavId |
-                       ImGuiNavMoveFlags_IsPageMove; // ImGuiNavMoveFlags_AlsoScoreVisibleSet
-                                                     // may be added later
+      g.NavMoveFlags =
+          ImGuiNavMoveFlags_AllowCurrentNavId |
+          ImGuiNavMoveFlags_IsPageMove; // ImGuiNavMoveFlags_AlsoScoreVisibleSet
+                                        // may be added later
     } else if (home_pressed) {
       // FIXME-NAV: handling of Home/End is assuming that the top/bottom most
       // item will be visible with Scroll.y == 0/ScrollMax.y Scrolling will be
