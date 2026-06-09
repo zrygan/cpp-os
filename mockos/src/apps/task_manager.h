@@ -21,7 +21,7 @@ private:
 public:
   void display();
   void randomize();
-  void initialize(std::vector<ProcessDetail> inputVector);
+  void initialize();
 };
 
 #endif

@@ -14,13 +14,7 @@ int main() {
   // so that we dont bloat up the main loop
   // if needed, use inline for that function
   TaskManager taskManager;
-  taskManager.initialize({
-      {"System", 80, 60, 50, 30, 20},
-      {"Explorer", 45, 70, 30, 10, 5},
-      {"Chrome", 12, 40, 15, 55, 80},
-      {"Idle", 3, 90, 0, 2, 12},
-      {"antivirus.exe", 60, 55, 40, 20, 35},
-  });
+  taskManager.initialize();
 
   // ********************
   // GAME LOOP
@@ -39,8 +33,6 @@ int main() {
     // TASKMANAGER STUFF
     // **********
     taskManager.randomize();
-    taskManager.display();
-
     // **********
     // INTERFACE STUFF
     // **********

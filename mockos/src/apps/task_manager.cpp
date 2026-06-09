@@ -4,12 +4,31 @@
 #include <cstdio>
 #include <random>
 
-void TaskManager::display() {}
-
 using PD = TaskManager::ProcessDetail;
 static int PD::*const resources[] = {
     &PD::cpu, &PD::memory, &PD::gpu, &PD::disk, &PD::network,
 };
+
+static std::vector<PD> inputVector = {
+    {"System",        80, 60, 50, 30, 20},
+    {"Explorer",      45, 70, 30, 10,  5},
+    {"Chrome",        12, 40, 15, 55, 80},
+    {"Idle",           3, 90,  0,  2, 12},
+    {"antivirus.exe", 60, 55, 40, 20, 35},
+};
+
+void TaskManager::initialize() {
+  for (auto res : resources) {
+    int sum = 0;
+    for (auto &pd : inputVector)
+      sum += pd.*res;
+    if (sum > 100) {
+      for (auto &pd : inputVector)
+        pd.*res = pd.*res * 100 / sum;
+    }
+  }
+  this->pds = inputVector;
+}
 
 void TaskManager::randomize() {
   static double lastTime = 0.0;
@@ -41,15 +60,5 @@ void TaskManager::randomize() {
   }
 }
 
-void TaskManager::initialize(std::vector<ProcessDetail> inputVector) {
-  for (auto res : resources) {
-    int sum = 0;
-    for (auto &pd : inputVector)
-      sum += pd.*res;
-    if (sum > 100) {
-      for (auto &pd : inputVector)
-        pd.*res = pd.*res * 100 / sum;
-    }
-  }
-  this->pds = inputVector;
+void TaskManager::display() {
 }
