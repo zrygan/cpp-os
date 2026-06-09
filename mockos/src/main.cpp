@@ -1,6 +1,6 @@
 #include "apps/task_manager.h"
 #include "game_loop.h"
-#include "interface/debug.h"
+#include "interface/info.h"
 #include "interface/taskbar.h"
 #include "os.h"
 #include <GLFW/glfw3.h>
@@ -8,7 +8,7 @@
 
 int main() {
   mockos::OS *this_os = mockos::Init();
-  
+
   // @OutForMilks add this to a taskmanager init function
   // so that we dont bloat up the main loop
   // if needed, use inline for that function
@@ -30,6 +30,11 @@ int main() {
     mockos::NewFrame();
 
     // **********
+    // SYSTEM CLOCK
+    // **********
+    mockos::GetTimeString(this_os);
+
+    // **********
     // TASKMANAGER STUFF
     // **********
     taskManager.randomize();
@@ -40,12 +45,8 @@ int main() {
     // **********
     mockos::MakeTaskbar(this_os);
 
-    if (ImGui::IsKeyPressed(ImGuiKey_Backslash)) 
-      this_os->flags.show_debug = 
-      !this_os->flags.show_debug;
-
-    if (this_os->flags.show_debug) 
-      mockos::MakeDebug(this_os);
+    if (this_os->flags.show_info)
+      mockos::MakeInfo(this_os);
 
     ImGui::Render();
     int display_w, display_h;

@@ -1,19 +1,38 @@
 #pragma once
 
 #include "imgui.h"
-#include "os.h"
 #include "interface/util.h"
+#include "os.h"
+#include <array>
+#include <functional>
+#include <string>
 
 namespace mockos {
-const ImGuiWindowFlags taskbar_flags =
+const ImGuiWindowFlags kTaskbarFlags =
     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
+struct TaskbarButton {
+  std::string label;
+  std::function<void(mockos::OS *)> action_on_press;
+};
+
+const std::array<TaskbarButton, 5> kTaskbarButtons = {
+    {{"PWR", [](mockos::OS *os) { os->flags.kill = true; }},
+     {"Task Manager", [](mockos::OS *os) { os->flags.show_taskbar = !os->flags.show_taskbar; }},
+     {"Info", [](mockos::OS *os) { os->flags.show_info = !os->flags.show_info; }},
+     {"PLACEHOLDER 1", [](mockos::OS *os) {}},
+     {"PLACEHOLDER 2", [](mockos::OS *os) {}}}};
+
+inline ImVec2 GetButtonSize(mockos::OS *this_os) {
+  return ImVec2(100.0f, 30.0f);
+}
+
 /**
  * This is the taskbar. The taskbar has three buttons and the task
  * manager button.
- * 
+ *
  * This handled flag logic using its OS parameter. That is,
  * if any button on the Taskbar is clicked. It will change the flags
  * in-place. Hence its return type is void while also being able to
@@ -30,25 +49,24 @@ inline void MakeTaskbar(mockos::OS *this_os) {
   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
-  if (ImGui::Begin("##Taskbar", nullptr, taskbar_flags)) {
-    if (ImGui::Button("PWR", ImVec2(60, 30))) {
-      this_os->flags.kill = true;
+  if (ImGui::Begin("##Taskbar", nullptr, kTaskbarFlags)) {
+    for (size_t i = 0; i < kTaskbarButtons.size(); ++i) {
+      if (i > 0)
+        ImGui::SameLine();
+
+      if (ImGui::Button(kTaskbarButtons[i].label.c_str(),
+                        GetButtonSize(this_os))) {
+        kTaskbarButtons[i].action_on_press(this_os);
+      }
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Task Manager", ImVec2(100, 30))) {
-      // Code to open your taskManager window
-    }
-    
 
     ImGui::SameLine();
     mockos::MakeVerticalSeparator();
 
-    // Align the system clock to the far right side
-    float system_clock_width = 80.0f;
+    float system_clock_width = 110.0f;
     ImGui::SameLine(ImGui::GetWindowWidth() - system_clock_width);
 
-    // TODO: add system clock here
-    ImGui::Text("16:20 PM");
+    ImGui::Text("%s", this_os->system_clock.c_str());
   }
   ImGui::End();
 
