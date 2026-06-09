@@ -1,7 +1,8 @@
 #include "apps/task_manager.h"
 #include "game_loop.h"
-#include "interface/info.h"
 #include "interface/taskbar.h"
+#include "apps/info.h"
+#include "apps/text_editor.h"
 #include "os.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -47,6 +48,9 @@ int main() {
 
     if (this_os->flags.show_info)
       mockos::MakeInfo(this_os);
+
+    if (this_os->flags.show_text_editor)
+      mockos::MakeTextEditor(this_os);
 
     ImGui::Render();
     int display_w, display_h;

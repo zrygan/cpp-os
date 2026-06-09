@@ -20,9 +20,14 @@ struct TaskbarButton {
 
 const std::array<TaskbarButton, 5> kTaskbarButtons = {
     {{"PWR", [](mockos::OS *os) { os->flags.kill = true; }},
-     {"Task Manager", [](mockos::OS *os) { os->flags.show_taskbar = !os->flags.show_taskbar; }},
-     {"Info", [](mockos::OS *os) { os->flags.show_info = !os->flags.show_info; }},
-     {"PLACEHOLDER 1", [](mockos::OS *os) {}},
+     {"Task Manager",
+      [](mockos::OS *os) { os->flags.show_taskbar = !os->flags.show_taskbar; }},
+     {"Info",
+      [](mockos::OS *os) { os->flags.show_info = !os->flags.show_info; }},
+     {"Text Editor",
+      [](mockos::OS *os) {
+        os->flags.show_text_editor = !os->flags.show_text_editor;
+      }},
      {"PLACEHOLDER 2", [](mockos::OS *os) {}}}};
 
 inline ImVec2 GetButtonSize(mockos::OS *this_os) {

@@ -13,6 +13,7 @@ namespace mockos {
 struct Flags {
   bool show_info = false;
   bool show_taskbar = false;
+  bool show_text_editor = false;
   bool kill = false;
 };
 
