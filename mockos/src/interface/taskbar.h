@@ -21,9 +21,7 @@ struct TaskbarButton {
 const std::array<TaskbarButton, 5> kTaskbarButtons = {
     {{"PWR", [](mockos::Context *os) { os->flags.kill = true; }},
      {"Task Manager",
-      [](mockos::Context *os) {
-        os->flags.show_taskbar = !os->flags.show_taskbar;
-      }},
+      [](mockos::Context *os) { os->flags.show_task_manager = !os->flags.show_task_manager; }},
      {"Info",
       [](mockos::Context *os) { os->flags.show_info = !os->flags.show_info; }},
      {"Text Editor",

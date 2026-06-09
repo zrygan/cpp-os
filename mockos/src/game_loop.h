@@ -3,6 +3,7 @@
 #include "apps/task_manager.h"
 #include "apps/text_editor.h"
 #include "apps/theme_editor.h"
+#include "apps/task_manager.h"
 #include "context.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -26,7 +27,7 @@ inline void Update(mockos::Context *ctx, TaskManager &taskManager) {
   ctx->io->FontGlobalScale = (float)h / 720.0f;
 }
 
-inline void DrawApps(mockos::Context *ctx) {
+inline void DrawApps(mockos::Context *ctx, TaskManager &taskManager) {
   mockos::MakeTaskbar(ctx);
   if (ctx->flags.show_info)
     mockos::MakeInfo(ctx);
@@ -34,6 +35,8 @@ inline void DrawApps(mockos::Context *ctx) {
     mockos::MakeTextEditor(ctx);
   if (ctx->flags.show_theme_editor)
     mockos::MakeThemeEditor(ctx);
+  if (ctx -> flags.show_task_manager)
+    mockos::MakeTaskManager(ctx, taskManager);
 }
 
 inline void Render(mockos::Context *ctx) {
@@ -52,7 +55,7 @@ inline void RunLoop(mockos::Context *ctx, TaskManager &taskManager) {
     glfwPollEvents();
     NewFrame();
     Update(ctx, taskManager);
-    DrawApps(ctx);
+    DrawApps(ctx, taskManager);
     Render(ctx);
   }
 }

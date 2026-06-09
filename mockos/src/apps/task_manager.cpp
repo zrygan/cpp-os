@@ -1,5 +1,6 @@
 #include "task_manager.h"
 #include "imgui.h"
+#include "context.h"
 #include <algorithm>
 #include <cstdio>
 #include <random>
@@ -58,4 +59,3 @@ void TaskManager::randomize() {
   }
 }
 
-void TaskManager::display() {}
