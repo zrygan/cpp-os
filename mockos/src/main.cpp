@@ -2,6 +2,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "helpers.h"
+#include "apps/task_manager.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 
@@ -15,7 +16,7 @@ int main() {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
   GLFWwindow *window =
-      glfwCreateWindow(1280, 720, "ImGui WSL Project", nullptr, nullptr);
+      glfwCreateWindow(1280, 720, "mockos", nullptr, nullptr);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -32,6 +33,15 @@ int main() {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init("#version 130");
 
+  TaskManager taskManager;
+  taskManager.initialize({
+      {"System",       80, 60, 50, 30, 20},
+      {"Explorer",     45, 70, 30, 10,  5},
+      {"Chrome",       12, 40, 15, 55, 80},
+      {"Idle",          3, 90,  0,  2, 12},
+      {"antivirus.exe",60, 55, 40, 20, 35},
+  });
+
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -39,17 +49,14 @@ int main() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Demo ImGUI");
-    ImGui::Text("Hello, World!");
-    static float clear_color[3] = {0.45f, 0.55f, 0.60f};
-    ImGui::ColorEdit3("Background Color", clear_color);
-    ImGui::End();
+    taskManager.randomize();
+    taskManager.display();
 
     ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-    glClearColor(clear_color[0], clear_color[1], clear_color[2], 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
