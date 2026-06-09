@@ -30,10 +30,15 @@ const std::array<TaskbarButton, 5> kTaskbarButtons = {
       [](mockos::Context *os) {
         os->flags.show_text_editor = !os->flags.show_text_editor;
       }},
-     {"PLACEHOLDER 2", [](mockos::Context *os) {}}}};
+     {"Theme Editor", [](mockos::Context *os) {
+        os->flags.show_theme_editor = !os->flags.show_theme_editor;
+      }}}};
 
 inline ImVec2 GetButtonSize(mockos::Context *this_ctx) {
-  return ImVec2(100.0f, 30.0f);
+  int h;
+  glfwGetWindowSize(this_ctx->window, nullptr, &h);
+  float scale = (float)h / 720.0f;
+  return ImVec2(100.0f * scale, 30.0f * scale);
 }
 
 /**
