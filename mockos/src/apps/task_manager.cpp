@@ -1,6 +1,6 @@
 #include "task_manager.h"
-#include "imgui.h"
 #include "context.h"
+#include "imgui.h"
 #include <algorithm>
 #include <cstdio>
 #include <random>
@@ -27,8 +27,6 @@ void TaskManager::initialize() {
     }
   }
   this->pds = inputVector;
-
-
 }
 
 void TaskManager::randomize() {
@@ -64,14 +62,15 @@ void TaskManager::randomize() {
 void TaskManager::updateMetrics() {
   static double lastTime = 0.0;
   double now = ImGui::GetTime();
-  if (now - lastTime < 1.0) return;
+  if (now - lastTime < 1.0)
+    return;
   lastTime = now;
 
   static std::mt19937 rng(std::random_device{}());
   std::uniform_real_distribution<float> delta(-0.1, 0.1);
 
   // weights are arranged for CPU, Memory, GPU, Disk, Network usage
-  static std::vector<float> weights = { 4.0, 3.0, 2.0, 1.0, 1.0 };
+  static std::vector<float> weights = {4.0, 3.0, 2.0, 1.0, 1.0};
   static float totalWeight = 11.0;
 
   float raw[5];
@@ -82,8 +81,10 @@ void TaskManager::updateMetrics() {
     sum += raw[i];
   }
 
-  std::vector<float*> ptrs = { &performance.cpu, &performance.memory, &performance.gpu,
-                    &performance.disk, &performance.network };
-                    
-  for (int i = 0; i < 5; i++) *ptrs[i] = raw[i] / sum;
+  std::vector<float *> ptrs = {&performance.cpu, &performance.memory,
+                               &performance.gpu, &performance.disk,
+                               &performance.network};
+
+  for (int i = 0; i < 5; i++)
+    *ptrs[i] = raw[i] / sum;
 }

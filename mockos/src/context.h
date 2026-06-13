@@ -26,7 +26,14 @@ struct Context {
   std::string bios_version = "CSOPESY-MO2";
   std::string bios_date = "June 9, 2026";
   std::string GetSystemClock() const { return mockos::GetTimeString(true); }
+
+  ImVec4 gradient_color1 = ImVec4(0.15f, 0.15f, 0.25f, 1.0f);
+  ImVec4 gradient_color2 = ImVec4(0.05f, 0.05f, 0.05f, 1.0f);
+  bool gradient_horizontal = false;
+  bool animate_gradient = false;
+  float animation_speed = 1.0f;
 };
+
 /**
  * The imgui.ini file will ALWAYS be generated. This will save
  * the state of the GUI after termination.
@@ -62,7 +69,7 @@ inline void *Init(Context *this_ctx) {
   ImGui::CreateContext();
   this_ctx->io = &ImGui::GetIO();
 
-  // ImGui::StyleColorsDark();
+  ImGui::StyleColorsDark();
 
   ImGui_ImplGlfw_InitForOpenGL(this_ctx->window, true);
   ImGui_ImplOpenGL3_Init("#version 130");

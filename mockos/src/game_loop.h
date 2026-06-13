@@ -3,13 +3,12 @@
 #include "apps/task_manager.h"
 #include "apps/text_editor.h"
 #include "apps/theme_editor.h"
-#include "apps/task_manager.h"
 #include "context.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "interface/taskbar.h"
 #include "interface/background.h"
+#include "interface/taskbar.h"
 #include <GLFW/glfw3.h>
 
 namespace mockos {
@@ -37,7 +36,7 @@ inline void DrawApps(mockos::Context *ctx, TaskManager &taskManager) {
     mockos::MakeTextEditor(ctx);
   if (ctx->flags.show_theme_editor)
     mockos::MakeThemeEditor(ctx);
-  if (ctx -> flags.show_task_manager)
+  if (ctx->flags.show_task_manager)
     mockos::MakeTaskManager(ctx, taskManager);
 }
 
@@ -57,8 +56,8 @@ inline void RunLoop(mockos::Context *ctx, TaskManager &taskManager) {
     glfwPollEvents();
     NewFrame();
     Update(ctx, taskManager);
-    
-    RenderBackground();
+
+    RenderBackground(ctx);
 
     DrawApps(ctx, taskManager);
     Render(ctx);
