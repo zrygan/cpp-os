@@ -8,6 +8,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "interface/taskbar.h"
+#include "interface/background.h"
 #include <GLFW/glfw3.h>
 
 namespace mockos {
@@ -52,6 +53,9 @@ inline void RunLoop(mockos::Context *ctx, TaskManager &taskManager) {
     glfwPollEvents();
     NewFrame();
     Update(ctx, taskManager);
+
+    RenderBackground();
+
     DrawApps(ctx);
     Render(ctx);
   }
