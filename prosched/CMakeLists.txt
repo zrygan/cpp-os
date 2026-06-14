@@ -1,20 +1,31 @@
 cmake_minimum_required(VERSION 3.20)
 project(prosched)
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(prosched 
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/heads/main.zip
+)
+FetchContent_MakeAvailable(googletest)
+enable_testing()
+
+add_executable(prosched
+  # src/ 
   src/main.cpp
   src/controller/Controller.cpp
   src/view/View.cpp
   src/view/page/Menu.cpp
 )
+target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)
 
-target_include_directories(prosched PRIVATE 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
+add_executable(prosched_tests
+  # tests/
 )
+target_include_directories(prosched_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(prosched_tests GTest::gtest_main)
 
-target_compile_options(prosched PRIVATE
-  -Wall -Wextra -Wpedantic
-)
+include(GoogleTest)
+gtest_discover_tests(prosched_tests)
