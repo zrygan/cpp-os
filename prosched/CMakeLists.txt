@@ -21,11 +21,12 @@ add_executable(prosched
 target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)
 
-add_executable(prosched_tests
-  # tests/
-)
-target_include_directories(prosched_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(prosched_tests GTest::gtest_main)
+# REMINDER: UNCOMMENT THIS AS SOON AS WE HAVE TEST CASES
+# add_executable(prosched_tests
+#   # tests/
+# )
+# target_include_directories(prosched_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# target_link_libraries(prosched_tests GTest::gtest_main)
 
-include(GoogleTest)
-gtest_discover_tests(prosched_tests)
+# include(GoogleTest)
+# gtest_discover_tests(prosched_tests)
