@@ -1,12 +1,6 @@
 #include "Menu.h"
 #include <iostream>
 
-#include <windows.h>
-static HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-static void setColor(int color) {
-  SetConsoleTextAttribute(hConsole, static_cast<WORD>(color));
-}
-#else
 static void setColor(int color) {
   switch (color) {
   case 10:
