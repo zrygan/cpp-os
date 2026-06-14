@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        # REMEMBER TO ALWAYS ADD SYSTEM DEPENDENCIES HERE
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglfw3-dev libgl1-mesa-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build all targets
+        run: cmake --build build
+
+      - name: Test prosched
+        run: ctest --test-dir build/prosched --output-on-failure
+        continue-on-error: false
+
+      - name: Test mockos
+        run: ctest --test-dir build/mockos --output-on-failure
