@@ -17,8 +17,13 @@ add_executable(prosched
   src/controller/Controller.cpp
   src/view/View.cpp
   src/view/page/Menu.cpp
+
+  # scheduler
+  src/scheduler/Scheduler.cpp
+  src/scheduler/process/Process.cpp
+  src/scheduler/worker/Worker.cpp
 )
-target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)
 
 # REMINDER: UNCOMMENT THIS AS SOON AS WE HAVE TEST CASES

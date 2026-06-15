@@ -1,10 +1,10 @@
 #pragma once
 
-#include <bits/stdc++.h>
 #include <stdio.h>
 #include <vector>
+#include <string>
 
-#include "../config.h"
+#include "config.h"
 
 struct AlgoContext {
     std::string schedulerType;

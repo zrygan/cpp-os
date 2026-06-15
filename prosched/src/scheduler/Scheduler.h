@@ -1,12 +1,11 @@
 #pragma once
 
-#include <bits/stdc++.h>
 #include <stdio.h>
 #include <vector>
 #include <queue>
 #include <mutex>
 
-#include "../../config.h"
+#include "config.h"
 #include "process/Process.h"
 #include "../context.h"
 

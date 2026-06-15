@@ -1,5 +1,7 @@
-#include "Process.h"
 #include <cstdlib>
+#include <string>
+
+#include "Process.h"
 
 Process::Process(std::string processName, int pid, int arrivalTick)
     : processName(processName), pid(pid), arrivalTick(arrivalTick) {}

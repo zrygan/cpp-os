@@ -1,13 +1,12 @@
 #pragma once
 
-#include <bits/stdc++.h>
 #include <stdio.h>
 #include <thread>
 #include <mutex>
 
-#include "../config.h"
-#include "Process.h"
-#include "../context.h"
+#include "config.h"
+#include "../process/Process.h"
+#include "../../context.h"
 
 class Worker {
 public:

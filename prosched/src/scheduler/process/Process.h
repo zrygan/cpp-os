@@ -1,10 +1,10 @@
 #pragma once
 
-#include <bits/stdc++.h>
 #include <stdio.h>
 #include <vector>
+#include <string>
 
-#include "../../../config.h"
+#include "config.h"
 
 using namespace std;
 
@@ -12,8 +12,8 @@ enum class InstructionType { PRINT, DECLARE, ADD, SUBTRACT, SLEEP, FOR };
 
 struct Instruction {
   InstructionType instructionType;
-  vector<string> args;
-  vector<Instruction> body; // for FOR instructions
+  std::vector<string> args;
+  std::vector<Instruction> body; // for FOR instructions
   int repeatCount = 1;      // for FOR instructions
 };
 
