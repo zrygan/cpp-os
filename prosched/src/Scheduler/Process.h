@@ -18,15 +18,32 @@ struct Instruction {
 };
 
 class Process {
-public:
-  std::string name;
-  int id;
+public: 
+  enum ProcessState {
+    READY,
+    RUNNING,
+    WAITING,
+    FINISHED
+  };
+
+  Process(std::string name, int id, int arrivalTick);
+  void AddCommand(std::shared_ptr<Instruction> instruction);
+  void ExecuteCurrentCommand();
+  void MoveToNextLine(); // ????
+  void AssignCore();
+
+  bool IsFinished();
+  int GetPID();
+  std::string GetName();
+
+private:
+  std::string processName;
+  int pid;
   std::vector<Instruction> instructions;
   int currentInstructionIndex = 0;
   int arrivalTick = 0;
   int coreAssigned = -1;
-  bool finished = false;
+  ProcessState currentState;
   std::vector<std::string> logs;
-
-  Process(std::string name, int id, int arrivalTick);
+  
 };
