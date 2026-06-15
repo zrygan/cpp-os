@@ -1,6 +1,10 @@
 #ifndef MENU_H
 #define MENU_H
 
-void welcome();
+/**
+ * @brief Prints the CSOPESY ASCII art banner and the initial
+ *  commandline instructions to the terminal.
+ */
+void Welcome();
 
 #endif

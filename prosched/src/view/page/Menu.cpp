@@ -1,7 +1,13 @@
 #include "Menu.h"
 #include <iostream>
 
-static void setColor(int color) {
+/**
+ * @brief Sets the terminal text color using ANSI escape sequences.
+ *
+ * @param color The color code to apply
+ *  (e.g., 10 = green, 14 = yellow, 7 = default).
+ */
+static void SetColor(int color) {
   switch (color) {
   case 10:
     std::cout << "\033[32m";
@@ -15,23 +21,27 @@ static void setColor(int color) {
   }
 }
 
-void welcome() {
+/**
+ * @brief Prints the CSOPESY ASCII art banner followed by the initial
+ *  commandline instructions. Color-codes key lines using SetColor().
+ */
+void Welcome() {
   std::cout << R"(
 
   ______   _____   ____   _____   ______   _____  __     __
  / ____/  / ___/  / __ \ |  __ \ |  ____| / ____| \ \   / /
-| |      | (___  | |  | || |__) || |__   | (___    \ \_/ / 
-| |       \___ \ | |  | ||  ___/ |  __|   \___ \    \   /  
-| |____   ____) || |__| || |     | |____  ____) |    | |   
- \_____| |_____/  \____/ |_|     |______||_____/     |_|   
+| |      | (___  | |  | || |__) || |__   | (___    \ \_/ /
+| |       \___ \ | |  | ||  ___/ |  __|   \___ \    \   /
+| |____   ____) || |__| || |     | |____  ____) |    | |
+ \_____| |_____/  \____/ |_|     |______||_____/     |_|
 
 )" << std::endl;
-  setColor(10);
+  SetColor(10);
   std::cout << "Hello, welcome to the CSOPESY commandline!" << std::endl;
-  setColor(14);
+  SetColor(14);
   std::cout << "Type 'exit' to quit, 'clear' to clear the screen." << std::endl;
   std::cout << "\n ** IMPORTANT: Type 'initialize' to load config and start "
                "system ** \n"
             << std::endl;
-  setColor(7);
+  SetColor(7);
 }
