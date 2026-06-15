@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "../config.h"
+#include "../../../config.h"
 
 using namespace std;
 
@@ -28,7 +28,7 @@ public:
 
   Process(std::string name, int id, int arrivalTick);
   void AddCommand(std::shared_ptr<Instruction> instruction);
-  void ExecuteCurrentCommand();
+  void ExecuteCurrentCommand(int coreNum);
   void AssignCore();
 
   bool IsFinished();
@@ -41,8 +41,6 @@ private:
   std::vector<Instruction> instructions;
   int currentInstructionIndex = 0;
   int arrivalTick = 0;
-  int coreAssigned = -1;
   ProcessState currentState;
-  std::vector<std::string> logs;
   
 };

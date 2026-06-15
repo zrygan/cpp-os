@@ -1,14 +1,14 @@
 #include "Process.h"
 #include <cstdlib>
 
-Process::Process(std::string name, int id, int arrivalTick)
+Process::Process(std::string processName, int pid, int arrivalTick)
     : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
 
 void Process::AddCommand(std::shared_ptr<Instruction> instruction) {
   instructions.push_back(*instruction);
 }
 
-void Process::ExecuteCurrentCommand(){
+void Process::ExecuteCurrentCommand(int coreNum){
   
 }
 

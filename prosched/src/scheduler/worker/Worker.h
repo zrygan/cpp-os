@@ -3,6 +3,7 @@
 #include <bits/stdc++.h>
 #include <stdio.h>
 #include <thread>
+#include <mutex>
 
 #include "../config.h"
 #include "Process.h"
@@ -12,18 +13,18 @@ class Worker {
 public:
     Worker(int coreNum);
 
-    void start();
-    void stop();
-    void assignProcess(Process* p);
+    void Start();
+    void Stop();
+    void AssignProcess(Process* p);
 
 private:
     AlgoContext ctx;
     int coreNum;
     Process* currentProcess = nullptr;
     std::thread workerThread;
+    std::mutex workerMutex;
     bool running = false;
 
     void ThreadTask();
-    void WriteLogs();
 
 };

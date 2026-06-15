@@ -4,14 +4,15 @@
 #include <stdio.h>
 #include <vector>
 #include <queue>
+#include <mutex>
 
-#include "../config.h"
-#include "Process.h"
+#include "../../config.h"
+#include "process/Process.h"
 #include "../context.h"
 
 class Scheduler {
 public:
-    Scheduler(ConfigStruct *config);
+    Scheduler(AlgoContext ctx);
 
     void Start();
     void Stop();
@@ -24,6 +25,7 @@ private:
     std::vector<Process> processes;
     std::queue<Process> processQueue;
     std::vector<std::thread> workerThreads;
+    std::mutex schedulerMutex;
     bool running = false;
 
     void SchedulerLoop();
