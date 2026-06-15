@@ -9,13 +9,8 @@ void Process::AddCommand(std::shared_ptr<Instruction> instruction) {
 }
 
 void Process::ExecuteCurrentCommand(){
-
+  
 }
-
-void Process::MoveToNextLine() {
-
-}
-
 
 void Process::AssignCore() {
 
@@ -25,7 +20,6 @@ bool Process::IsFinished() {
   if (currentState == FINISHED){
     return true;
   }
-
   return false;
 }
 

@@ -29,7 +29,6 @@ public:
   Process(std::string name, int id, int arrivalTick);
   void AddCommand(std::shared_ptr<Instruction> instruction);
   void ExecuteCurrentCommand();
-  void MoveToNextLine(); // ????
   void AssignCore();
 
   bool IsFinished();
