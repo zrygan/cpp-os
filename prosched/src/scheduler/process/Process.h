@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "config.h"
-#include "../../commands/Command.h"
+#include "src/commands/Command.h"
 
 using namespace std;
 
@@ -41,10 +41,10 @@ public:
    * 
    * @return a boolean value returns true if all commands run successfully,
    * returns false if a command is unsuccessful
-   * @param coreNum for PRINT command?
+   * @param currentInstructionIndex indicated index of command to be executed ?
    */
   bool ExecuteCurrentCommand(
-    int coreNum
+    int currentInstructionIndex
   );
 
   /**

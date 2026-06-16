@@ -11,6 +11,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 enable_testing()
 
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.txt"
+    "${CMAKE_CURRENT_BINARY_DIR}/config.txt"
+    COPYONLY
+)
+
 add_executable(prosched
   # src/ 
   src/main.cpp

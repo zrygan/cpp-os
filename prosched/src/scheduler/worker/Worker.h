@@ -5,8 +5,8 @@
 #include <mutex>
 
 #include "config.h"
-#include "../process/Process.h"
-#include "../../context.h"
+#include "src/scheduler/process/Process.h"
+#include "src/context.h"
 
 class Worker {
 public:

@@ -10,15 +10,7 @@ using namespace std;
 int main() {
   printf("hello, world!\n");
 
-  ConfigStruct *cs = fromFile();
-  // AlgoContext ctx = AlgoContext::buildConfig(cs);
-  
-  if (cs) {
-    std::cout << cs->batch_process_freq;
-  }
-
   Controller controller;
-  controller.initialize();
   controller.run();
   return 0;
 }

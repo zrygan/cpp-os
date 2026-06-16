@@ -24,7 +24,7 @@ struct ConfigStruct {
 /**
  * @brief This constant stores the fixed filename of the config file.
  */
-const std::string CONFIG_FILENAME = "config.txt";
+const std::string CONFIG_FILENAME = "prosched/config.txt";
 
 /**
  * @brief This function is for DEBUGGING PURPOSES only. This will
