@@ -14,7 +14,7 @@ void Process::ExecuteCurrentCommand(int coreNum){
   
 }
 
-void Process::AssignCore() {
+void Process::AssignCore(int coreNum) {
 
 }
 
