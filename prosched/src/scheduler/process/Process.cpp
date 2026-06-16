@@ -2,19 +2,20 @@
 #include <string>
 
 #include "Process.h"
+#include "../../commands/Command.h"
 
 Process::Process(std::string processName, int pid, int arrivalTick)
     : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
 
-void Process::AddCommand(std::shared_ptr<Instruction> instruction) {
-  instructions.push_back(*instruction);
+bool Process::AddCommand(std::shared_ptr<Command> command) {
+  commands.push_back(*command);
 }
 
-void Process::ExecuteCurrentCommand(int coreNum){
+bool Process::ExecuteCurrentCommand(int coreNum){
   
 }
 
-void Process::AssignCore(int coreNum) {
+bool Process::AssignCore(int coreNum) {
 
 }
 

@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "config.h"
-#include "../commands/Command.h"
+#include "../../commands/Command.h"
 
 using namespace std;
 
