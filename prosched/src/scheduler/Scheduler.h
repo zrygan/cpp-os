@@ -12,6 +12,13 @@
 
 class Scheduler {
 public:
+    /** 
+     * \brief Creates a scheduler instance
+     * 
+     * Initializes the scheduler using the provided scheduling configuration
+     * 
+     * @param ctx Scheduling configuration and algorithm settings
+     */
     Scheduler(AlgoContext ctx);
 
     /**
@@ -24,8 +31,7 @@ public:
      * and return a boolean value
      * turn running = true
      * 
-     * @param workerThreads is a vector of CPU worker threads
-     * to be used by the main scheduler loop
+     * @param workerThreads is a vector of CPU worker threads available for scheduling
      * @return a boolean value, where true if all worker threads
      * have been joined, else false
      */
@@ -43,14 +49,18 @@ public:
     /**
      * \brief Adds a Process to the processQueue ?
      * 
-     * detailed description
-     * @param p is the process to be added
+     * Registers the specified process with the scheduler and places it into the
+     * appropriate scheduling structure 
+     * 
+     * @param p A pointer to the process to be added
      * @return self if success, else returns none
      */
     Process AddProcess(Process *p);
 
     /**
      * \brief prints the current processes when "screen -ls" is called
+     * 
+     * Outputs the current process list and their states
      */
     void PrintProcesses();
 
@@ -66,7 +76,8 @@ private:
     /** 
      * \brief the main scheduler loop
      * 
-     * 
+     * Continuously selects and dispatches processes according to
+     * the configured scheduling algorithm until the scheduler is stopped. 
     */
     void SchedulerLoop();
 };
