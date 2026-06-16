@@ -2,6 +2,8 @@
 
 #include "Worker.h"
 
+Worker::Worker(int coreNum) : coreNum(coreNum) {}
+
 void Worker::Start() {
     running = true;
 }

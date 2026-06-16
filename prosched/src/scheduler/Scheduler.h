@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+#include <thread>
 
 #include "config.h"
 #include "process/Process.h"

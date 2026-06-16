@@ -3,19 +3,12 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "config.h"
+#include "../commands/Command.h"
 
 using namespace std;
-
-enum class InstructionType { PRINT, DECLARE, ADD, SUBTRACT, SLEEP, FOR };
-
-struct Instruction {
-  InstructionType instructionType;
-  std::vector<string> args;
-  std::vector<Instruction> body; // for FOR instructions
-  int repeatCount = 1;      // for FOR instructions
-};
 
 class Process {
 public: 
@@ -27,7 +20,7 @@ public:
   };
 
   Process(std::string name, int id, int arrivalTick);
-  void AddCommand(std::shared_ptr<Instruction> instruction);
+  void AddCommand(std::shared_ptr<Command> command);
   void ExecuteCurrentCommand(int coreNum);
   void AssignCore();
 
@@ -38,7 +31,7 @@ public:
 private:
   std::string processName;
   int pid;
-  std::vector<Instruction> instructions;
+  std::vector<Command> commands;
   int currentInstructionIndex = 0;
   int arrivalTick = 0;
   ProcessState currentState;
