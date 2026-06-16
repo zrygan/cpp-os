@@ -14,10 +14,15 @@ class Scheduler {
 public:
     Scheduler(AlgoContext ctx);
 
-    void Start();
+    // these two have input?
+    void Start(
+        // dfn some inputs (workers)
+    );
     void Stop();
 
-    void AddProcess(Process *p);
+    // for AddProcess return the process itself on success.
+    // none if not success.
+    Process AddProcess(Process *p);
     void PrintProcesses();
 
 private:
