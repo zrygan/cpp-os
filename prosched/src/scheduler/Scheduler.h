@@ -73,11 +73,29 @@ private:
     AlgoContext ctx;
     std::thread schedulerThread;
     std::vector<Process> processes;
-    std::queue<Process> processQueue;
+    std::queue<Process*> processQueue;
     std::vector<Worker*> workers;
     std::mutex schedulerMutex;
     bool running = false;
+    bool generatingProcesses = false;
 
+    /**
+     * @brief First-Come First-Serve Scheduler Algorithm
+     * 
+     * A non-preemptive algorithm in which processes are attended to in
+     * the order they arrive in the process queue. For each CPU worker 
+     * in the workers vector assign processes from the process queue to 
+     * a specific Worker to be executed.
+     */
+    void FCFS();
+
+    /**
+     * @brief Round Robin Scheduler
+     * 
+     * detailed desc
+     */
+    void RoundRobin();
+    
     /** 
      * @brief the main scheduler loop
      * 

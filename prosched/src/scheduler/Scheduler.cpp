@@ -5,6 +5,7 @@
 #include <new>
 #include <optional>
 #include <chrono>
+#include <queue>
 
 #include "Scheduler.h"
 #include "src/scheduler/process/Process.h"
@@ -27,7 +28,7 @@ bool Scheduler::Start(){
     running = true;
 
     // @aaron just edit this if something changes with how Worker functions 
-    for (int i = 0; i <= this->ctx.numCpu; i++){
+    for (int i = 0; i < this->ctx.numCpu; i++){
         Worker* w = new Worker(i, ctx);
 
         try{
@@ -56,17 +57,19 @@ void Scheduler::Stop(){
         w->Stop();
     }
 
-    std::cout << "Scheduler stopped\n";
+    std::cout << "Scheduler stopped\n\n";
 }
 
 Scheduler* Scheduler::SchedulerLoop() {
+    int cpuCycles = 0;
+
     while(running) {
-        std::lock_guard<std::mutex> lock(schedulerMutex);
+        cpuCycles++;
 
         if (this->ctx.schedulerType == "fcfs"){
-            // add fcfs algorithm here
+            FCFS();
         } else if (this->ctx.schedulerType == "rr"){
-
+            RoundRobin();
         } else {
             std::cout << this->ctx.schedulerType << " is not a valid scheduler type\n";
             return nullptr;
@@ -76,6 +79,23 @@ Scheduler* Scheduler::SchedulerLoop() {
     }
 
     return this;
+}
+
+void Scheduler::FCFS() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+
+    std::cout << "\nFCFS Scheduler\n";
+    for(Worker *w : workers){
+        if(!processQueue.empty()) {
+            Process* p = processQueue.front();
+            processQueue.pop();
+            w->AssignProcess(p);
+        }
+    }
+}
+
+void Scheduler::RoundRobin() {
+    // @aaron future func for rr
 }
 
 Process* Scheduler::AddProcess(Process* p){
