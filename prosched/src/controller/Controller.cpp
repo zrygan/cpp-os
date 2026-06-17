@@ -46,7 +46,9 @@ void Controller::run() {
 
       if (!isInitialized) {
         if (input == "initialize"){
+          
             initialize();
+            
         } else {
           std::cout << "\nType \"initialize\" to access commands\n";
         }
@@ -59,6 +61,12 @@ void Controller::run() {
           } else {
             std::cout << "\nScheduler has not started, run \"scheduler-start\" to start\n\n";
           }
+        } else if (input == "screen -ls") {
+          this->scheduler->PrintProcesses();
+        } else if (input == "screen -s") { // append process name
+
+        } else if (input == "report-util") {
+
         } else {
           std::cout << "\nNot a valid command\n";
         }

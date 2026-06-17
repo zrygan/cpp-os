@@ -11,7 +11,7 @@
 namespace prosched {
 
 /** @enum Keyword
-    @brief All the valid instruction types in the marq language.
+    @brief All the valid instruction types for the OS emulator.
 
     Defines the set of keywords that the interpreter recognizes and can execute.
 */
@@ -42,7 +42,7 @@ struct Statement {
 };
 
 /** @class Interpreter
-    @brief A simple string-based language interpreter for the marq runtime.
+    @brief A simple string-based language interpreter for the prosched runtime.
 
     Marq is a mini-programming language that executes from a single string.
     It supports variables, arithmetic operations, loops, and simple I/O.
@@ -475,4 +475,4 @@ public:
   }
 };
 
-} // namespace marq
+} // namespace prosched

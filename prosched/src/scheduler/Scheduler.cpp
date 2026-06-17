@@ -29,7 +29,6 @@ bool Scheduler::Start(){
     // ehhh
     generatingProcesses = true;
 
-    // @aaron just edit this if something changes with how Worker functions 
     for (int i = 0; i < this->ctx.numCpu; i++){
         Worker* w = new Worker(i, ctx);
 
@@ -63,11 +62,21 @@ void Scheduler::Stop(){
     std::cout << "Scheduler stopped\n\n";
 }
 
-Process* Scheduler::generateProcess(AlgoContext *ctx, int id, int tick) {
+Process* Scheduler::generateProcess(AlgoContext *ctx, int pid, int tick) {
 
-  std::string name = std::to_string(id) + std::to_string(tick);
-  Process *p = new Process(name, id, tick);
+  std::string name = "process" + std::to_string(nextPID);
+  Process *p = new Process(name, pid, tick);
 
+  int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns - this->ctx.minIns + 1);
+
+  // only prints for now 
+  for (int i = 0; i < commandAmount; i++) {
+    p->AddInstruction("PRINT(\"Hello world from " + name + "!\")");
+  }
+
+  processQueue.push(p);
+  processes.push_back(p);
+  
   return p;
 }
 
@@ -77,7 +86,7 @@ Scheduler* Scheduler::SchedulerLoop() {
     while(running) {
         cpuCycles++;
 
-        if (generatingProcesses){
+        if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0){
             Process* p = generateProcess(&this->ctx, nextPID++, cpuCycles);
             std::lock_guard<std::mutex> lock(schedulerMutex);
             processQueue.push(p);

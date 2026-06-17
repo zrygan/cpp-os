@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "config.h"
-#include "src/commands/Command.h"
+#include "src/commands/interpreter.hpp"
 
 using namespace std;
 
@@ -19,34 +19,34 @@ public:
     FINISHED
   };
 
-  Process(std::string name, int id, int arrivalTick);
+  Process(std::string processName, int id, int arrivalTick);
 
+  // @stephen @aaron this was prev std::shared_ptr<Command> AddCommand(std::shared_ptr<Command> command);
   /**
    * @brief adds a command to the process
    * 
    * Appends the specified randomized command to Process' commands vector
    * 
-   * @param command Shared pointer to the command to be added
+   * @param instruction 
    * @return If adding a command is successful it returns the 
    * specific command, else unsuccessful return nullptr
    */
-  std::shared_ptr<Command> AddCommand(
-    std::shared_ptr<Command> command
-  );
+  std::string AddInstruction(std::string instruction);
 
+  // @stephen @aaron this was previously "Command* ExecuteCurrentCommand(int currentInstructionIndex)"
   /**
-   * @brief Executes the current randomized command assigned to the Process
+   * @brief Executes all commands in statements
    * 
    * disclaimer: function isnt implemented yet so this is how i think it would work atm
-   * Takes the Process' commands vector and executes each command until
-   * the commands vector is empty or if a command fails
+   * Takes the statements vector and executes each command until
+   * statements is empty 
    * 
+   * @param coreNum
    * @return If executing a command was successful the command is returned, else
-   * unsuccessfull a nullptr is returned
-   * @param currentInstructionIndex indicated index of command to be executed ?
+   * unsuccessfull a nullptr is returned 
    */
-  Command* ExecuteCurrentCommand(
-    int currentInstructionIndex
+  std::string ExecuteInstructions (
+    int coreNum
   );
 
   /**
@@ -85,13 +85,30 @@ public:
    */
   std::string GetName();
 
+  /**
+   * @brief Gets the process logs
+   * 
+   * @return vector of logs
+   */
+  std::vector<std::string> GetLogs();
+
 private:
   std::string processName;
   int pid;
   int coreNum;
-  std::vector<Command> commands;
   int currentInstructionIndex = 0;
   int arrivalTick = 0;
-  ProcessState currentState;
+  ProcessState currentState = READY;
+  std::vector<std::string> logs;
+
+  prosched::Interpreter interpreter;
+  std::vector<prosched::Statement> statements;
+
+  /**
+   * @brief gets the current timestamp of a process
+   * 
+   * @return the timestamp string
+   */
+  std::string GetTimestamp();
   
 };
