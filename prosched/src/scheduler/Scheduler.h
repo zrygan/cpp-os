@@ -141,15 +141,15 @@ namespace prosched {
             std::string name = "process" + std::to_string(nextPID);
             Process *p = new Process(name, pid, tick);
 
+            // std::cout << p->GetName() << "\n";
+
             int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns - this->ctx.minIns + 1);
 
             // only prints for now 
             for (int i = 0; i < commandAmount; i++) {
                 p->AddInstruction("PRINT(\"Hello world from " + name + "!\")");
+                // std::cout << p->GetName() << " added an instruction\n";
             }
-
-            processQueue.push(p);
-            processes.push_back(p);
             
             return p;
         }
@@ -186,7 +186,7 @@ namespace prosched {
         void FCFS() {
             std::lock_guard<std::mutex> lock(schedulerMutex);
 
-            std::cout << "\nFCFS Scheduler\n";
+            // std::cout << "\nFCFS Scheduler\n";
             for(Worker *w : workers){
                 if(!processQueue.empty()) {
                    if(!w->IsBusy()){
@@ -212,10 +212,9 @@ namespace prosched {
          * 
          * Continuously selects and dispatches processes according to
          * the configured scheduling algorithm until the scheduler is stopped. 
-         * 
-         * @return A scheduler with associated context upon loop stop
+         *
         */
-        Scheduler* SchedulerLoop() {
+        void SchedulerLoop() {
             int cpuCycles = 0;
 
             while(running) {
@@ -234,7 +233,7 @@ namespace prosched {
                     RoundRobin();
                 } else {
                     std::cout << this->ctx.schedulerType << " is not a valid scheduler type\n";
-                    return nullptr;
+                    return;
                 }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
