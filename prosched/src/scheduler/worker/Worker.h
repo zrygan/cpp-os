@@ -78,11 +78,12 @@ namespace prosched {
         prosched::Process* AssignProcess(prosched::Process* p) {
             std::lock_guard<std::mutex> lock(workerMutex);
             if (currentProcess != nullptr) {
-                std::cout << "Worker on core " << coreNum << " is already assigned a process\n";
+                // std::cout << "Worker on core " << coreNum << " is already assigned a process\n";
                 return nullptr;
             }
             currentProcess = p;
-            return currentProcess;
+            if (p) p->AssignCore(coreNum);
+            return p;
         }
 
         /**

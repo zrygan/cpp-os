@@ -54,7 +54,7 @@ namespace prosched {
       }
     }
 
-    // @stephen @aaron this was previously "Command* ExecuteCurrentCommand(int currentInstructionIndex)"
+    // @stephen @aaron this was previously "Command* ExecuteCurrentCommand(int currentInstructionIndex) roger
     /**
      * @brief Executes all commands in statements
      * 
@@ -164,6 +164,15 @@ namespace prosched {
     }
 
     /**
+     * @brief Gets the assigned CPU core number
+     * 
+     * @return the assigned CPU core number
+     */
+    int GetCoreNum() {
+      return coreNum;
+    }
+
+    /**
      * @brief Gets the process logs
      * 
      * @return vector of logs
@@ -199,5 +208,7 @@ namespace prosched {
     }
     
   };
+
+
 
 } // namespace prosched

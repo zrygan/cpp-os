@@ -118,15 +118,22 @@ namespace prosched {
          * Outputs the current process list and their states
          */
         void PrintProcesses() {
-            // screen calls (screen -ls)
-
-            // running processes
-            // <process name> <timestamp> Core: <coreNum> <instruction progress>
-
-            // finished processes
-            // <process name> <timestamp> Finished <instruction progress>
+            std::lock_guard<std::mutex> lock(schedulerMutex);
+            std::cout << "\n--- Running Processes ---\n";
+            for (Process* p : processes) {
+                if (!p->IsFinished()) {
+                    std::cout << p->GetName() << "   (PID " << p->GetPID() 
+                            << ")   Core: " << p->GetCoreNum() << "\n";
+                }
+            }
+            std::cout << "\n--- Finished Processes ---\n";
+            for (Process* p : processes) {
+                if (p->IsFinished()) {
+                    std::cout << p->GetName() << "   (PID " << p->GetPID() << ")   Finished\n";
+                }
+            }
+            std::cout << std::endl;
         }
-
         /**
          * @brief
          * 
