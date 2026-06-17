@@ -13,7 +13,7 @@
 class Scheduler {
 public:
     /** 
-     * \brief Creates a scheduler instance
+     * @brief Creates a scheduler instance
      * 
      * Initializes the scheduler using the provided scheduling configuration
      * 
@@ -22,7 +22,7 @@ public:
     Scheduler(AlgoContext ctx);
 
     /**
-     * \brief starts the main scheduler loop
+     * @brief starts the main scheduler loop
      * 
      * disclaimer: function isnt implemented yet so this is how i think it would work atm
      * Starting the scheduler starts a scheduler thread and calls on n number of Workers 
@@ -40,14 +40,14 @@ public:
     );
 
     /**
-     * \brief Stops the Scheduler from running
+     * @brief Stops the Scheduler from running
      * 
      * running = false, stops all worker threads and the scheduler thread
      */
     void Stop();
 
     /**
-     * \brief Adds a Process to the processQueue ?
+     * @brief Adds a Process to the processQueue
      * 
      * Registers the specified process with the scheduler and places it into the
      * appropriate scheduling structure 
@@ -55,10 +55,10 @@ public:
      * @param p A pointer to the process to be added
      * @return self if success, else returns none
      */
-    Process AddProcess(Process *p);
+    Process* AddProcess(Process *p);
 
     /**
-     * \brief prints the current processes when "screen -ls" is called
+     * @brief prints the current processes when "screen -ls" is called
      * 
      * Outputs the current process list and their states
      */
@@ -74,10 +74,12 @@ private:
     bool running = false;
 
     /** 
-     * \brief the main scheduler loop
+     * @brief the main scheduler loop
      * 
      * Continuously selects and dispatches processes according to
      * the configured scheduling algorithm until the scheduler is stopped. 
+     * 
+     * @return A scheduler with associated context upon loop stop
     */
-    void SchedulerLoop();
+    Scheduler* SchedulerLoop();
 };

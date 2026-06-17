@@ -4,18 +4,21 @@
 
 Worker::Worker(int coreNum) : coreNum(coreNum) {}
 
-void Worker::Start() {
+bool Worker::Start() {
     running = true;
+    return running;
 }
 
 void Worker::Stop(){
     running = false;
 }
 
-void Worker::AssignProcess(Process* p) {
+Process* Worker::AssignProcess(Process* p) {
     currentProcess = p;
+    return currentProcess;
 }
 
-void Worker::ThreadTask() {
+Worker* Worker::ThreadTask() {
     currentProcess->ExecuteCurrentCommand(coreNum);
+    return this;
 }

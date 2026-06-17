@@ -11,21 +11,22 @@
 class Worker {
 public:
     /** 
-     * \brief Creates a worker iassociated with a CPU core
+     * @brief Creates a worker iassociated with a CPU core
      * 
      * @param coreNum the identifier of the CPU core assigned to this worker
      */
     Worker(int coreNum);
 
     /**
-     * \brief Starts worker execution
+     * @brief Starts worker execution
      * 
      * Launches the worker thread and begins processing the assigned process
+     * @return true if start is successful
      */
-    void Start();
+    bool Start();
 
     /**
-     * \brief Stops worker execution
+     * @brief Stops worker execution
      * 
      * Signals the worker thread to terminate
      */
@@ -40,8 +41,9 @@ public:
      * be executed when the worker is running.
      * 
      * @param p a pointer to the Process to assign
+     * @return the assigned process if successful
      */
-    void AssignProcess(Process* p);
+    Process* AssignProcess(Process* p);
 
 private:
     AlgoContext ctx;
@@ -51,9 +53,10 @@ private:
     std::mutex workerMutex;
     bool running = false;
     /**
-     * \brief Worker thread's main execution loop
+     * @brief Worker thread's main execution loop
      * 
+     * @return self if successful once stopped
      */
-    void ThreadTask();
+    Worker* ThreadTask();
 
 };

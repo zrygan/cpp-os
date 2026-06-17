@@ -45,7 +45,6 @@ void Controller::run() {
       std::cout << "Enter Input: ";
       std::cin >> input;
 
-      // actions here
       if (!isInitialized) {
         if (input == "initialize"){
             initialize();
