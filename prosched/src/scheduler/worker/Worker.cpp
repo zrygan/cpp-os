@@ -58,12 +58,33 @@ Worker* Worker::ThreadTask() {
 
         if (p != nullptr) {
             p->ExecuteCurrentCommand(coreNum);
-            std::cout << "Worker on core " << coreNum << " is executing process " << currentProcess->GetName() << "\n";
+            // std::cout << "Worker on core " << coreNum << " is executing process " << currentProcess->GetName() << "\n";
             
+            if (p->IsFinished()) {
+                std::lock_guard<std::mutex> lock(workerMutex);
+                currentProcess = nullptr; // Process finished, core is now free
+            }
         } else {
-            std::cout << "Worker on core " << coreNum << " is idle\n";
+            // std::cout << "Worker on core " << coreNum << " is idle\n";
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
     return this;
+}
+
+bool Worker::IsRunning() const {
+    return running;
+}
+
+bool Worker::IsBusy() const {
+    return currentProcess != nullptr;
+}
+
+int Worker::GetCoreNum() const {
+    return coreNum;
+}
+
+Process* Worker::GetCurrentProcess() const {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    return currentProcess;
 }
