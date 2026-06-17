@@ -35,6 +35,7 @@ target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)
 add_executable(prosched_tests
   tests/SchedulerTest.cpp
   tests/WorkerTest.cpp
+  tests/ProcessTest.cpp
   src/scheduler/Scheduler.cpp
   src/scheduler/process/Process.cpp
   src/scheduler/worker/Worker.cpp
