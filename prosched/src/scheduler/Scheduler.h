@@ -31,13 +31,10 @@ public:
      * and return a boolean value
      * turn running = true
      * 
-     * @param workerThreads is a vector of CPU worker threads available for scheduling
      * @return a boolean value, where true if all worker threads
      * have been joined, else false
      */
-    bool Start(
-        std::vector<thread> workerThreads
-    );
+    bool Start();
 
     /**
      * @brief Stops the Scheduler from running
@@ -64,12 +61,19 @@ public:
      */
     void PrintProcesses();
 
+    /**
+     * @brief getter for running boolean
+     * 
+     * @return boolean value if scheduler is running or not
+     */
+    bool IsRunning();
+
 private:
     AlgoContext ctx;
     std::thread schedulerThread;
     std::vector<Process> processes;
     std::queue<Process> processQueue;
-    std::vector<std::thread> workerThreads;
+    std::vector<Worker*> workers;
     std::mutex schedulerMutex;
     bool running = false;
 

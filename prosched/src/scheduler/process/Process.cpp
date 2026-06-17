@@ -10,6 +10,7 @@ Process::Process(std::string processName, int pid, int arrivalTick)
     : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
 
 std::shared_ptr<Command>* Process::AddCommand(std::shared_ptr<Command> command) {
+  // temp
   try {
     commands.push_back(*command);
     return &command;

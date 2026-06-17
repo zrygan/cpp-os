@@ -2,7 +2,7 @@
 
 #include "Worker.h"
 
-Worker::Worker(int coreNum) : coreNum(coreNum) {}
+Worker::Worker(int coreNum, AlgoContext ctx) : coreNum(coreNum), ctx(ctx) {}
 
 bool Worker::Start() {
     running = true;

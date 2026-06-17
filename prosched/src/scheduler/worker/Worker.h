@@ -14,8 +14,9 @@ public:
      * @brief Creates a worker iassociated with a CPU core
      * 
      * @param coreNum the identifier of the CPU core assigned to this worker
+     * @param ctx 
      */
-    Worker(int coreNum);
+    Worker(int coreNum, AlgoContext ctx);
 
     /**
      * @brief Starts worker execution

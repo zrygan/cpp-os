@@ -19,8 +19,6 @@ void Controller::initialize() {
     return;
   }
 
-  std::cout << cs->batch_process_freq;
-
   this->ctx = AlgoContext::buildConfig(cs);
   this->scheduler = new Scheduler(this->ctx);
   this->isInitialized= true;
@@ -41,6 +39,7 @@ void Controller::run() {
   std::string input;
 
     // while command not exit keep i/o open
+    // wow this is messy lols
     while(input != "exit"){
       std::cout << "Enter Input: ";
       std::cin >> input;
@@ -50,6 +49,18 @@ void Controller::run() {
             initialize();
         } else {
           std::cout << "\nType \"initialize\" to access commands\n";
+        }
+      } else {
+        if (input == "scheduler-start") {
+          this->scheduler->Start();
+        } else if (input == "scheduler-stop") {
+          if (this->scheduler->IsRunning() == true) {
+            this->scheduler->Stop();
+          } else {
+            std::cout << "\nScheduler has not started, run \"scheduler-start\" to start\n\n";
+          }
+        } else {
+          std::cout << "\nNot a valid command\n";
         }
       }
     }
