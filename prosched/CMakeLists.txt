@@ -25,9 +25,9 @@ add_executable(prosched
   src/view/page/Menu.cpp
 
   # scheduler
-  src/scheduler/Scheduler.cpp
-  src/scheduler/process/Process.cpp
-  src/scheduler/worker/Worker.cpp
+  src/scheduler/Scheduler.h
+  src/scheduler/process/Process.h
+  src/scheduler/worker/Worker.h
 )
 target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)

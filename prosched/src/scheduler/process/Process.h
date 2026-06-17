@@ -28,14 +28,14 @@ namespace prosched {
       FINISHED
     };
 
-    Process(std::string processName, int id, int arrivalTick)
+    Process(std::string processName, int pid, int arrivalTick)
     : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
 
     // @stephen @aaron this was prev std::shared_ptr<Command> AddCommand(std::shared_ptr<Command> command);
     /**
      * @brief adds a command to the process
      * 
-     * Appends the specified randomized command to Process' commands vector
+     * Appends the specified randomized command to Process' statements vector
      * 
      * @param instruction 
      * @return If adding a command is successful it returns the 
@@ -43,7 +43,7 @@ namespace prosched {
      */
     std::string AddInstruction(std::string instruction) {
       try {
-        auto stmts = interpreter.parse(instruction);
+        std::vector<Statement> stmts = interpreter.parse(instruction);
         statements.insert(statements.end(), stmts.begin(), stmts.end());
         return instruction;
       } catch (const std::bad_alloc& e) {
@@ -61,7 +61,7 @@ namespace prosched {
      * statements is empty 
      * 
      * @param coreNum
-     * @return If executing a command was successful the command is returned, else
+     * @return If executing the instructions were successful the hmmm, else
      * unsuccessfull a nullptr is returned 
      */
     std::vector<prosched::Statement> ExecuteInstructions (int coreNum) {
@@ -95,8 +95,7 @@ namespace prosched {
     /**
      * @brief Assigns a CPU core to the Process
      * 
-     * disclaimer: function isnt implemented yet so this is how i think it would work atm
-     * Stores the identifier of the CPU core responsible for executing this process (?)
+     * Stores the identifier of the CPU core responsible for executing this process
      * 
      * @param coreNum indicates the CPU core to be assigned
      * @return coreNum is returned if the assignment was successful; otherwise -1
@@ -175,5 +174,5 @@ namespace prosched {
     }
     
   };
-  
+
 } // namespace prosched

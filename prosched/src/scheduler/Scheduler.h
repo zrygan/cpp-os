@@ -118,7 +118,13 @@ namespace prosched {
          * Outputs the current process list and their states
          */
         void PrintProcesses() {
-            // screen calls
+            // screen calls (screen -ls)
+
+            // running processes
+            // <process name> <timestamp> Core: <coreNum> <instruction progress>
+
+            // finished processes
+            // <process name> <timestamp> Finished <instruction progress>
         }
 
         /**
@@ -183,9 +189,11 @@ namespace prosched {
             std::cout << "\nFCFS Scheduler\n";
             for(Worker *w : workers){
                 if(!processQueue.empty()) {
-                    Process* p = processQueue.front();
-                    processQueue.pop();
-                    w->AssignProcess(p);
+                   if(!w->IsBusy()){
+                        Process* p = processQueue.front();
+                        processQueue.pop();
+                        w->AssignProcess(p);
+                   }
                 }
             }
         }

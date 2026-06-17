@@ -234,7 +234,7 @@ private:
       @param stmt_str The statement string to parse
       @return A Statement AST node, ready for execution
   */
-  Statement parseStatement(const std::string &stmt_str);
+  // Statement parseStatement(const std::string &stmt_str);
 
   /** @brief Execute a single AST node.
 
@@ -242,7 +242,7 @@ private:
 
       @param stmt The Statement AST node to execute
   */
-  void executeStatement(const Statement &stmt);
+  // void executeStatement(const Statement &stmt);
 
   /** @brief Parse a comma-separated block of instructions into a vector of AST nodes.
 
