@@ -8,7 +8,8 @@
 
 #include "config.h"
 #include "process/Process.h"
-#include "../context.h"
+#include "src/context.h"
+#include "src/scheduler/worker/Worker.h"
 
 class Scheduler {
 public:
