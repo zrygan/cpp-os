@@ -30,8 +30,9 @@ public:
      * @brief Stops worker execution
      * 
      * Signals the worker thread to terminate
+     * @return true if stop is successful
      */
-    void Stop();
+    bool Stop();
 
     /**
      * \brief Assigns a process to the worker for execution

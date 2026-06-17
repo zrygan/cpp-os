@@ -27,7 +27,7 @@ bool Scheduler::Start(){
     running = true;
 
     // @aaron just edit this if something changes with how Worker functions 
-    for (int i = 0; i <= this->ctx.numCpu; i++){
+    for (int i = 0; i < this->ctx.numCpu; i++){
         Worker* w = new Worker(i, ctx);
 
         try{

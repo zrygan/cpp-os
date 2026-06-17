@@ -30,7 +30,7 @@ public:
    * @return If adding a command is successful it returns the 
    * specific command, else unsuccessful return nullptr
    */
-  std::shared_ptr<Command>* AddCommand(
+  std::shared_ptr<Command> AddCommand(
     std::shared_ptr<Command> command
   );
 
