@@ -70,10 +70,11 @@ Testing/
 # vscode
 .vscode
 
-<<<<<<< Updated upstream
 #ImGui
 *.ini
-=======
+
 # vscode
 .vscode
->>>>>>> Stashed changes
+
+# logs printed from PRINT
+/logs

@@ -42,7 +42,7 @@ void Controller::run() {
     // wow this is messy lols
     while(input != "exit"){
       std::cout << "Enter Input: ";
-      std::cin >> input;
+      std::getline(std::cin, input);
 
       if (!isInitialized) {
         if (input == "initialize"){

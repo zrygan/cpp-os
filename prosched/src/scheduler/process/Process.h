@@ -11,6 +11,8 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
+#include <filesystem>
 
 #include "config.h"
 #include "src/commands/interpreter.hpp"
@@ -87,6 +89,7 @@ namespace prosched {
 
       if (currentInstructionIndex >= (int)statements.size()) {
           currentState = FINISHED;
+          SaveLogsToFile();
       }
 
       return statements;
@@ -107,6 +110,28 @@ namespace prosched {
       } else {
         return -1;
       }
+    }
+
+    /**
+     * @brief saves the logs vector into a txt file 
+     * 
+     * ngl idk if this should be here or insoide the executePrint() in intepreter.hpp
+     */
+    void SaveLogsToFile() {
+        std::filesystem::create_directory("logs");
+        std::string filename = "logs/" + processName + ".txt";
+        
+        std::ofstream outFile(filename);
+        if (outFile.is_open()) {
+            outFile << "Process name: " << processName << "\n";
+            for (const auto& log : logs) {
+                outFile << log << "\n";
+            }
+            
+            outFile.close();
+        } else {
+            std::cerr << "Error: Could not make log file for " << processName << "\n";
+        }
     }
 
     /**

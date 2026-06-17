@@ -143,7 +143,11 @@ namespace prosched {
 
             // std::cout << p->GetName() << "\n";
 
-            int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns - this->ctx.minIns + 1);
+            // uncomment this for future 
+            // int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns - this->ctx.minIns + 1);
+
+            // fcfs specs say only 100
+            int commandAmount = 100;
 
             // only prints for now 
             for (int i = 0; i < commandAmount; i++) {
@@ -221,10 +225,18 @@ namespace prosched {
                 cpuCycles++;
 
                 if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0){
-                    Process* p = generateProcess(&this->ctx, nextPID++, cpuCycles);
-                    std::lock_guard<std::mutex> lock(schedulerMutex);
-                    processQueue.push(p);
-                    processes.push_back(p);
+
+                    // limit to 10 processes -> 10 txt files
+                    if (nextPID <= 10) {
+                        Process* p = generateProcess(&this->ctx, nextPID, cpuCycles);
+                        std::lock_guard<std::mutex> lock(schedulerMutex);
+                        processQueue.push(p);
+                        processes.push_back(p);
+
+                        nextPID++;
+                    } else {
+                        generatingProcesses = false;
+                    }
                 }
 
                 if (this->ctx.schedulerType == "fcfs"){
