@@ -146,14 +146,16 @@ namespace prosched {
             processes.push_back(p);
             
             return p;
-            }
+        }
 
         /**
          * @brief getter for running boolean
          * 
          * @return boolean value if scheduler is running or not
          */
-        bool IsRunning();
+        bool IsRunning() {
+            return running == true;
+        }
 
     private:
         AlgoContext ctx;
