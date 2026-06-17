@@ -8,12 +8,12 @@ namespace ProcessAddComandTest {
 // A valid command returns the same Command* that was passed in
 TEST(ProcessAddCommand, ReturnedPointerMatchesInput) {
     Process p("proc", 1, 0);
-    auto cmd = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd = std::make_shared<Command>();
 
-    Command *result = p.AddCommand(cmd);
+    std::shared_ptr<Command> *result = p.AddCommand(cmd);
 
     ASSERT_NE(result, nullptr);
-    EXPECT_EQ(result, cmd.get());
+    EXPECT_EQ(result->get(), cmd.get());
 }
 
 // Adding multiple commands should all succeed
@@ -21,8 +21,8 @@ TEST(ProcessAddCommand, AddMultipleCommands) {
     Process p("proc", 1, 0);
 
     for (int i = 0; i < 5; i++) {
-        auto cmd = std::make_shared<Command>();
-        Command *result = p.AddCommand(cmd);
+        std::shared_ptr<Command> cmd = std::make_shared<Command>();
+        std::shared_ptr<Command> *result = p.AddCommand(cmd);
         EXPECT_NE(result, nullptr) << "Failed on command index " << i;
     }
 }
@@ -31,7 +31,7 @@ TEST(ProcessAddCommand, AddMultipleCommands) {
 TEST(ProcessAddCommand, NullCommandReturnsNull) {
     Process p("proc", 1, 0);
 
-    Command *result = p.AddCommand(nullptr);
+    std::shared_ptr<Command> *result = p.AddCommand(nullptr);
 
     EXPECT_EQ(result, nullptr);
 }
@@ -41,8 +41,8 @@ TEST(ProcessAddCommand, ManyCommands) {
     Process p("proc", 1, 0);
 
     for (int i = 0; i < 1000; i++) {
-        auto cmd = std::make_shared<Command>();
-        Command *result = p.AddCommand(cmd);
+        std::shared_ptr<Command> cmd = std::make_shared<Command>();
+        std::shared_ptr<Command> *result = p.AddCommand(cmd);
         EXPECT_NE(result, nullptr) << "Failed on command index " << i;
     }
 }
@@ -50,10 +50,10 @@ TEST(ProcessAddCommand, ManyCommands) {
 // Adding the same shared_ptr instance twice should succeed both times
 TEST(ProcessAddCommand, SameCommandAddedTwice) {
     Process p("proc", 1, 0);
-    auto cmd = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd = std::make_shared<Command>();
 
-    Command *r1 = p.AddCommand(cmd);
-    Command *r2 = p.AddCommand(cmd);
+    std::shared_ptr<Command> *r1 = p.AddCommand(cmd);
+    std::shared_ptr<Command> *r2 = p.AddCommand(cmd);
 
     EXPECT_NE(r1, nullptr);
     EXPECT_NE(r2, nullptr);
@@ -63,12 +63,12 @@ TEST(ProcessAddCommand, SameCommandAddedTwice) {
 // and nulls must still return nullptr
 TEST(ProcessAddCommand, InterleavedValidAndNull) {
     Process p("proc", 1, 0);
-    auto cmd1 = std::make_shared<Command>();
-    auto cmd2 = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd1 = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd2 = std::make_shared<Command>();
 
-    Command *r1   = p.AddCommand(cmd1);
-    Command *null = p.AddCommand(nullptr);
-    Command *r2   = p.AddCommand(cmd2);
+    std::shared_ptr<Command> *r1   = p.AddCommand(cmd1);
+    std::shared_ptr<Command> *null = p.AddCommand(nullptr);
+    std::shared_ptr<Command> *r2   = p.AddCommand(cmd2);
 
     EXPECT_NE(r1,   nullptr);
     EXPECT_EQ(null, nullptr);
@@ -79,9 +79,9 @@ TEST(ProcessAddCommand, InterleavedValidAndNull) {
 TEST(ProcessAddCommand, IndependentProcessesDoNotShareCommands) {
     Process p1("proc1", 1, 0);
     Process p2("proc2", 2, 0);
-    auto cmd = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd = std::make_shared<Command>();
 
-    Command *r1 = p1.AddCommand(cmd);
+    std::shared_ptr<Command> *r1 = p1.AddCommand(cmd);
 
     EXPECT_NE(r1, nullptr);
     EXPECT_EQ(p2.ExecuteCurrentCommand(0), nullptr);
@@ -94,7 +94,7 @@ namespace ProcessExecuteCommand {
 // Executing a valid index should return the Command that lives at that slot
 TEST(ProcessExecuteCurrentCommand, ValidIndexReturnsCommand) {
     Process p("proc", 1, 0);
-    auto cmd = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd = std::make_shared<Command>();
     p.AddCommand(cmd);
 
     Command *result = p.ExecuteCurrentCommand(0);
@@ -145,9 +145,9 @@ TEST(ProcessExecuteCurrentCommand, LargeIndexReturnsNull) {
 // Each index in sequence should return its own Command
 TEST(ProcessExecuteCurrentCommand, SequentialExecution) {
     Process p("proc", 1, 0);
-    auto cmd1 = std::make_shared<Command>();
-    auto cmd2 = std::make_shared<Command>();
-    auto cmd3 = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd1 = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd2 = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd3 = std::make_shared<Command>();
     p.AddCommand(cmd1);
     p.AddCommand(cmd2);
     p.AddCommand(cmd3);
@@ -176,7 +176,7 @@ TEST(ProcessExecuteCurrentCommand, LastValidIndexReturnsCommand) {
     Process p("proc", 1, 0);
     p.AddCommand(std::make_shared<Command>());
     p.AddCommand(std::make_shared<Command>());
-    auto last = std::make_shared<Command>();
+    std::shared_ptr<Command> last = std::make_shared<Command>();
     p.AddCommand(last);
 
     Command *result = p.ExecuteCurrentCommand(2);
@@ -187,7 +187,7 @@ TEST(ProcessExecuteCurrentCommand, LastValidIndexReturnsCommand) {
 // Re-executing the same index twice must not remove or corrupt the command
 TEST(ProcessExecuteCurrentCommand, SameIndexExecutedTwice) {
     Process p("proc", 1, 0);
-    auto cmd = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd = std::make_shared<Command>();
     p.AddCommand(cmd);
 
     Command *r1 = p.ExecuteCurrentCommand(0);
@@ -200,7 +200,7 @@ TEST(ProcessExecuteCurrentCommand, SameIndexExecutedTwice) {
 // A bad call must not poison state — valid call after OOB must still succeed
 TEST(ProcessExecuteCurrentCommand, ValidAfterOutOfBoundsStillWorks) {
     Process p("proc", 1, 0);
-    auto cmd = std::make_shared<Command>();
+    std::shared_ptr<Command> cmd = std::make_shared<Command>();
     p.AddCommand(cmd);
 
     p.ExecuteCurrentCommand(99);
