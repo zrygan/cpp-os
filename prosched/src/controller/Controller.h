@@ -10,7 +10,7 @@ class Controller {
 private:
   View view;
   AlgoContext ctx;
-  Scheduler *scheduler;
+  prosched::Scheduler *scheduler;
   bool isInitialized;
 
 public:

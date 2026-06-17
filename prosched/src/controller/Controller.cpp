@@ -20,7 +20,7 @@ void Controller::initialize() {
   }
 
   this->ctx = AlgoContext::buildConfig(cs);
-  this->scheduler = new Scheduler(this->ctx);
+  this->scheduler = new prosched::Scheduler(this->ctx);
   this->isInitialized= true;
 
   std::cout << "Initialized successfully.\n\n";
@@ -48,7 +48,7 @@ void Controller::run() {
         if (input == "initialize"){
           
             initialize();
-            
+
         } else {
           std::cout << "\nType \"initialize\" to access commands\n";
         }
