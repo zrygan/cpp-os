@@ -45,7 +45,7 @@ public:
    * @return If executing a command was successful the command is returned, else
    * unsuccessfull a nullptr is returned 
    */
-  std::string ExecuteInstructions (
+  std::string ExecuteCurrentCommand (
     int coreNum
   );
 

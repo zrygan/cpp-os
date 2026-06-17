@@ -28,8 +28,8 @@ namespace prosched {
   }
 
   // this is incomplete
-  std::string Process::ExecuteInstructions(int coreNum){
-
+  std::string Process::ExecuteCurrentCommand(int coreNum){
+  
     currentState = RUNNING;
 
     if (currentInstructionIndex >= statements.size()) {
