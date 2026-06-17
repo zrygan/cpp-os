@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <string>
 #include <new>
+#include <optional>
 
 #include "Process.h"
 #include "src/commands/Command.h"
@@ -8,25 +9,29 @@
 Process::Process(std::string processName, int pid, int arrivalTick)
     : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
 
-bool Process::AddCommand(std::shared_ptr<Command> command) {
+std::shared_ptr<Command>* Process::AddCommand(std::shared_ptr<Command> command) {
   try {
     commands.push_back(*command);
-    return true;
+    return &command;
   } catch (const std::bad_alloc& e) {
     std::cerr << "Allocation failed: " << e.what();
-    return false;
+    return nullptr;
   }
 }
 
-bool Process::ExecuteCurrentCommand(int currentInstructionIndex){
+Command* Process::ExecuteCurrentCommand(int currentInstructionIndex){
   // run command in commands[currentInstructionIndex]
   // temp return
-  return true;
+  return &commands.at(currentInstructionIndex);
 }
 
-bool Process::AssignCore(int coreNum) {
+int Process::AssignCore(int coreNum) {
   //temp rturn
-  return true;
+  if (coreNum) {
+    return coreNum;
+  } else {
+    return -1;
+  }
 }
 
 bool Process::IsFinished() {
