@@ -31,7 +31,7 @@ TEST(ProcessAddCommand, AddMultipleCommands) {
 TEST(ProcessAddCommand, NullCommandReturnsNull) {
     Process p("proc", 1, 0);
 
-    Command *result = p.AddCommand(nullptr);
+    std::shared_ptr<Command> *result = p.AddCommand(nullptr);
 
     EXPECT_EQ(result, nullptr);
 }
