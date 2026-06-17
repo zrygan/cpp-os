@@ -62,6 +62,17 @@ public:
      */
     void PrintProcesses();
 
+      /**
+     * @brief
+     * 
+     * @param ctx
+     * @param id
+     * @param tick
+     * 
+     * @return Process generated
+     */
+    Process* generateProcess(AlgoContext *ctx, int id, int tick);
+
     /**
      * @brief getter for running boolean
      * 
@@ -72,12 +83,14 @@ public:
 private:
     AlgoContext ctx;
     std::thread schedulerThread;
-    std::vector<Process> processes;
+    std::vector<Process*> processes;
     std::queue<Process*> processQueue;
     std::vector<Worker*> workers;
     std::mutex schedulerMutex;
     bool running = false;
+
     bool generatingProcesses = false;
+    int nextPID = 1;
 
     /**
      * @brief First-Come First-Serve Scheduler Algorithm

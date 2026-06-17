@@ -49,11 +49,3 @@ int Process::GetPID() {
 std::string Process::GetName() {
   return processName;
 }
-
-Process *generateProcess(ConfigStruct *config, int id, int tick) {
-
-  std::string name = std::to_string(id) + std::to_string(tick);
-  Process *p = new Process(name, id, tick);
-
-  return p;
-}

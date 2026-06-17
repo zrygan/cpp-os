@@ -39,7 +39,7 @@ public:
    * 
    * disclaimer: function isnt implemented yet so this is how i think it would work atm
    * Takes the Process' commands vector and executes each command until
-   * the commands vector is empty or if a command fails <-- is this supposed to do all commands at once or one command at a time? @author 
+   * the commands vector is empty or if a command fails
    * 
    * @return If executing a command was successful the command is returned, else
    * unsuccessfull a nullptr is returned

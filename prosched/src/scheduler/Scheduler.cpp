@@ -26,6 +26,8 @@ bool Scheduler::Start(){
     std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
     
     running = true;
+    // ehhh
+    generatingProcesses = true;
 
     // @aaron just edit this if something changes with how Worker functions 
     for (int i = 0; i < this->ctx.numCpu; i++){
@@ -48,6 +50,7 @@ bool Scheduler::Start(){
 
 void Scheduler::Stop(){
     running = false;
+    generatingProcesses = false;
 
     if (schedulerThread.joinable()){
         schedulerThread.join();
@@ -60,11 +63,26 @@ void Scheduler::Stop(){
     std::cout << "Scheduler stopped\n\n";
 }
 
+Process* Scheduler::generateProcess(AlgoContext *ctx, int id, int tick) {
+
+  std::string name = std::to_string(id) + std::to_string(tick);
+  Process *p = new Process(name, id, tick);
+
+  return p;
+}
+
 Scheduler* Scheduler::SchedulerLoop() {
     int cpuCycles = 0;
 
     while(running) {
         cpuCycles++;
+
+        if (generatingProcesses){
+            Process* p = generateProcess(&this->ctx, nextPID++, cpuCycles);
+            std::lock_guard<std::mutex> lock(schedulerMutex);
+            processQueue.push(p);
+            processes.push_back(p);
+        }
 
         if (this->ctx.schedulerType == "fcfs"){
             FCFS();
@@ -100,7 +118,7 @@ void Scheduler::RoundRobin() {
 
 Process* Scheduler::AddProcess(Process* p){
     try {
-        processes.push_back(*p);
+        processes.push_back(p);
         return p;
     } catch (const std::bad_alloc& e) {
         std::cerr << "Allocation failed: " << e.what();
