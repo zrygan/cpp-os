@@ -2,10 +2,18 @@
 #include "scheduler/worker/Worker.h"
 #include "scheduler/process/Process.h"
 
+static AlgoContext makeTestCtx() {
+    ConfigStruct *cs = makeDefault();
+    cs->scheduler = "fcfs";
+    AlgoContext ctx = AlgoContext::buildConfig(cs);
+    delete cs;
+    return ctx;
+}
+
 // Assigning a process while the worker is stopped should still succeed
 // Assigning a valid process should return the same pointer that was passed in
 TEST(WorkerAssignProcess, ReturnsAssignedProcess) {
-    Worker worker(0);
+    Worker worker(0, makeTestCtx());
     Process p("proc", 1, 0);
 
     Process *result = worker.AssignProcess(&p);
@@ -15,7 +23,7 @@ TEST(WorkerAssignProcess, ReturnsAssignedProcess) {
 
 // Assigning nullptr should return nullptr (explicit "no process" assignment)
 TEST(WorkerAssignProcess, AssignNullptrReturnsNull) {
-    Worker worker(0);
+    Worker worker(0, makeTestCtx());
 
     Process *result = worker.AssignProcess(nullptr);
 
@@ -24,7 +32,7 @@ TEST(WorkerAssignProcess, AssignNullptrReturnsNull) {
 
 // Reassigning to a different process — returns the new process, not the old one
 TEST(WorkerAssignProcess, ReassignReturnsNewProcess) {
-    Worker worker(0);
+    Worker worker(0, makeTestCtx());
     Process p1("first",  1, 0);
     Process p2("second", 2, 0);
 
@@ -36,7 +44,7 @@ TEST(WorkerAssignProcess, ReassignReturnsNewProcess) {
 
 // Assigning the same pointer twice should return it both times without issue
 TEST(WorkerAssignProcess, AssignSameProcessTwice) {
-    Worker worker(0);
+    Worker worker(0, makeTestCtx());
     Process p("proc", 1, 0);
 
     Process *r1 = worker.AssignProcess(&p);
@@ -48,7 +56,7 @@ TEST(WorkerAssignProcess, AssignSameProcessTwice) {
 
 // Assigning nullptr after a valid process (unassign) — should return nullptr
 TEST(WorkerAssignProcess, UnassignAfterValidProcess) {
-    Worker worker(0);
+    Worker worker(0, makeTestCtx());
     Process p("proc", 1, 0);
 
     worker.AssignProcess(&p);
@@ -70,7 +78,7 @@ TEST(WorkerAssignProcess, WorksAcrossCoreBoundaries) {
 
 // Assigning a process while the worker is running should still succeed
 TEST(WorkerAssignProcess, AssignWhileRunning) {
-    Worker worker(0);
+    Worker worker(0, makeTestCtx());
     Process p("proc", 1, 0);
 
     worker.Start();
