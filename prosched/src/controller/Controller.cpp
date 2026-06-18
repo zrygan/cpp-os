@@ -21,6 +21,17 @@ void Controller::initialize() {
   this->scheduler = new prosched::Scheduler(this->ctx);
   this->isInitialized= true;
 
+
+    /* <RV @zrygan> ===========
+    Shouldn't this be outside this function?
+
+    Also the function view.DisplayMenu() kind of doesn not display
+    the menu but instead shows a start up page. I suggest some changes
+    implemented in the naming and organization of stuff since we are
+    using MVC.
+
+    @outformilks @chuae
+    <RV @zrygan> =========== */
   std::cout << "Initialized successfully.\n\n";
   std::cout << "List of accessible commands:\n"
             << "- exit\n"
