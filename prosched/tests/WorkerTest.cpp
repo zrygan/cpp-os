@@ -1,88 +1,239 @@
+#include <gtest/gtest.h>
+#include <chrono>
+#include <thread>
 #include "scheduler/worker/Worker.h"
 #include "scheduler/process/Process.h"
-#include <gtest/gtest.h>
 
 static AlgoContext makeTestCtx() {
-  ConfigStruct *cs = makeDefault();
-  cs->scheduler = "fcfs";
-  AlgoContext ctx = AlgoContext::buildConfig(cs);
-  delete cs;
-  return ctx;
+    ConfigStruct *cs = makeDefault();
+    cs->scheduler = "fcfs";
+    AlgoContext ctx = AlgoContext::buildConfig(cs);
+    delete cs;
+    return ctx;
 }
 
-// Assigning a process while the worker is stopped should still succeed
-// Assigning a valid process should return the same pointer that was passed in
-TEST(WorkerAssignProcess, ReturnsAssignedProcess) {
-  Worker worker(0, makeTestCtx());
-  Process p("proc", 1, 0);
+namespace WorkerAssignProcess {
 
-  Process *result = worker.AssignProcess(&p);
+  // Idle worker — returns the process that was passed in
+  TEST(WorkerAssignProcess, ReturnsProcessWhenIdle) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("assign_1", 1, 0);
 
-  EXPECT_EQ(result, &p);
-}
+      prosched::Process *result = w.AssignProcess(&p);
 
-// Assigning nullptr should return nullptr (explicit "no process" assignment)
-TEST(WorkerAssignProcess, AssignNullptrReturnsNull) {
-  Worker worker(0, makeTestCtx());
+      EXPECT_EQ(result, &p);
+  }
 
-  Process *result = worker.AssignProcess(nullptr);
+  // Nullptr input on an idle worker — returns nullptr, worker stays idle
+  TEST(WorkerAssignProcess, NullInputOnIdleWorkerReturnsNull) {
+      prosched::Worker w(1, makeTestCtx());
 
-  EXPECT_EQ(result, nullptr);
-}
+      prosched::Process *result = w.AssignProcess(nullptr);
 
-// Reassigning to a different process — returns the new process, not the old one
-TEST(WorkerAssignProcess, ReassignReturnsNewProcess) {
-  Worker worker(0, makeTestCtx());
-  Process p1("first", 1, 0);
-  Process p2("second", 2, 0);
+      EXPECT_EQ(result, nullptr);
+      EXPECT_FALSE(w.IsBusy());
+  }
 
-  worker.AssignProcess(&p1);
-  Process *result = worker.AssignProcess(&p2);
+  // Worker already has a process — second assign must return nullptr (busy guard)
+  TEST(WorkerAssignProcess, ReturnsNullWhenBusy) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p1("assign_busy_1", 1, 0);
+      prosched::Process p2("assign_busy_2", 2, 0);
 
-  EXPECT_EQ(result, &p2);
-}
+      w.AssignProcess(&p1);
+      prosched::Process *result = w.AssignProcess(&p2);
 
-// Assigning the same pointer twice should return it both times without issue
-TEST(WorkerAssignProcess, AssignSameProcessTwice) {
-  Worker worker(0, makeTestCtx());
-  Process p("proc", 1, 0);
+      EXPECT_EQ(result, nullptr);
+  }
 
-  Process *r1 = worker.AssignProcess(&p);
-  Process *r2 = worker.AssignProcess(&p);
+  // Running but idle worker (no process yet) — assign should succeed
+  TEST(WorkerAssignProcess, AssignToRunningIdleWorkerSucceeds) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("assign_running", 1, 0);
 
-  EXPECT_EQ(r1, &p);
-  EXPECT_EQ(r2, &p);
-}
+      w.Start();
+      prosched::Process *result = w.AssignProcess(&p);
+      w.Stop();
 
-// Assigning nullptr after a valid process (unassign) — should return nullptr
-TEST(WorkerAssignProcess, UnassignAfterValidProcess) {
-  Worker worker(0, makeTestCtx());
-  Process p("proc", 1, 0);
+      EXPECT_EQ(result, &p);
+  }
 
-  worker.AssignProcess(&p);
-  Process *result = worker.AssignProcess(nullptr);
+  // After process finishes and thread clears it, a new process can be assigned
+  TEST(WorkerAssignProcess, CanAssignAgainAfterProcessFinishes) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p1("assign_after_1", 1, 0);
+      prosched::Process p2("assign_after_2", 2, 0);
+      p1.AddInstruction("PRINT(\"done\")");
 
-  EXPECT_EQ(result, nullptr);
-}
+      w.AssignProcess(&p1);
+      w.Start();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-// Worker on core 0 vs high core numbers — AssignProcess should behave the same
-TEST(WorkerAssignProcess, WorksAcrossCoreBoundaries) {
-  Worker w_zero(0);
-  Worker w_high(INT_MAX);
-  Process p("proc", 1, 0);
+      // p1 should be finished and currentProcess should be cleared
+      ASSERT_TRUE(p1.IsFinished());
 
-  EXPECT_EQ(w_zero.AssignProcess(&p), &p);
-  EXPECT_EQ(w_high.AssignProcess(&p), &p);
-}
+      prosched::Process *result = w.AssignProcess(&p2);
+      w.Stop();
 
-// Assigning a process while the worker is running should still succeed
-TEST(WorkerAssignProcess, AssignWhileRunning) {
-  Worker worker(0, makeTestCtx());
-  Process p("proc", 1, 0);
+      EXPECT_EQ(result, &p2);
+  }
 
-  worker.Start();
-  Process *result = worker.AssignProcess(&p);
-  worker.Stop();
+} // namespace WorkerAssignProcess
 
-  EXPECT_EQ(result, &p);
-}
+
+namespace WorkerIsBusy {
+
+  TEST(WorkerIsBusy, FalseOnConstruction) {
+      prosched::Worker w(1, makeTestCtx());
+      EXPECT_FALSE(w.IsBusy());
+  }
+
+  TEST(WorkerIsBusy, TrueAfterValidAssign) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("busy_1", 1, 0);
+
+      w.AssignProcess(&p);
+      EXPECT_TRUE(w.IsBusy());
+  }
+
+  // Assigning nullptr on an idle worker changes nothing — stays not busy
+  TEST(WorkerIsBusy, FalseAfterNullAssignOnIdleWorker) {
+      prosched::Worker w(1, makeTestCtx());
+
+      w.AssignProcess(nullptr);
+      EXPECT_FALSE(w.IsBusy());
+  }
+
+  // Once the process finishes, the thread clears currentProcess — worker goes idle
+  TEST(WorkerIsBusy, FalseAfterProcessFinishes) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("busy_thread", 1, 0);
+      p.AddInstruction("PRINT(\"hi\")");
+
+      w.AssignProcess(&p);
+      w.Start();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+      EXPECT_FALSE(w.IsBusy());
+
+      w.Stop();
+  }
+
+} // namespace WorkerIsBusy
+
+
+namespace WorkerIsRunning {
+
+  TEST(WorkerIsRunning, FalseOnConstruction) {
+      prosched::Worker w(1, makeTestCtx());
+      EXPECT_FALSE(w.IsRunning());
+  }
+
+  TEST(WorkerIsRunning, TrueAfterStart) {
+      prosched::Worker w(1, makeTestCtx());
+
+      w.Start();
+      EXPECT_TRUE(w.IsRunning());
+
+      w.Stop();
+  }
+
+  TEST(WorkerIsRunning, FalseAfterStop) {
+      prosched::Worker w(1, makeTestCtx());
+
+      w.Start();
+      w.Stop();
+
+      EXPECT_FALSE(w.IsRunning());
+  }
+
+  // Starting an already-running worker returns false and stays running
+  TEST(WorkerIsRunning, StartReturnsFalseIfAlreadyRunning) {
+      prosched::Worker w(1, makeTestCtx());
+
+      w.Start();
+      bool result = w.Start(); // second start
+
+      EXPECT_FALSE(result);
+      EXPECT_TRUE(w.IsRunning()); // still running
+
+      w.Stop();
+  }
+
+  // Stopping a worker that was never started returns false
+  TEST(WorkerIsRunning, StopReturnsFalseIfNotRunning) {
+      prosched::Worker w(1, makeTestCtx());
+
+      bool result = w.Stop();
+
+      EXPECT_FALSE(result);
+      EXPECT_FALSE(w.IsRunning());
+  }
+
+  // Start/Stop cycle can repeat without deadlock
+  TEST(WorkerIsRunning, CanRestartAfterStop) {
+      prosched::Worker w(1, makeTestCtx());
+
+      w.Start();
+      w.Stop();
+      bool result = w.Start();
+
+      EXPECT_TRUE(result);
+      EXPECT_TRUE(w.IsRunning());
+
+      w.Stop();
+  }
+
+} // namespace WorkerIsRunning
+
+
+namespace WorkerGetCoreNum {
+
+  TEST(WorkerGetCoreNum, ReturnsConstructedCoreNum) {
+      prosched::Worker w(2, makeTestCtx());
+      EXPECT_EQ(w.GetCoreNum(), 2);
+  }
+
+  TEST(WorkerGetCoreNum, DifferentWorkersHaveDifferentCoreNums) {
+      prosched::Worker w1(1, makeTestCtx());
+      prosched::Worker w2(3, makeTestCtx());
+
+      EXPECT_EQ(w1.GetCoreNum(), 1);
+      EXPECT_EQ(w2.GetCoreNum(), 3);
+  }
+
+} // namespace WorkerGetCoreNum
+
+
+namespace WorkerGetCurrentProcess {
+
+  TEST(WorkerGetCurrentProcess, NullWhenIdle) {
+      prosched::Worker w(1, makeTestCtx());
+      EXPECT_EQ(w.GetCurrentProcess(), nullptr);
+  }
+
+  TEST(WorkerGetCurrentProcess, ReturnsAssignedProcess) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("cur_proc", 1, 0);
+
+      w.AssignProcess(&p);
+
+      EXPECT_EQ(w.GetCurrentProcess(), &p);
+  }
+
+  // After process finishes, thread clears it — GetCurrentProcess returns nullptr
+  TEST(WorkerGetCurrentProcess, NullAfterProcessFinishes) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("cur_done", 1, 0);
+      p.AddInstruction("PRINT(\"bye\")");
+
+      w.AssignProcess(&p);
+      w.Start();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+      EXPECT_EQ(w.GetCurrentProcess(), nullptr);
+
+      w.Stop();
+  }
+
+} // namespace WorkerGetCurrentProcess
