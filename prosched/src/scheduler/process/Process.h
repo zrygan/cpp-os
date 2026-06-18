@@ -99,7 +99,7 @@ public:
    * @return coreNum is returned if the assignment was successful; otherwise -1
    */
   int AssignCore(int coreNum) {
-    if (coreNum) {
+    if (coreNum >= 0) {
       this->coreNum = coreNum;
       return coreNum;
     } else {
