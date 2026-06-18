@@ -1,6 +1,6 @@
-#include "view/View.h"
 #include "context.h"
 #include "src/scheduler/Scheduler.h"
+#include "view/View.h"
 
 #ifndef CONTROLLER_H
 #define CONTROLLER_H

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <stdio.h>
-#include <vector>
-#include <queue>
 #include <mutex>
+#include <queue>
+#include <stdio.h>
 #include <thread>
+#include <vector>
 
 #include "config.h"
 #include "process/Process.h"
@@ -14,250 +14,253 @@
 using namespace std;
 
 namespace prosched {
-    
-    class Scheduler {
-    public:
-        /** 
-         * @brief Creates a scheduler instance
-         * 
-         * Initializes the scheduler using the provided scheduling configuration
-         * 
-         * @param ctx Scheduling configuration and algorithm settings
-         */
-        Scheduler(AlgoContext ctx) : ctx(ctx) {}
 
-        /**
-         * @brief starts the main scheduler loop
-         * 
-         * disclaimer: function isnt implemented yet so this is how i think it would work atm
-         * Starting the scheduler starts a scheduler thread and calls on n number of Workers 
-         * (where n is the number of defined CPU cores) and starts their individual thread tasks, 
-         * once each thread is running the Start function will then start the main scheduler loop 
-         * and return a boolean value
-         * turn running = true
-         * 
-         * @return a boolean value, where true if all worker threads
-         * have been joined, else false
-         */
-        bool Start() {
-            if (running) return false;
+class Scheduler {
+public:
+  /**
+   * @brief Creates a scheduler instance
+   *
+   * Initializes the scheduler using the provided scheduling configuration
+   *
+   * @param ctx Scheduling configuration and algorithm settings
+   */
+  Scheduler(AlgoContext ctx) : ctx(ctx) {}
 
-            // testing print
-            std::cout << "\n\nScheduler specs\n";
-            std::cout << "\nNumber of cores: " << this->ctx.numCpu;
-            std::cout << "\nScheduler: " << this->ctx.schedulerType;
-            std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
-            std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-" << this->ctx.maxIns;
-            std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
-            std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
-            
-            running = true;
-            // ehhh
-            generatingProcesses = true;
+  /**
+   * @brief starts the main scheduler loop
+   *
+   * disclaimer: function isnt implemented yet so this is how i think it would
+   * work atm Starting the scheduler starts a scheduler thread and calls on n
+   * number of Workers (where n is the number of defined CPU cores) and starts
+   * their individual thread tasks, once each thread is running the Start
+   * function will then start the main scheduler loop and return a boolean value
+   * turn running = true
+   *
+   * @return a boolean value, where true if all worker threads
+   * have been joined, else false
+   */
+  bool Start() {
+    if (running)
+      return false;
 
-            for (int i = 0; i < this->ctx.numCpu; i++){
-                Worker* w = new Worker(i, ctx);
+    // testing print
+    std::cout << "\n\nScheduler specs\n";
+    std::cout << "\nNumber of cores: " << this->ctx.numCpu;
+    std::cout << "\nScheduler: " << this->ctx.schedulerType;
+    std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
+    std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-"
+              << this->ctx.maxIns;
+    std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
+    std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
 
-                try{
-                    workers.push_back(w);
-                } catch (const std::bad_alloc& e) {
-                    std::cerr << "Allocation failed: " << e.what();
-                    return false;
-                }
+    running = true;
+    // ehhh
+    generatingProcesses = true;
 
-                w->Start();
-            }
+    for (int i = 0; i < this->ctx.numCpu; i++) {
+      Worker *w = new Worker(i, ctx);
 
-            schedulerThread = std::thread(&Scheduler::SchedulerLoop, this);
-            std::cout << "Scheduler started with " << this->ctx.numCpu << " cores\n";
-            return true;
+      try {
+        workers.push_back(w);
+      } catch (const std::bad_alloc &e) {
+        std::cerr << "Allocation failed: " << e.what();
+        return false;
+      }
+
+      w->Start();
+    }
+
+    schedulerThread = std::thread(&Scheduler::SchedulerLoop, this);
+    std::cout << "Scheduler started with " << this->ctx.numCpu << " cores\n";
+    return true;
+  }
+
+  /**
+   * @brief Stops the Scheduler from running
+   *
+   * running = false, stops all worker threads and the scheduler thread
+   */
+  void Stop() {
+    running = false;
+    generatingProcesses = false;
+
+    if (schedulerThread.joinable()) {
+      schedulerThread.join();
+    }
+
+    for (Worker *w : workers) {
+      w->Stop();
+    }
+
+    std::cout << "Scheduler stopped\n\n";
+  }
+
+  /**
+   * @brief Adds a Process to the processQueue
+   *
+   * Registers the specified process with the scheduler and places it into the
+   * appropriate scheduling structure
+   *
+   * @param p A pointer to the process to be added
+   * @return self if success, else returns none
+   */
+  prosched::Process *AddProcess(prosched::Process *p) {
+    try {
+      processes.push_back(p);
+      return p;
+    } catch (const std::bad_alloc &e) {
+      std::cerr << "Allocation failed: " << e.what();
+      return nullptr;
+    }
+  }
+
+  /**
+   * @brief prints the current processes when "screen -ls" is called
+   *
+   * Outputs the current process list and their states
+   */
+  void PrintProcesses() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    std::cout << "\n--- Running Processes ---\n";
+    for (Process *p : processes) {
+      if (!p->IsFinished()) {
+        std::cout << p->GetName() << "   (PID " << p->GetPID()
+                  << ")   Core: " << p->GetCoreNum() << "\n";
+      }
+    }
+    std::cout << "\n--- Finished Processes ---\n";
+    for (Process *p : processes) {
+      if (p->IsFinished()) {
+        std::cout << p->GetName() << "   (PID " << p->GetPID()
+                  << ")   Finished\n";
+      }
+    }
+    std::cout << std::endl;
+  }
+  /**
+   * @brief
+   *
+   * @param ctx
+   * @param id
+   * @param tick
+   *
+   * @return Process generated
+   */
+  prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
+
+    std::string name = "process" + std::to_string(nextPID);
+    Process *p = new Process(name, pid, tick);
+
+    // std::cout << p->GetName() << "\n";
+
+    // uncomment this for future
+    // int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns -
+    // this->ctx.minIns + 1);
+
+    // fcfs specs say only 100
+    int commandAmount = 100;
+
+    // only prints for now
+    for (int i = 0; i < commandAmount; i++) {
+      p->AddInstruction("PRINT(\"Hello world from " + name + "!\")");
+      // std::cout << p->GetName() << " added an instruction\n";
+    }
+
+    return p;
+  }
+
+  /**
+   * @brief getter for running boolean
+   *
+   * @return boolean value if scheduler is running or not
+   */
+  bool IsRunning() { return running == true; }
+
+private:
+  AlgoContext ctx;
+  std::thread schedulerThread;
+  std::vector<prosched::Process *> processes;
+  std::queue<prosched::Process *> processQueue;
+  std::vector<Worker *> workers;
+  std::mutex schedulerMutex;
+  bool running = false;
+
+  bool generatingProcesses = false;
+  int nextPID = 1;
+
+  /**
+   * @brief First-Come First-Serve Scheduler Algorithm
+   *
+   * A non-preemptive algorithm in which processes are attended to in
+   * the order they arrive in the process queue. For each CPU worker
+   * in the workers vector assign processes from the process queue to
+   * a specific Worker to be executed.
+   */
+  void FCFS() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+
+    // std::cout << "\nFCFS Scheduler\n";
+    for (Worker *w : workers) {
+      if (!processQueue.empty()) {
+        if (!w->IsBusy()) {
+          Process *p = processQueue.front();
+          processQueue.pop();
+          w->AssignProcess(p);
         }
+      }
+    }
+  }
 
-        /**
-         * @brief Stops the Scheduler from running
-         * 
-         * running = false, stops all worker threads and the scheduler thread
-         */
-        void Stop() {
-            running = false;
-            generatingProcesses = false;
+  /**
+   * @brief Round Robin Scheduler
+   *
+   * detailed desc
+   */
+  void RoundRobin() {
+    // @aaron future func for rr
+  }
 
-            if (schedulerThread.joinable()){
-                schedulerThread.join();
-            }
+  /**
+   * @brief the main scheduler loop
+   *
+   * Continuously selects and dispatches processes according to
+   * the configured scheduling algorithm until the scheduler is stopped.
+   *
+   */
+  void SchedulerLoop() {
+    int cpuCycles = 0;
 
-            for (Worker* w : workers) {
-                w->Stop();
-            }
+    while (running) {
+      cpuCycles++;
 
-            std::cout << "Scheduler stopped\n\n";
+      if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
+
+        // limit to 10 processes -> 10 txt files
+        if (nextPID <= 10) {
+          Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
+          std::lock_guard<std::mutex> lock(schedulerMutex);
+          processQueue.push(p);
+          processes.push_back(p);
+
+          nextPID++;
+        } else {
+          generatingProcesses = false;
         }
+      }
 
-        /**
-         * @brief Adds a Process to the processQueue
-         * 
-         * Registers the specified process with the scheduler and places it into the
-         * appropriate scheduling structure 
-         * 
-         * @param p A pointer to the process to be added
-         * @return self if success, else returns none
-         */
-        prosched::Process* AddProcess(prosched::Process *p) {
-            try {
-                processes.push_back(p);
-                return p;
-            } catch (const std::bad_alloc& e) {
-                std::cerr << "Allocation failed: " << e.what();
-                return nullptr;
-            }
-        }
+      if (this->ctx.schedulerType == "fcfs") {
+        FCFS();
+      } else if (this->ctx.schedulerType == "rr") {
+        RoundRobin();
+      } else {
+        std::cout << this->ctx.schedulerType
+                  << " is not a valid scheduler type\n";
+        return;
+      }
 
-        /**
-         * @brief prints the current processes when "screen -ls" is called
-         * 
-         * Outputs the current process list and their states
-         */
-        void PrintProcesses() {
-            std::lock_guard<std::mutex> lock(schedulerMutex);
-            std::cout << "\n--- Running Processes ---\n";
-            for (Process* p : processes) {
-                if (!p->IsFinished()) {
-                    std::cout << p->GetName() << "   (PID " << p->GetPID() 
-                            << ")   Core: " << p->GetCoreNum() << "\n";
-                }
-            }
-            std::cout << "\n--- Finished Processes ---\n";
-            for (Process* p : processes) {
-                if (p->IsFinished()) {
-                    std::cout << p->GetName() << "   (PID " << p->GetPID() << ")   Finished\n";
-                }
-            }
-            std::cout << std::endl;
-        }
-        /**
-         * @brief
-         * 
-         * @param ctx
-         * @param id
-         * @param tick
-         * 
-         * @return Process generated
-         */
-        prosched::Process* generateProcess(AlgoContext *ctx, int pid, int tick) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  }
+};
 
-            std::string name = "process" + std::to_string(nextPID);
-            Process *p = new Process(name, pid, tick);
-
-            // std::cout << p->GetName() << "\n";
-
-            // uncomment this for future 
-            // int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns - this->ctx.minIns + 1);
-
-            // fcfs specs say only 100
-            int commandAmount = 100;
-
-            // only prints for now 
-            for (int i = 0; i < commandAmount; i++) {
-                p->AddInstruction("PRINT(\"Hello world from " + name + "!\")");
-                // std::cout << p->GetName() << " added an instruction\n";
-            }
-            
-            return p;
-        }
-
-        /**
-         * @brief getter for running boolean
-         * 
-         * @return boolean value if scheduler is running or not
-         */
-        bool IsRunning() {
-            return running == true;
-        }
-
-    private:
-        AlgoContext ctx;
-        std::thread schedulerThread;
-        std::vector<prosched::Process*> processes;
-        std::queue<prosched::Process*> processQueue;
-        std::vector<Worker*> workers;
-        std::mutex schedulerMutex;
-        bool running = false;
-
-        bool generatingProcesses = false;
-        int nextPID = 1;
-
-        /**
-         * @brief First-Come First-Serve Scheduler Algorithm
-         * 
-         * A non-preemptive algorithm in which processes are attended to in
-         * the order they arrive in the process queue. For each CPU worker 
-         * in the workers vector assign processes from the process queue to 
-         * a specific Worker to be executed.
-         */
-        void FCFS() {
-            std::lock_guard<std::mutex> lock(schedulerMutex);
-
-            // std::cout << "\nFCFS Scheduler\n";
-            for(Worker *w : workers){
-                if(!processQueue.empty()) {
-                   if(!w->IsBusy()){
-                        Process* p = processQueue.front();
-                        processQueue.pop();
-                        w->AssignProcess(p);
-                   }
-                }
-            }
-        }
-
-        /**
-         * @brief Round Robin Scheduler
-         * 
-         * detailed desc
-         */
-        void RoundRobin() {
-            // @aaron future func for rr
-        }
-        
-        /** 
-         * @brief the main scheduler loop
-         * 
-         * Continuously selects and dispatches processes according to
-         * the configured scheduling algorithm until the scheduler is stopped. 
-         *
-        */
-        void SchedulerLoop() {
-            int cpuCycles = 0;
-
-            while(running) {
-                cpuCycles++;
-
-                if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0){
-
-                    // limit to 10 processes -> 10 txt files
-                    if (nextPID <= 10) {
-                        Process* p = generateProcess(&this->ctx, nextPID, cpuCycles);
-                        std::lock_guard<std::mutex> lock(schedulerMutex);
-                        processQueue.push(p);
-                        processes.push_back(p);
-
-                        nextPID++;
-                    } else {
-                        generatingProcesses = false;
-                    }
-                }
-
-                if (this->ctx.schedulerType == "fcfs"){
-                    FCFS();
-                } else if (this->ctx.schedulerType == "rr"){
-                    RoundRobin();
-                } else {
-                    std::cout << this->ctx.schedulerType << " is not a valid scheduler type\n";
-                    return;
-                }
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-        }
-    };
-
-}
+} // namespace prosched
