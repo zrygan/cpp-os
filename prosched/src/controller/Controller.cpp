@@ -9,8 +9,6 @@
 #include "context.h"
 #include "src/scheduler/Scheduler.h"
 
-using namespace std;
-
 void Controller::initialize() { 
   ConfigStruct *cs = fromFile();
 
@@ -40,6 +38,40 @@ void Controller::run() {
 
     // while command not exit keep i/o open
     // wow this is messy lols
+
+    /* <RV @zrygan> ===========
+    There must be an easier way to parse these commands especially
+    since some commands have parameters (see screen -s <proc>)
+    
+    To add: Also introduce separation of concerns here.
+    This does multiple things: DisplayMenu, get input, parse input,
+    execute input.
+    
+    I suggest running the input parsing (with parameters) as a separate
+    function. See what happens in (Interpreter.hpp). And I think
+    a match case on command types would also be better.
+
+    suggestion:
+    enum CLI_COMMAND {
+      CLI_EXIT,
+      CLI_SCREEN_S
+      CLI_SCREEN_LS
+      // ...
+    };
+
+    parsed_input = get_cli_command(input); 
+    // this takes the input line and returns the enum type and the
+    // parameters of that cli-type.
+    // the type of parsed_input is a CLI_COMMAND
+
+    match parsed_input {
+      case CLI_EXIT { };
+      case CLI_SCREEN_S { };
+      case_CLI_SCREEN_LS { };
+      // ...
+    }
+
+    <RV @zrygan> =========== */
     while(input != "exit"){
       std::cout << "Enter Input: ";
       std::getline(std::cin, input);
