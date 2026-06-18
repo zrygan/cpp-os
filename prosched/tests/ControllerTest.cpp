@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
 #include "controller/Controller.h"
 
-// ─── IdentifyCommand ──────────────────────────────────────────────────────────
-// Pure function — maps token vectors to CLI_COMMAND enum. No file or state deps.
 
 namespace ControllerIdentifyCommand {
 
@@ -53,8 +51,6 @@ namespace ControllerIdentifyCommand {
 
 } // namespace ControllerIdentifyCommand
 
-// ─── GetParsedInput ───────────────────────────────────────────────────────────
-// Tokenizes on space then delegates to IdentifyCommand. No file or state deps.
 
 namespace ControllerGetParsedInput {
 
@@ -97,9 +93,6 @@ namespace ControllerGetParsedInput {
 
 } // namespace ControllerGetParsedInput
 
-// ─── HandlePreInit ────────────────────────────────────────────────────────────
-// Tests return value only. "exit" is not tested — it calls _Exit and kills the process.
-
 namespace ControllerHandlePreInit {
 
     TEST(ControllerHandlePreInit, NonInitializeInputReturnsFalse) {
@@ -121,6 +114,7 @@ namespace ControllerHandlePreInit {
 
 } // namespace ControllerHandlePreInit
 
+
 // ─── initialize ───────────────────────────────────────────────────────────────
 // Reads "prosched/config.txt" relative to CWD. CMakeLists.txt copies the file to
 // ${CMAKE_CURRENT_BINARY_DIR}/prosched/config.txt so tests find it at runtime.
@@ -134,7 +128,7 @@ namespace ControllerInitialize {
     TEST(ControllerInitialize, ReturnsCorrectSchedulerType) {
         Controller c;
         AlgoContext ctx = c.initialize();
-        EXPECT_EQ(ctx.schedulerType, "fcfs");
+        EXPECT_EQ(ctx.schedulerType, SchedulerType::FCFS);
     }
 
     TEST(ControllerInitialize, ReturnsCorrectNumCpu) {
@@ -168,11 +162,11 @@ namespace ControllerInitialize {
         EXPECT_EQ(ctx.delayPerExec, 0);
     }
 
-    TEST(ControllerInitialize, SchedulerTypeIsNotEmptyOnSuccess) {
+    TEST(ControllerInitialize, SchedulerTypeIsNotUnknownOnSuccess) {
         Controller c;
         AlgoContext ctx = c.initialize();
-        // Empty schedulerType means fromFile() failed (config.txt not found)
-        EXPECT_NE(ctx.schedulerType, "");
+        // UNKNOWN means fromFile() failed (config.txt not found) or scheduler string unrecognized
+        EXPECT_NE(ctx.schedulerType, SchedulerType::UNKNOWN);
     }
 
     TEST(ControllerInitialize, CalledTwiceDoesNotCrash) {
