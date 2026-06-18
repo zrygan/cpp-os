@@ -235,17 +235,10 @@ private:
 
     // std::cout << "\nFCFS Scheduler\n";
     for (Worker *w : workers) {
-      /*
-        <RV @zrygan> ===========
-        can't you combine the two ifs into 1 if with a conjunction?
-        <RV @zrygan> ===========
-       */
-      if (!processQueue.empty()) {
-        if (!w->IsBusy()) {
-          Process *p = processQueue.front();
-          processQueue.pop();
-          w->AssignProcess(p);
-        }
+      if (!processQueue.empty() && !w->IsBusy()) {
+        Process *p = processQueue.front();
+        processQueue.pop();
+        w->AssignProcess(p);
       }
     }
   }
@@ -289,12 +282,7 @@ private:
         a lot of things.
         
         @erin @aaron
-
-        ======
-
-        The else block here does not make sense.
-
-        If generatingProcesses already false. Why set it false again?
+        
         <RV @zrygan> ===========
       */
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
@@ -307,9 +295,7 @@ private:
           processes.push_back(p);
 
           nextPID++;
-        } else {
-          generatingProcesses = false;
-        }
+        } 
       }
 
       /*
