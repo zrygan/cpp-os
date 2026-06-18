@@ -10,6 +10,7 @@
 #include "process/Process.h"
 #include "src/context.h"
 #include "src/scheduler/worker/Worker.h"
+#include "src/Constants.hpp"
 
 using namespace std;
 
@@ -62,20 +63,7 @@ public:
     if (running)
       return false;
 
-    /*
-        <RV @zrygan> ===========
-        again just separate the concerns. And follow MVC?
-        <RV @zrygan> ===========
-    */
-    // testing print
-    std::cout << "\n\nScheduler specs\n";
-    std::cout << "\nNumber of cores: " << this->ctx.numCpu;
-    std::cout << "\nScheduler: " << this->ctx.schedulerType;
-    std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
-    std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-"
-              << this->ctx.maxIns;
-    std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
-    std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
+    printSchedulerSpecs();
 
     running = true;
     // ehhh
@@ -189,13 +177,8 @@ public:
     // this->ctx.minIns + 1);
 
     // fcfs specs say only 100
-    /*
-        <RV @zrygan> ===========
-        For constants explicitly mentioned in the specifications can
-         we make a Constants.hpp with these constant values.
-        <RV @zrygan> ===========
-    */
-    int commandAmount = 100;
+
+    int commandAmount = NUM_PRINT_INSTRUCTIONS;
 
     // only prints for now
     for (int i = 0; i < commandAmount; i++) {
@@ -224,6 +207,38 @@ private:
 
   bool generatingProcesses = false;
   int nextPID = 1;
+
+  /**
+   * @brief converts the scheduler type enum to a string for printing
+   * 
+   * @return a string representation of the scheduler type
+   */
+  std::string schedulerTypeToString() {
+    switch (ctx.schedulerType) {
+        case SchedulerType::FCFS: 
+        return "fcfs";
+        case SchedulerType::RR:   
+        return "rr";
+        default:                   
+        return "unknown";
+    }
+  }
+
+  /**
+   * @brief prints the scheduler specs when "screen -ls" is called
+   */
+  void printSchedulerSpecs() {
+    std::cout << "\n\nScheduler specs\n";
+    std::cout << "\nNumber of cores: " << this->ctx.numCpu;
+    std::cout << "\nScheduler: " << schedulerTypeToString();
+    std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
+    std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-"
+              << this->ctx.maxIns;
+    std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
+    std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
+}
+
+
 
   /**
    * @brief First-Come First-Serve Scheduler Algorithm
@@ -291,7 +306,7 @@ private:
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
 
         // limit to 10 processes -> 10 txt files
-        if (nextPID <= 10) {
+        if (nextPID <= MAX_PROCESSES) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
           processQueue.push(p);
@@ -301,19 +316,12 @@ private:
         } 
       }
 
-      /*
-        <RV @zrygan> ==========
-        nitpick: again this is fine, but we can also use Enums to make
-        things explicit.
-        <RV @zrygan> ==========
-       */
-      if (this->ctx.schedulerType == "fcfs") {
+      if (ctx.schedulerType == SchedulerType::FCFS) {
         FCFS();
-      } else if (this->ctx.schedulerType == "rr") {
+      } else if (ctx.schedulerType == SchedulerType::RR) {
         RoundRobin();
       } else {
-        std::cout << this->ctx.schedulerType
-                  << " is not a valid scheduler type\n";
+        std::cout << "Invalid scheduler type (check config)\n";
         return;
       }
 
