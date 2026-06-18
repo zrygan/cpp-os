@@ -39,6 +39,7 @@ add_executable(prosched_tests
   tests/SchedulerTest.cpp
   tests/InterpreterTest.cpp
   tests/ControllerTest.cpp
+  tests/ConfigTest.cpp
 
   # Controller and View are not header-only; their implementations must be linked
   src/controller/Controller.cpp
