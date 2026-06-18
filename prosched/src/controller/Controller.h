@@ -14,7 +14,7 @@ private:
   bool isInitialized;
 
 public:
-  void initialize();
+  AlgoContext initialize();
   void run();
 };
 

@@ -9,7 +9,7 @@
 #include "context.h"
 #include "src/scheduler/Scheduler.h"
 
-void Controller::initialize() {
+AlgoContext Controller::initialize() {
   ConfigStruct *cs = fromFile();
 
   /*
@@ -24,7 +24,8 @@ void Controller::initialize() {
   */
   if (cs == nullptr) {
     std::cout << "Failed to find config file\n";
-    return;
+    this->ctx = {};
+    return this->ctx;
   }
 
   this->ctx = AlgoContext::buildConfig(cs);
@@ -49,6 +50,8 @@ void Controller::initialize() {
             << "- scheduler-start\n"
             << "- scheduler-stop\n"
             << "- report-util\n\n";
+  
+  return this->ctx;         
 }
 
 void Controller::run() {
