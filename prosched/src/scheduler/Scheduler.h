@@ -43,6 +43,11 @@ public:
     if (running)
       return false;
 
+    /*
+        <RV @zrygan> ===========
+        again just separate the concerns. And follow MVC?
+        <RV @zrygan> ===========
+    */
     // testing print
     std::cout << "\n\nScheduler specs\n";
     std::cout << "\nNumber of cores: " << this->ctx.numCpu;
@@ -158,6 +163,12 @@ public:
     // this->ctx.minIns + 1);
 
     // fcfs specs say only 100
+    /*
+        <RV @zrygan> ===========
+        For constants explicitly mentioned in the specifications can
+         we make a Constants.hpp with these constant values.
+        <RV @zrygan> ===========
+    */
     int commandAmount = 100;
 
     // only prints for now
@@ -201,6 +212,11 @@ private:
 
     // std::cout << "\nFCFS Scheduler\n";
     for (Worker *w : workers) {
+      /*
+        <RV @zrygan> ===========
+        can't you combine the two ifs into 1 if with a conjunction?
+        <RV @zrygan> ===========
+       */
       if (!processQueue.empty()) {
         if (!w->IsBusy()) {
           Process *p = processQueue.front();
@@ -233,6 +249,31 @@ private:
     while (running) {
       cpuCycles++;
 
+      /*
+        <RV @zrygan> ===========
+        So cpuCycles % ctx.batchProcessFreq is required everywhere.
+
+        Can we ensure in the the config loader or whereever the values
+        for these are populated. We check that the values are 
+        valid/make sense. This can be a very easy pain point in the future.
+
+        The same thing for limiting the number of processes to 10.
+
+
+        ======
+
+        Also again, separation of concerns. This is a function juggling
+        a lot of things.
+        
+        @erin @aaron
+
+        ======
+
+        The else block here does not make sense.
+
+        If generatingProcesses already false. Why set it false again?
+        <RV @zrygan> ===========
+      */
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
 
         // limit to 10 processes -> 10 txt files
@@ -248,6 +289,12 @@ private:
         }
       }
 
+      /*
+        <RV @zrygan> ==========
+        nitpick: again this is fine, but we can also use Enums to make
+        things explicit.
+        <RV @zrygan> ==========
+       */
       if (this->ctx.schedulerType == "fcfs") {
         FCFS();
       } else if (this->ctx.schedulerType == "rr") {
