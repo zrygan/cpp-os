@@ -30,7 +30,7 @@ void Controller::initialize() {
     implemented in the naming and organization of stuff since we are
     using MVC.
 
-    @outformilks @chuae
+    @stephen @erin
     <RV @zrygan> =========== */
   std::cout << "Initialized successfully.\n\n";
   std::cout << "List of accessible commands:\n"
