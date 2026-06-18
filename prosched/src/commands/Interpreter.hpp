@@ -490,7 +490,7 @@ public:
     }
     screen_buffer.push_back("====================================");
     return memory;  
-}
+  }
 };
 
 } // namespace prosched
