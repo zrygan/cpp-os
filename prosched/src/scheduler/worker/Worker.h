@@ -100,7 +100,10 @@ public:
    *
    * @return true if a process is assigned and executing
    */
-  bool IsBusy() const { return currentProcess != nullptr; }
+  bool IsBusy() const { 
+    std::lock_guard<std::mutex> lock(workerMutex);
+    return currentProcess != nullptr; 
+  }
 
   /**
    * @brief Gets the core number associated with this worker

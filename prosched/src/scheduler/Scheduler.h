@@ -155,6 +155,8 @@ public:
                 std::string(5, ' ') << 
                 p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
                 "\n";
+        } else {
+            std::cout << "Core " << w->GetCoreNum() << " (idle)\n";
         }
     }
 
@@ -185,6 +187,8 @@ public:
     std::cout << std::string(50, '-') << "\n";
     std::cout << std::endl;
   }
+
+  
 
   /**
    * @brief
