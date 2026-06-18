@@ -36,7 +36,9 @@ public:
         Stop();
     }
     for (Process* p : processes) {
-        delete p;
+      if (p && p->IsOwnedByScheduler()) {
+          delete p;
+      }
     }
     for (Worker* w : workers) {
         delete w;
@@ -178,6 +180,7 @@ public:
 
     std::string name = "process" + std::to_string(nextPID);
     Process *p = new Process(name, pid, tick);
+    p->SetOwnedByScheduler(true);
 
     // std::cout << p->GetName() << "\n";
 
@@ -282,7 +285,7 @@ private:
         a lot of things.
         
         @erin @aaron
-        
+
         <RV @zrygan> ===========
       */
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
