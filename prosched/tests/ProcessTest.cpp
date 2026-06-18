@@ -1,212 +1,247 @@
-#include "scheduler/process/Process.h"
-#include "commands/Command.h"
 #include <gtest/gtest.h>
-#include <memory>
+#include "scheduler/process/Process.h"
 
-namespace ProcessAddComandTest {
+namespace ProcessAddInstruction {
 
-// A valid command returns the same Command* that was passed in
-TEST(ProcessAddCommand, ReturnedPointerMatchesInput) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd = std::make_shared<Command>();
-
-  std::shared_ptr<Command> *result = p.AddCommand(cmd);
-
-  ASSERT_NE(result, nullptr);
-  EXPECT_EQ(result->get(), cmd.get());
+TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
+    prosched::Process p("add_1", 1, 0);
+    std::string result = p.AddInstruction("PRINT(\"hello\")");
+    EXPECT_EQ(result, "PRINT(\"hello\")");
 }
 
-// Adding multiple commands should all succeed
-TEST(ProcessAddCommand, AddMultipleCommands) {
-  Process p("proc", 1, 0);
-
-  for (int i = 0; i < 5; i++) {
-    std::shared_ptr<Command> cmd = std::make_shared<Command>();
-    std::shared_ptr<Command> *result = p.AddCommand(cmd);
-    EXPECT_NE(result, nullptr) << "Failed on command index " << i;
-  }
+TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
+    prosched::Process p("add_2", 2, 0);
+    std::string result = p.AddInstruction("DECLARE(x, 10)");
+    EXPECT_EQ(result, "DECLARE(x, 10)");
 }
 
-// Adding a nullptr shared_ptr should return nullptr (nothing to register)
-TEST(ProcessAddCommand, NullCommandReturnsNull) {
-  Process p("proc", 1, 0);
-
-  std::shared_ptr<Command> *result = p.AddCommand(nullptr);
-
-  EXPECT_EQ(result, nullptr);
+TEST(ProcessAddInstruction, MultipleInstructionsAllSucceed) {
+    prosched::Process p("add_3", 3, 0);
+    for (int i = 0; i < 10; i++) {
+        std::string r = p.AddInstruction("PRINT(\"line\")");
+        EXPECT_FALSE(r.empty()) << "Failed at index " << i;
+    }
 }
 
-// Adding a large number of commands should not crash (no artificial cap)
-TEST(ProcessAddCommand, ManyCommands) {
-  Process p("proc", 1, 0);
-
-  for (int i = 0; i < 1000; i++) {
-    std::shared_ptr<Command> cmd = std::make_shared<Command>();
-    std::shared_ptr<Command> *result = p.AddCommand(cmd);
-    EXPECT_NE(result, nullptr) << "Failed on command index " << i;
-  }
+// Unknown keyword is absorbed by the interpreter — should not throw
+TEST(ProcessAddInstruction, UnknownKeywordDoesNotCrash) {
+    prosched::Process p("add_4", 4, 0);
+    EXPECT_NO_THROW(p.AddInstruction("UNKNOWNCMD(x)"));
 }
 
-// Adding the same shared_ptr instance twice should succeed both times
-TEST(ProcessAddCommand, SameCommandAddedTwice) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd = std::make_shared<Command>();
-
-  std::shared_ptr<Command> *r1 = p.AddCommand(cmd);
-  std::shared_ptr<Command> *r2 = p.AddCommand(cmd);
-
-  EXPECT_NE(r1, nullptr);
-  EXPECT_NE(r2, nullptr);
+// Empty string produces no statements — should not crash
+TEST(ProcessAddInstruction, EmptyStringDoesNotCrash) {
+    prosched::Process p("add_5", 5, 0);
+    EXPECT_NO_THROW(p.AddInstruction(""));
 }
 
-// Interleaving valid and null adds: valid ones must still succeed
-// and nulls must still return nullptr
-TEST(ProcessAddCommand, InterleavedValidAndNull) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd1 = std::make_shared<Command>();
-  std::shared_ptr<Command> cmd2 = std::make_shared<Command>();
+// Two separate Process instances must not share their statement vectors
+TEST(ProcessAddInstruction, IndependentProcessesDoNotShareInstructions) {
+    prosched::Process p1("add_6a", 6, 0);
+    prosched::Process p2("add_6b", 7, 0);
 
-  std::shared_ptr<Command> *r1 = p.AddCommand(cmd1);
-  std::shared_ptr<Command> *null = p.AddCommand(nullptr);
-  std::shared_ptr<Command> *r2 = p.AddCommand(cmd2);
+    p1.AddInstruction("PRINT(\"from p1\")");
 
-  EXPECT_NE(r1, nullptr);
-  EXPECT_EQ(null, nullptr);
-  EXPECT_NE(r2, nullptr);
+    // p2 has no instructions — executing should finish it immediately (empty return)
+    auto result = p2.ExecuteInstructions(1);
+    EXPECT_TRUE(result.empty());
+    EXPECT_TRUE(p2.IsFinished());
 }
 
-// Two separate Process instances must not share their command vectors
-TEST(ProcessAddCommand, IndependentProcessesDoNotShareCommands) {
-  Process p1("proc1", 1, 0);
-  Process p2("proc2", 2, 0);
-  std::shared_ptr<Command> cmd = std::make_shared<Command>();
+} // namespace ProcessAddInstruction
 
-  std::shared_ptr<Command> *r1 = p1.AddCommand(cmd);
 
-  EXPECT_NE(r1, nullptr);
-  EXPECT_EQ(p2.ExecuteCurrentCommand(0), nullptr);
+namespace ProcessExecuteInstructions {
+
+// Each call should advance by exactly one statement
+TEST(ProcessExecuteInstructions, ExecutesOneStatementPerCall) {
+    prosched::Process p("exec_1", 1, 0);
+    p.AddInstruction("PRINT(\"a\")");
+    p.AddInstruction("PRINT(\"b\")");
+    p.AddInstruction("PRINT(\"c\")");
+
+    p.ExecuteInstructions(1);
+    p.ExecuteInstructions(1);
+
+    EXPECT_EQ(p.GetLogs().size(), 2u);
+    EXPECT_FALSE(p.IsFinished());
 }
 
-} // namespace ProcessAddComandTest
+// Should return a non-empty vector while there are still statements left
+TEST(ProcessExecuteInstructions, ReturnsStatementsWhileRunning) {
+    prosched::Process p("exec_2", 2, 0);
+    p.AddInstruction("PRINT(\"a\")");
+    p.AddInstruction("PRINT(\"b\")");
 
-namespace ProcessExecuteCommand {
-
-// Executing a valid index should return the Command that lives at that slot
-TEST(ProcessExecuteCurrentCommand, ValidIndexReturnsCommand) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd = std::make_shared<Command>();
-  p.AddCommand(cmd);
-
-  Command *result = p.ExecuteCurrentCommand(0);
-
-  ASSERT_NE(result, nullptr);
-  EXPECT_EQ(result, cmd.get());
+    auto result = p.ExecuteInstructions(1);
+    EXPECT_FALSE(result.empty());
 }
 
-// A process with no commands should return nullptr for any index
-TEST(ProcessExecuteCurrentCommand, NoCommandsReturnsNull) {
-  Process p("proc", 1, 0);
+// Should return empty vector when called on an already-finished process
+TEST(ProcessExecuteInstructions, CallingAfterFinishedReturnsEmpty) {
+    prosched::Process p("exec_3", 3, 0);
+    p.AddInstruction("PRINT(\"a\")");
 
-  Command *result = p.ExecuteCurrentCommand(0);
+    p.ExecuteInstructions(1);          // finishes the process
+    auto result = p.ExecuteInstructions(1); // already finished
 
-  EXPECT_EQ(result, nullptr);
+    EXPECT_TRUE(result.empty());
 }
 
-// A negative index is out of bounds — should return nullptr
-TEST(ProcessExecuteCurrentCommand, NegativeIndexReturnsNull) {
-  Process p("proc", 1, 0);
-  p.AddCommand(std::make_shared<Command>());
-
-  Command *result = p.ExecuteCurrentCommand(-1);
-
-  EXPECT_EQ(result, nullptr);
+// A process with no instructions should finish on the first call
+TEST(ProcessExecuteInstructions, NoInstructionsFinishesOnFirstCall) {
+    prosched::Process p("exec_4", 4, 0);
+    p.ExecuteInstructions(1);
+    EXPECT_TRUE(p.IsFinished());
 }
 
-// An index past the end of the command list should return nullptr
-TEST(ProcessExecuteCurrentCommand, OutOfBoundsIndexReturnsNull) {
-  Process p("proc", 1, 0);
-  p.AddCommand(std::make_shared<Command>());
+// Non-PRINT instructions execute without generating logs
+TEST(ProcessExecuteInstructions, DeclareInstructionProducesNoLog) {
+    prosched::Process p("exec_5", 5, 0);
+    p.AddInstruction("DECLARE(x, 42)");
+    p.ExecuteInstructions(1);
 
-  Command *result = p.ExecuteCurrentCommand(1); // only index 0 is valid
-
-  EXPECT_EQ(result, nullptr);
+    EXPECT_TRUE(p.GetLogs().empty());
 }
 
-// INT_MAX index should be handled safely without crashing
-TEST(ProcessExecuteCurrentCommand, LargeIndexReturnsNull) {
-  Process p("proc", 1, 0);
-  p.AddCommand(std::make_shared<Command>());
+// Arithmetic result is visible when PRINTed after ADD
+TEST(ProcessExecuteInstructions, AddResultVisibleInPrint) {
+    prosched::Process p("exec_6", 6, 0);
+    p.AddInstruction("DECLARE(x, 3)");
+    p.AddInstruction("DECLARE(y, 7)");
+    p.AddInstruction("ADD(z, x, y)");
+    p.AddInstruction("PRINT(z)");
 
-  Command *result = p.ExecuteCurrentCommand(INT_MAX);
+    p.ExecuteInstructions(1); // DECLARE x
+    p.ExecuteInstructions(1); // DECLARE y
+    p.ExecuteInstructions(1); // ADD z = 10
+    p.ExecuteInstructions(1); // PRINT z → "10"
 
-  EXPECT_EQ(result, nullptr);
+    auto logs = p.GetLogs();
+    ASSERT_FALSE(logs.empty());
+    EXPECT_NE(logs.back().find("10"), std::string::npos);
 }
 
-// Each index in sequence should return its own Command
-TEST(ProcessExecuteCurrentCommand, SequentialExecution) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd1 = std::make_shared<Command>();
-  std::shared_ptr<Command> cmd2 = std::make_shared<Command>();
-  std::shared_ptr<Command> cmd3 = std::make_shared<Command>();
-  p.AddCommand(cmd1);
-  p.AddCommand(cmd2);
-  p.AddCommand(cmd3);
+} // namespace ProcessExecuteInstructions
 
-  Command *r0 = p.ExecuteCurrentCommand(0);
-  Command *r1 = p.ExecuteCurrentCommand(1);
-  Command *r2 = p.ExecuteCurrentCommand(2);
 
-  EXPECT_EQ(r0, cmd1.get());
-  EXPECT_EQ(r1, cmd2.get());
-  EXPECT_EQ(r2, cmd3.get());
+namespace ProcessIsFinished {
+
+TEST(ProcessIsFinished, FalseOnConstruction) {
+    prosched::Process p("fin_1", 1, 0);
+    EXPECT_FALSE(p.IsFinished());
 }
 
-// INT_MIN index should be handled safely — no crash
-TEST(ProcessExecuteCurrentCommand, MostNegativeIndexReturnsNull) {
-  Process p("proc", 1, 0);
-  p.AddCommand(std::make_shared<Command>());
+TEST(ProcessIsFinished, FalseAfterPartialExecution) {
+    prosched::Process p("fin_2", 2, 0);
+    p.AddInstruction("PRINT(\"a\")");
+    p.AddInstruction("PRINT(\"b\")");
 
-  Command *result = p.ExecuteCurrentCommand(INT_MIN);
-
-  EXPECT_EQ(result, nullptr);
+    p.ExecuteInstructions(1); // only first of two done
+    EXPECT_FALSE(p.IsFinished());
 }
 
-// Executing the exact last valid index (size - 1) should return non-null
-TEST(ProcessExecuteCurrentCommand, LastValidIndexReturnsCommand) {
-  Process p("proc", 1, 0);
-  p.AddCommand(std::make_shared<Command>());
-  p.AddCommand(std::make_shared<Command>());
-  std::shared_ptr<Command> last = std::make_shared<Command>();
-  p.AddCommand(last);
+TEST(ProcessIsFinished, TrueAfterLastInstructionRuns) {
+    prosched::Process p("fin_3", 3, 0);
+    p.AddInstruction("PRINT(\"a\")");
 
-  Command *result = p.ExecuteCurrentCommand(2);
-
-  EXPECT_EQ(result, last.get());
+    p.ExecuteInstructions(1);
+    EXPECT_TRUE(p.IsFinished());
 }
 
-// Re-executing the same index twice must not remove or corrupt the command
-TEST(ProcessExecuteCurrentCommand, SameIndexExecutedTwice) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd = std::make_shared<Command>();
-  p.AddCommand(cmd);
+TEST(ProcessIsFinished, TrueAfterAllOfManyInstructions) {
+    prosched::Process p("fin_4", 4, 0);
+    const int count = 5;
+    for (int i = 0; i < count; i++)
+        p.AddInstruction("PRINT(\"x\")");
 
-  Command *r1 = p.ExecuteCurrentCommand(0);
-  Command *r2 = p.ExecuteCurrentCommand(0);
+    for (int i = 0; i < count; i++)
+        p.ExecuteInstructions(1);
 
-  EXPECT_EQ(r1, cmd.get());
-  EXPECT_EQ(r2, cmd.get());
+    EXPECT_TRUE(p.IsFinished());
 }
 
-// A bad call must not poison state — valid call after OOB must still succeed
-TEST(ProcessExecuteCurrentCommand, ValidAfterOutOfBoundsStillWorks) {
-  Process p("proc", 1, 0);
-  std::shared_ptr<Command> cmd = std::make_shared<Command>();
-  p.AddCommand(cmd);
+// Calling again after finish must not flip back to not-finished
+TEST(ProcessIsFinished, RemainsFinishedAfterExtraCall) {
+    prosched::Process p("fin_5", 5, 0);
+    p.AddInstruction("PRINT(\"a\")");
 
-  p.ExecuteCurrentCommand(99);
-  Command *result = p.ExecuteCurrentCommand(0);
-
-  EXPECT_EQ(result, cmd.get());
+    p.ExecuteInstructions(1);
+    p.ExecuteInstructions(1); // extra call on finished process
+    EXPECT_TRUE(p.IsFinished());
 }
 
-} // namespace ProcessExecuteCommand
+} // namespace ProcessIsFinished
+
+
+namespace ProcessLogs {
+
+// Logs are empty before any execution
+TEST(ProcessLogs, EmptyBeforeExecution) {
+    prosched::Process p("log_1", 1, 0);
+    p.AddInstruction("PRINT(\"hello\")");
+    EXPECT_TRUE(p.GetLogs().empty());
+}
+
+// Each PRINT statement adds exactly one log entry
+TEST(ProcessLogs, PrintAddsOneLogEntry) {
+    prosched::Process p("log_2", 2, 0);
+    p.AddInstruction("PRINT(\"hello\")");
+    p.ExecuteInstructions(1);
+    EXPECT_EQ(p.GetLogs().size(), 1u);
+}
+
+// Log entry must contain the string that was printed
+TEST(ProcessLogs, LogContainsPrintedValue) {
+    prosched::Process p("log_3", 3, 0);
+    p.AddInstruction("PRINT(\"hello world\")");
+    p.ExecuteInstructions(1);
+
+    ASSERT_FALSE(p.GetLogs().empty());
+    EXPECT_NE(p.GetLogs()[0].find("hello world"), std::string::npos);
+}
+
+// Log entry must contain the core number passed to ExecuteInstructions
+TEST(ProcessLogs, LogContainsCoreNumber) {
+    prosched::Process p("log_4", 4, 0);
+    p.AddInstruction("PRINT(\"msg\")");
+    p.ExecuteInstructions(3); // core 3
+
+    ASSERT_FALSE(p.GetLogs().empty());
+    EXPECT_NE(p.GetLogs()[0].find("Core:3"), std::string::npos);
+}
+
+// Non-PRINT instructions must not add log entries
+TEST(ProcessLogs, NonPrintInstructionAddsNoLog) {
+    prosched::Process p("log_5", 5, 0);
+    p.AddInstruction("DECLARE(x, 10)");
+    p.ExecuteInstructions(1);
+    EXPECT_TRUE(p.GetLogs().empty());
+}
+
+// Logs accumulate across multiple executions
+TEST(ProcessLogs, LogsAccumulateAcrossCalls) {
+    prosched::Process p("log_6", 6, 0);
+    p.AddInstruction("PRINT(\"a\")");
+    p.AddInstruction("PRINT(\"b\")");
+    p.AddInstruction("PRINT(\"c\")");
+
+    p.ExecuteInstructions(1);
+    p.ExecuteInstructions(1);
+    p.ExecuteInstructions(1);
+
+    EXPECT_EQ(p.GetLogs().size(), 3u);
+}
+
+// Two processes must not share log state
+TEST(ProcessLogs, IndependentProcessesDoNotShareLogs) {
+    prosched::Process p1("log_7a", 7, 0);
+    prosched::Process p2("log_7b", 8, 0);
+
+    p1.AddInstruction("PRINT(\"from p1\")");
+    p1.ExecuteInstructions(1);
+
+    EXPECT_TRUE(p2.GetLogs().empty());
+}
+
+} // namespace ProcessLogs
