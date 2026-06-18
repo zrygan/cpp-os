@@ -45,3 +45,14 @@ void Welcome() {
             << std::endl;
   SetColor(7);
 }
+
+void CommandSet() {
+  std::cout << "Initialized successfully.\n\n";
+  std::cout << "List of accessible commands:\n"
+            << "- exit\n"
+            << "- screen -s <process name>\n"
+            << "- screen -ls\n"
+            << "- scheduler-start\n"
+            << "- scheduler-stop\n"
+            << "- report-util\n\n";
+}

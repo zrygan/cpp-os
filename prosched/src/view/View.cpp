@@ -11,3 +11,5 @@ void View::DisplayMenu() { Welcome(); }
  * @brief Clears the terminal screen using a system call.
  */
 void View::DisplayClear() { system("cls"); }
+
+void View::DisplayCommands() { CommandSet(); }

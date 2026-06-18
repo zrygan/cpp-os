@@ -18,6 +18,8 @@ public:
    * @brief Clears the terminal screen.
    */
   void DisplayClear();
+
+  void DisplayCommands();
 };
 
 #endif

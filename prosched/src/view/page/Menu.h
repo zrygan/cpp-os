@@ -7,4 +7,6 @@
  */
 void Welcome();
 
+void CommandSet();
+
 #endif

@@ -33,6 +33,9 @@ private:
 public:
   AlgoContext initialize();
   void run();
+  void HandleView();
+  bool HandlePreInit(const std::string& input);
+  void HandlePostInit(const std::string& input);
 
   Command GetParsedInput(const std::string& input);
   void ExecuteCommand(const Command& command);
