@@ -17,8 +17,6 @@
 #include "config.h"
 #include "src/commands/Interpreter.hpp"
 
-using namespace std;
-
 namespace prosched {
 
 class Process {

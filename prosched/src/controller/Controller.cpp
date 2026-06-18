@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <stdio.h>
 #include <string>
-#include <sstream>
-#include <cstdlib>
 
 #include "Controller.h"
 #include "config.h"
@@ -35,8 +35,8 @@ AlgoContext Controller::initialize() {
   this->isInitialized = true;
 
   this->view.DisplayCommands();
-  
-  return this->ctx;         
+
+  return this->ctx;
 }
 
 void Controller::HandleView() {
@@ -44,25 +44,26 @@ void Controller::HandleView() {
   view.DisplayMenu();
 }
 
-bool Controller::HandlePreInit(const std::string& input) {
+bool Controller::HandlePreInit(const std::string &input) {
   if (input == "initialize") {
-        AlgoContext result = initialize();
-        if (!isInitialized) {
-            std::cout << "Initialization failed. Check config.txt.\n";
-        }
-        return true;
+    AlgoContext result = initialize();
+    if (!isInitialized) {
+      std::cout << "Initialization failed. Check config.txt.\n";
+    }
+    return true;
   }
 
   if (input == "exit") {
-      ExitOS();
+    ExitOS();
   }
 
   std::cout << "Type \"initialize\" to access commands.\n";
   return false;
 }
 
-void Controller::HandlePostInit(const std::string& input) {
-  if (input.empty()) return;
+void Controller::HandlePostInit(const std::string &input) {
+  if (input.empty())
+    return;
 
   Command command = GetParsedInput(input);
   ExecuteCommand(command);
@@ -77,52 +78,52 @@ void Controller::run() {
     std::getline(std::cin, input);
 
     if (!isInitialized) {
-        HandlePreInit(input);
+      HandlePreInit(input);
     } else {
-        HandlePostInit(input);
+      HandlePostInit(input);
     }
   }
 }
 
 std::vector<std::string> trim(const std::string &s, char separator) {
   std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream tokenStream(s);
+  std::string token;
+  std::istringstream tokenStream(s);
 
-    while (std::getline(tokenStream, token, separator)) {
-        tokens.push_back(token);
-    }
-    return tokens;
+  while (std::getline(tokenStream, token, separator)) {
+    tokens.push_back(token);
+  }
+  return tokens;
 }
 
-void Controller::ExitOS(){
+void Controller::ExitOS() {
   std::cout << "Stopping prosched...\n";
   std::_Exit(EXIT_SUCCESS);
 }
 
-Command Controller::GetParsedInput(const std::string& input) {
+Command Controller::GetParsedInput(const std::string &input) {
   Command commands;
 
   if (input.empty()) {
-        commands.cliCommand = CLI_COMMAND::UNKNOWN;
-        return commands;
+    commands.cliCommand = CLI_COMMAND::UNKNOWN;
+    return commands;
   }
 
   std::vector<std::string> trimmed = trim(input, ' ');
 
   if (trimmed.empty()) {
-        commands.cliCommand = CLI_COMMAND::UNKNOWN;
-        return commands;
+    commands.cliCommand = CLI_COMMAND::UNKNOWN;
+    return commands;
   }
 
   commands.cliCommand = IdentifyCommand(trimmed);
-  
+
   if (commands.cliCommand == CLI_COMMAND::UNKNOWN) {
     commands.cliCommand = CLI_COMMAND::UNKNOWN;
     return commands;
   }
 
-  if(commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S){
+  if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S) {
     commands.processName = trimmed[2];
     return commands;
   }
@@ -130,44 +131,44 @@ Command Controller::GetParsedInput(const std::string& input) {
   return commands;
 }
 
-void Controller::ExecuteCommand(const Command& command){
+void Controller::ExecuteCommand(const Command &command) {
   try {
-    switch(command.cliCommand) {
-      case CLI_COMMAND::CLI_EXIT:
-        ExitOS();
+    switch (command.cliCommand) {
+    case CLI_COMMAND::CLI_EXIT:
+      ExitOS();
       break;
 
-      case CLI_COMMAND::CLI_SCREEN_LS:
-        this->scheduler->PrintProcesses();
+    case CLI_COMMAND::CLI_SCREEN_LS:
+      this->scheduler->PrintProcesses();
       break;
 
-      case CLI_COMMAND::CLI_SCREEN_S:
-        // none for now
-      break;
-
-      case CLI_COMMAND::CLI_SCHEDULER_START:
-        if (!this->scheduler->IsRunning() == true) {
-          this->scheduler->Start();
-        } else {
-          std::cout << "Scheduler is still running...\n\n";
-        }
-      break;
-
-      case CLI_COMMAND::CLI_SCHEDULER_STOP:
-        if (this->scheduler->IsRunning() == true) {
-          this->scheduler->Stop();
-        } else {
-          std::cout << "Scheduler has not started, run \"scheduler-start\" "
-                       "to start\n\n";
-        }
-      break;
-
-      case CLI_COMMAND::CLI_REPORT_UTIL:
+    case CLI_COMMAND::CLI_SCREEN_S:
       // none for now
       break;
 
-      case CLI_COMMAND::UNKNOWN:
-        std::cout << "Command unknown. Try again. \n";
+    case CLI_COMMAND::CLI_SCHEDULER_START:
+      if (!this->scheduler->IsRunning() == true) {
+        this->scheduler->Start();
+      } else {
+        std::cout << "Scheduler is still running...\n\n";
+      }
+      break;
+
+    case CLI_COMMAND::CLI_SCHEDULER_STOP:
+      if (this->scheduler->IsRunning() == true) {
+        this->scheduler->Stop();
+      } else {
+        std::cout << "Scheduler has not started, run \"scheduler-start\" "
+                     "to start\n\n";
+      }
+      break;
+
+    case CLI_COMMAND::CLI_REPORT_UTIL:
+      // none for now
+      break;
+
+    case CLI_COMMAND::UNKNOWN:
+      std::cout << "Command unknown. Try again. \n";
       break;
     }
 
@@ -177,10 +178,12 @@ void Controller::ExecuteCommand(const Command& command){
   }
 }
 
-CLI_COMMAND Controller::IdentifyCommand(const std::vector<std::string> &command) {
-  if(command[0] == "screen") {
-    if (command.size() < 2) return CLI_COMMAND::UNKNOWN;
-    if(command[1] == "-ls") {
+CLI_COMMAND
+Controller::IdentifyCommand(const std::vector<std::string> &command) {
+  if (command[0] == "screen") {
+    if (command.size() < 2)
+      return CLI_COMMAND::UNKNOWN;
+    if (command[1] == "-ls") {
       return CLI_COMMAND::CLI_SCREEN_LS;
     } else if (command[1] == "-s") {
       return CLI_COMMAND::CLI_SCREEN_S;

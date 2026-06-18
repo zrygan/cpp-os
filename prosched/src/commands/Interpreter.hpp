@@ -50,13 +50,6 @@ struct Statement {
     The interpreter operates in two distinct phases:
     - **Parsing**: converts the input string into an abstract syntax tree (AST)
     - **Execution**: walks the AST and executes instructions recursively
-
-    @example
-    @code
-    Interpreter vm;
-    vm.execute("DECLARE(x, 10), DECLARE(y, 20), ADD(z, x, y), PRINT(z)");
-    auto output = vm.flushBuffer(); // ["30"]
-    @endcode
 */
 class Interpreter {
 private:
@@ -261,102 +254,6 @@ private:
     return stmts;
   }
 
-  /** @brief Execute PRINT: output text or numeric values.
-
-      Handles string literals and variable substitution.
-      Results are appended to the screen buffer.
-
-      @param stmt The PRINT statement to execute
-  */
-  void executePrint(const Statement &stmt) {
-    std::string arg = stmt.args[0];
-    std::string output = "";
-
-    size_t plus_idx = arg.find('+');
-    if (plus_idx != std::string::npos) {
-      std::string str_part = trim(arg.substr(0, plus_idx));
-      std::string var_part = trim(arg.substr(plus_idx + 1));
-
-      if (str_part.front() == '"' && str_part.back() == '"') {
-        output += str_part.substr(1, str_part.size() - 2);
-      }
-      output += std::to_string(resolveOperand(var_part));
-    } else if (arg.front() == '"' && arg.back() == '"') {
-      output = arg.substr(1, arg.size() - 2);
-    } else {
-      output = std::to_string(resolveOperand(arg));
-    }
-    screen_buffer.push_back(output);
-  }
-
-  /** @brief Execute DECLARE: create and initialize a variable.
-      @param stmt The DECLARE statement to execute
-  */
-  void executeDeclare(const Statement &stmt) {
-    if (stmt.args.size() >= 2) {
-      memory[stmt.args[0]] = static_cast<uint16_t>(std::stoul(stmt.args[1]));
-    }
-  }
-
-  /** @brief Execute ADD: compute first_operand + second_operand, store in variable.
-      @param stmt The ADD statement to execute
-  */
-  void executeAdd(const Statement &stmt) {
-    if (stmt.args.size() >= 3) {
-      memory[stmt.args[0]] = resolveOperand(stmt.args[1]) + resolveOperand(stmt.args[2]);
-    }
-  }
-
-  /** @brief Execute SUBTRACT: compute first_operand - second_operand, store in variable.
-      @param stmt The SUBTRACT statement to execute
-  */
-  void executeSubtract(const Statement &stmt) {
-    if (stmt.args.size() >= 3) {
-      memory[stmt.args[0]] = resolveOperand(stmt.args[1]) - resolveOperand(stmt.args[2]);
-    }
-  }
-
-  /** @brief Execute SLEEP: pause for N ticks (1 tick = 10ms).
-      @param stmt The SLEEP statement to execute
-  */
-  void executeSleep(const Statement &stmt) {
-    if (stmt.args.size() >= 1) {
-      uint8_t ticks = static_cast<uint8_t>(std::stoul(stmt.args[0]));
-      std::this_thread::sleep_for(std::chrono::milliseconds(ticks * 10));
-    }
-  }
-
-  /** @brief Execute FOR: run nested instructions repeatedly.
-
-      The repeat count is resolved from the second argument.
-
-      @param stmt The FOR statement to execute
-  */
-  void executeFor(const Statement &stmt) {
-    if (stmt.args.size() >= 2) {
-      uint16_t repeats = resolveOperand(stmt.args[1]);
-      for (uint16_t i = 0; i < repeats; ++i) {
-        for (const auto &nested : stmt.nested) {
-          executeStatement(nested);
-        }
-      }
-    }
-  }
-
-  /** @brief Execute DBG!: dump all variables and their values to the screen buffer.
-  */
-  void executeDebug() {
-    screen_buffer.push_back("====================================");
-    if (memory.empty()) {
-      screen_buffer.push_back("  [No variables declared]");
-    } else {
-      for (const auto &pair : memory) {
-        screen_buffer.push_back("|" + pair.first + "|\t" +
-                                std::to_string(pair.second));
-      }
-    }
-    screen_buffer.push_back("====================================");
-  }
 
   Statement parseStatement(const std::string &stmt_str) {
     std::string trimmed = trim(stmt_str);
@@ -460,19 +357,140 @@ public:
 
       @param program The program string to parse and execute
   */
-  void execute(std::string program) {
+  void executeString(std::string program) {
     program = trim(program);
     if (program.empty())
       return;
 
     try {
-      auto statements = parse(program);
+      std::vector<Statement>statements = parse(program);
       executeStatements(statements);
     } catch (const std::exception &e) {
       screen_buffer.push_back(
           "[!] Interpreter Error: Malformed syntax near -> " + program);
     }
   }
+
+  /** @brief Execute PRINT: output text or numeric values.
+
+      Handles string literals and variable substitution.
+      Results are appended to the screen buffer.
+
+      @param stmt The PRINT statement to execute
+
+      @returns the value printed to the buffer
+
+      @warning side effect on screen_buffer attribute
+  */
+  std::string executePrint(const Statement &stmt) {
+    std::string arg = stmt.args[0];
+    std::string output = "";
+
+    size_t plus_idx = arg.find('+');
+    if (plus_idx != std::string::npos) {
+        std::string str_part = trim(arg.substr(0, plus_idx));
+        std::string var_part = trim(arg.substr(plus_idx + 1));
+        if (str_part.front() == '"' && str_part.back() == '"')
+            output += str_part.substr(1, str_part.size() - 2);
+        output += std::to_string(resolveOperand(var_part));
+    } else if (arg.front() == '"' && arg.back() == '"') {
+        output = arg.substr(1, arg.size() - 2);
+    } else {
+        output = std::to_string(resolveOperand(arg));
+    }
+
+    screen_buffer.push_back(output);  // side effect
+    return output;
+}
+
+  /** @brief Execute DECLARE: create and initialize a variable.
+   * 
+   * @param stmt The DECLARE statement to execute, or none at failure
+   * 
+   * @return the value of the declaration
+   * 
+   * @warning side effect on memory attribute
+  */
+  std::optional<uint16_t> executeDeclare(const Statement &stmt) {
+    if (stmt.args.size() < 2)
+        return std::nullopt;
+    memory[stmt.args[0]] = static_cast<uint16_t>(std::stoul(stmt.args[1]));
+    return memory[stmt.args[0]];
+}
+
+  /** @brief Execute ADD: compute first_operand + second_operand, store in variable.
+   * 
+   * @param stmt The ADD statement to execute
+   * 
+   * @return the resulting value of the ADD, or none at failure
+   * 
+   * @warning side effect on memory attribute
+  */
+  std::optional<uint16_t> executeAdd(const Statement &stmt) {
+    if (stmt.args.size() < 3)
+        return std::nullopt;
+    memory[stmt.args[0]] = resolveOperand(stmt.args[1]) + resolveOperand(stmt.args[2]);
+    return memory[stmt.args[0]];
+}
+
+  /** @brief Execute SUBTRACT: compute first_operand - second_operand, store in variable.
+   * 
+   * @param stmt The SUBTRACT statement to execute
+   * 
+   * @return the resulting value of the SUBTRACT, or none at failure
+   * 
+   * @warning side effect on memory attribute
+  */
+  std::optional<uint16_t> executeSubtract(const Statement &stmt) {
+    if (stmt.args.size() < 3)
+        return std::nullopt;
+    memory[stmt.args[0]] = resolveOperand(stmt.args[1]) - resolveOperand(stmt.args[2]);
+    return memory[stmt.args[0]];
+}
+
+  /** @brief Execute SLEEP: pause for N ticks (1 tick = 10ms).
+      @param stmt The SLEEP statement to execute
+  */
+  void executeSleep(const Statement &stmt) {
+    if (stmt.args.size() >= 1) {
+      uint8_t ticks = static_cast<uint8_t>(std::stoul(stmt.args[0]));
+      std::this_thread::sleep_for(std::chrono::milliseconds(ticks * 10));
+    }
+  }
+
+  /** @brief Execute FOR: run nested instructions repeatedly.
+
+      The repeat count is resolved from the second argument.
+
+      @param stmt The FOR statement to execute
+  */
+  void executeFor(const Statement &stmt) {
+    if (stmt.args.size() >= 2) {
+      uint16_t repeats = resolveOperand(stmt.args[1]);
+      for (uint16_t i = 0; i < repeats; ++i) {
+        for (const auto &nested : stmt.nested) {
+          executeStatement(nested);
+        }
+      }
+    }
+  }
+
+  /** @brief Execute DBG!: dump all variables and their values to the screen buffer.
+   * 
+   * @returns the memory of the class
+  */
+  std::unordered_map<std::string, uint16_t> executeDebug() {
+    screen_buffer.push_back("====================================");
+    if (memory.empty()) {
+        screen_buffer.push_back("  [No variables declared]");
+    } else {
+        for (const auto &pair : memory) {
+            screen_buffer.push_back("|" + pair.first + "|\t" + std::to_string(pair.second));
+        }
+    }
+    screen_buffer.push_back("====================================");
+    return memory;  
+}
 };
 
 } // namespace prosched

@@ -6,13 +6,13 @@
 #define CONTROLLER_H
 
 enum class CLI_COMMAND {
-    CLI_EXIT,
-    CLI_SCREEN_LS,
-    CLI_SCREEN_S,
-    CLI_SCHEDULER_START,
-    CLI_SCHEDULER_STOP,
-    CLI_REPORT_UTIL,
-    UNKNOWN,
+  CLI_EXIT,
+  CLI_SCREEN_LS,
+  CLI_SCREEN_S,
+  CLI_SCHEDULER_START,
+  CLI_SCHEDULER_STOP,
+  CLI_REPORT_UTIL,
+  UNKNOWN,
 };
 
 struct Command {
@@ -34,11 +34,11 @@ public:
   AlgoContext initialize();
   void run();
   void HandleView();
-  bool HandlePreInit(const std::string& input);
-  void HandlePostInit(const std::string& input);
+  bool HandlePreInit(const std::string &input);
+  void HandlePostInit(const std::string &input);
 
-  Command GetParsedInput(const std::string& input);
-  void ExecuteCommand(const Command& command);
+  Command GetParsedInput(const std::string &input);
+  void ExecuteCommand(const Command &command);
   CLI_COMMAND IdentifyCommand(const std::vector<std::string> &command);
   void ExitOS();
 };

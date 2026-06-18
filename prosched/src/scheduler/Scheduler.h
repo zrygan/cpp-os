@@ -33,15 +33,15 @@ public:
    */
   ~Scheduler() {
     if (running) {
-        Stop();
+      Stop();
     }
-    for (Process* p : processes) {
-        delete p;
+    for (Process *p : processes) {
+      delete p;
     }
-    for (Worker* w : workers) {
-        delete w;
+    for (Worker *w : workers) {
+      delete w;
     }
-}
+  }
 
   /**
    * @brief starts the main scheduler loop
@@ -116,7 +116,7 @@ public:
 
     // Empty the queue without deleting since destructor will handle processes
     while (!processQueue.empty()) {
-        processQueue.pop();
+      processQueue.pop();
     }
 
     std::cout << "Scheduler stopped\n\n";
@@ -277,7 +277,7 @@ private:
         So cpuCycles % ctx.batchProcessFreq is required everywhere.
 
         Can we ensure in the the config loader or whereever the values
-        for these are populated. We check that the values are 
+        for these are populated. We check that the values are
         valid/make sense. This can be a very easy pain point in the future.
 
         The same thing for limiting the number of processes to 10.
@@ -287,7 +287,7 @@ private:
 
         Also again, separation of concerns. This is a function juggling
         a lot of things.
-        
+
         @erin @aaron
 
         ======
