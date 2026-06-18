@@ -3,18 +3,21 @@
 
 namespace ProcessAddInstruction {
 
+// AddInstruction returns the original instruction string on success
 TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
   prosched::Process p("add_1", 1, 0);
   std::string result = p.AddInstruction("PRINT(\"hello\")");
   EXPECT_EQ(result, "PRINT(\"hello\")");
 }
 
+// Works with non-PRINT instructions (DECLARE) too
 TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
   prosched::Process p("add_2", 2, 0);
   std::string result = p.AddInstruction("DECLARE(x, 10)");
   EXPECT_EQ(result, "DECLARE(x, 10)");
 }
 
+// Repeated AddInstruction calls all succeed — no internal cap
 TEST(ProcessAddInstruction, MultipleInstructionsAllSucceed) {
   prosched::Process p("add_3", 3, 0);
   for (int i = 0; i < 10; i++) {
@@ -42,8 +45,7 @@ TEST(ProcessAddInstruction, IndependentProcessesDoNotShareInstructions) {
 
   p1.AddInstruction("PRINT(\"from p1\")");
 
-  // p2 has no instructions — executing should finish it immediately (empty
-  // return)
+  // p2 has no instructions — executing should finish it immediately (empty return)
   auto result = p2.ExecuteInstructions(1);
   EXPECT_TRUE(result.empty());
   EXPECT_TRUE(p2.IsFinished());
@@ -126,11 +128,13 @@ TEST(ProcessExecuteInstructions, AddResultVisibleInPrint) {
 
 namespace ProcessIsFinished {
 
+// Process starts not finished before any execution
 TEST(ProcessIsFinished, FalseOnConstruction) {
   prosched::Process p("fin_1", 1, 0);
   EXPECT_FALSE(p.IsFinished());
 }
 
+// Not finished until the very last instruction runs
 TEST(ProcessIsFinished, FalseAfterPartialExecution) {
   prosched::Process p("fin_2", 2, 0);
   p.AddInstruction("PRINT(\"a\")");
@@ -140,6 +144,7 @@ TEST(ProcessIsFinished, FalseAfterPartialExecution) {
   EXPECT_FALSE(p.IsFinished());
 }
 
+// Finishes exactly on the call that runs the last instruction
 TEST(ProcessIsFinished, TrueAfterLastInstructionRuns) {
   prosched::Process p("fin_3", 3, 0);
   p.AddInstruction("PRINT(\"a\")");
@@ -148,6 +153,7 @@ TEST(ProcessIsFinished, TrueAfterLastInstructionRuns) {
   EXPECT_TRUE(p.IsFinished());
 }
 
+// Finishes after all N instructions have each been executed once
 TEST(ProcessIsFinished, TrueAfterAllOfManyInstructions) {
   prosched::Process p("fin_4", 4, 0);
   const int count = 5;
@@ -243,3 +249,70 @@ TEST(ProcessLogs, IndependentProcessesDoNotShareLogs) {
 }
 
 } // namespace ProcessLogs
+
+namespace ProcessAssignCore {
+
+// Returns the assigned core number and updates GetCoreNum
+TEST(ProcessAssignCore, PositiveValueReturnsAndSetsCore) {
+  prosched::Process p("core_1", 1, 0);
+  EXPECT_EQ(p.AssignCore(2), 2);
+  EXPECT_EQ(p.GetCoreNum(), 2);
+}
+
+// Core 0 is valid after the coreNum >= 0 fix
+TEST(ProcessAssignCore, ZeroIsValidReturnsAndSetsCore) {
+  prosched::Process p("core_2", 2, 0);
+  EXPECT_EQ(p.AssignCore(0), 0);
+  EXPECT_EQ(p.GetCoreNum(), 0);
+}
+
+// Negative input is rejected; previously set core value is preserved
+TEST(ProcessAssignCore, NegativeReturnsMinus1AndLeavesCorUnchanged) {
+  prosched::Process p("core_3", 3, 0);
+  p.AssignCore(5);
+  EXPECT_EQ(p.AssignCore(-1), -1);
+  EXPECT_EQ(p.GetCoreNum(), 5);
+}
+
+} // namespace ProcessAssignCore
+
+namespace ProcessOwnership {
+
+// A fresh Process is not scheduler-owned by default
+TEST(ProcessOwnership, DefaultIsFalse) {
+  prosched::Process p("own_1", 1, 0);
+  EXPECT_FALSE(p.IsOwnedByScheduler());
+}
+
+// SetOwnedByScheduler(true) is immediately visible through the getter
+TEST(ProcessOwnership, SetTrueReflectsInGetter) {
+  prosched::Process p("own_2", 2, 0);
+  p.SetOwnedByScheduler(true);
+  EXPECT_TRUE(p.IsOwnedByScheduler());
+}
+
+// Ownership can be toggled back to false
+TEST(ProcessOwnership, SetFalseAfterTrueReflectsInGetter) {
+  prosched::Process p("own_3", 3, 0);
+  p.SetOwnedByScheduler(true);
+  p.SetOwnedByScheduler(false);
+  EXPECT_FALSE(p.IsOwnedByScheduler());
+}
+
+} // namespace ProcessOwnership
+
+namespace ProcessIdentity {
+
+// GetPID returns exactly the value given to the constructor
+TEST(ProcessIdentity, GetPIDReturnsCtrValue) {
+  prosched::Process p("id_1", 42, 0);
+  EXPECT_EQ(p.GetPID(), 42);
+}
+
+// GetName returns exactly the value given to the constructor
+TEST(ProcessIdentity, GetNameReturnsCtrValue) {
+  prosched::Process p("my_process", 1, 0);
+  EXPECT_EQ(p.GetName(), "my_process");
+}
+
+} // namespace ProcessIdentity
