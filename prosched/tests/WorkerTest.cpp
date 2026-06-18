@@ -78,6 +78,24 @@ namespace WorkerAssignProcess {
     EXPECT_EQ(result, &p2);
   }
 
+  // Two threads race to assign at the same time — workerMutex must ensure exactly
+  // one succeeds and neither thread blocks forever
+  TEST(WorkerAssignProcess, ConcurrentAssignFromTwoThreadsDoesNotDeadlock) {
+    prosched::Worker w(1, makeTestCtx());
+    prosched::Process p1("conc_1", 1, 0);
+    prosched::Process p2("conc_2", 2, 0);
+
+    prosched::Process *r1 = nullptr, *r2 = nullptr;
+    std::thread t1([&] { r1 = w.AssignProcess(&p1); });
+    std::thread t2([&] { r2 = w.AssignProcess(&p2); });
+
+    t1.join();
+    t2.join();
+
+    // Exactly one succeeds — the other is blocked by the busy guard
+    EXPECT_TRUE((r1 == nullptr) != (r2 == nullptr));
+  }
+
 } // namespace WorkerAssignProcess
 
 namespace WorkerIsBusy {

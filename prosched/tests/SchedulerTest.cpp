@@ -134,6 +134,21 @@ namespace SchedulerAddProcess {
     EXPECT_EQ(result, nullptr);
   }
 
+// AddProcess acquires schedulerMutex; SchedulerLoop also acquires it for
+// process generation and FCFS — must return the same pointer even under contention
+TEST(SchedulerAddProcess, AddWhileRunningReturnsSamePointer) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  scheduler.Start();
+
+  prosched::Process p("live_add", 1, 0);
+  p.AddInstruction("PRINT(\"hi\")");
+
+  prosched::Process *result = scheduler.AddProcess(&p);
+  EXPECT_EQ(result, &p);
+
+  scheduler.Stop();
+}
+
 } // namespace SchedulerAddProcess
 
 namespace SchedulerStartStop {
@@ -269,6 +284,25 @@ namespace SchedulerPrintProcesses {
 
     scheduler.Stop();
   }
+
+// PrintProcesses holds schedulerMutex then acquires workerMutex via
+// GetCurrentProcess — two concurrent callers must not produce lock-order inversion;
+// scheduler must still be running correctly after both complete
+TEST(SchedulerPrintProcesses, ConcurrentPrintLeavesSchedulerRunning) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  scheduler.Start();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  std::thread t1([&] { scheduler.PrintProcesses(); });
+  std::thread t2([&] { scheduler.PrintProcesses(); });
+
+  t1.join();
+  t2.join();
+
+  EXPECT_TRUE(scheduler.IsRunning());
+
+  scheduler.Stop();
+}
 
 } // namespace SchedulerPrintProcesses
 
