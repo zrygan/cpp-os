@@ -6,8 +6,14 @@
 
 #include "config.h"
 
+enum class SchedulerType {
+    FCFS,
+    RR,
+    UNKNOWN
+};
+
 struct AlgoContext {
-  std::string schedulerType;
+  SchedulerType schedulerType = SchedulerType::UNKNOWN;
   int numCpu;
   int batchProcessFreq;
   int minIns;
@@ -18,7 +24,12 @@ struct AlgoContext {
 
   static AlgoContext buildConfig(ConfigStruct *config) {
     AlgoContext ctx;
-    ctx.schedulerType = config->scheduler;
+    
+    std::string sched = config->scheduler;
+    if (sched == "fcfs") ctx.schedulerType = SchedulerType::FCFS;
+    else if (sched == "rr") ctx.schedulerType = SchedulerType::RR;
+    else ctx.schedulerType = SchedulerType::UNKNOWN;
+
     ctx.numCpu = config->num_cpu;
     ctx.batchProcessFreq = config->batch_process_freq;
     ctx.minIns = config->min_ins;
