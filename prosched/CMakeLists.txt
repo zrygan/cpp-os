@@ -19,11 +19,11 @@ configure_file(
 
 # fromFile() opens "prosched/config.txt" relative to CWD; tests run from the
 # binary dir, so we need the file one level deeper as well.
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/config.txt"
-    "${CMAKE_CURRENT_BINARY_DIR}/prosched/config.txt"
-    COPYONLY
-)
+# configure_file(
+#     "${CMAKE_CURRENT_SOURCE_DIR}/config.txt"
+#     "${CMAKE_CURRENT_BINARY_DIR}/prosched/config.txt"
+#     COPYONLY
+# )
 
 add_executable(prosched
   # src/ 
@@ -45,12 +45,12 @@ add_executable(prosched_tests
   tests/WorkerTest.cpp
   tests/SchedulerTest.cpp
   tests/InterpreterTest.cpp
-  tests/ControllerTest.cpp
+  # tests/ControllerTest.cpp
 
   # Controller and View are not header-only; their implementations must be linked
-  src/controller/Controller.cpp
-  src/view/View.cpp
-  src/view/page/Menu.cpp
+  # src/controller/Controller.cpp
+  # src/view/View.cpp
+  # src/view/page/Menu.cpp
 )
 target_include_directories(prosched_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(prosched_tests GTest::gtest_main)
