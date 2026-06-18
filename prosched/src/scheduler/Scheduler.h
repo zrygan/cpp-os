@@ -35,8 +35,10 @@ public:
     if (running) {
       Stop();
     }
-    for (Process *p : processes) {
-      delete p;
+    for (Process* p : processes) {
+      if (p && p->IsOwnedByScheduler()) {
+          delete p;
+      }
     }
     for (Worker *w : workers) {
       delete w;
@@ -178,6 +180,7 @@ public:
 
     std::string name = "process" + std::to_string(nextPID);
     Process *p = new Process(name, pid, tick);
+    p->SetOwnedByScheduler(true);
 
     // std::cout << p->GetName() << "\n";
 
@@ -235,17 +238,10 @@ private:
 
     // std::cout << "\nFCFS Scheduler\n";
     for (Worker *w : workers) {
-      /*
-        <RV @zrygan> ===========
-        can't you combine the two ifs into 1 if with a conjunction?
-        <RV @zrygan> ===========
-       */
-      if (!processQueue.empty()) {
-        if (!w->IsBusy()) {
-          Process *p = processQueue.front();
-          processQueue.pop();
-          w->AssignProcess(p);
-        }
+      if (!processQueue.empty() && !w->IsBusy()) {
+        Process *p = processQueue.front();
+        processQueue.pop();
+        w->AssignProcess(p);
       }
     }
   }
@@ -290,11 +286,6 @@ private:
 
         @erin @aaron
 
-        ======
-
-        The else block here does not make sense.
-
-        If generatingProcesses already false. Why set it false again?
         <RV @zrygan> ===========
       */
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
@@ -307,9 +298,7 @@ private:
           processes.push_back(p);
 
           nextPID++;
-        } else {
-          generatingProcesses = false;
-        }
+        } 
       }
 
       /*

@@ -44,7 +44,7 @@ public:
       return instruction;
     } catch (const std::bad_alloc &e) {
       std::cerr << "Allocation failed: " << e.what();
-      return nullptr;
+      return "";
     }
   }
 
@@ -165,6 +165,21 @@ public:
    */
   std::vector<std::string> GetLogs() { return logs; }
 
+  /**
+   * @brief Sets whether the process is owned by the scheduler
+   *
+   * @param owned boolean value indicating ownership
+   */
+  void SetOwnedByScheduler(bool owned) { ownedByScheduler = owned; }
+
+  /**
+   * @brief Checks if the process is owned by the scheduler
+   *
+   * @return true if owned by the scheduler; otherwise false
+   */
+  bool IsOwnedByScheduler() const { return ownedByScheduler; }
+
+  
 private:
   std::string processName;
   int pid;
@@ -173,6 +188,7 @@ private:
   int arrivalTick = 0;
   ProcessState currentState = READY;
   std::vector<std::string> logs;
+  bool ownedByScheduler = false;
 
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;
