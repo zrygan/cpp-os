@@ -114,9 +114,9 @@ private:
     int depth = 0;
     std::string current;
     for (char c : list) {
-      if (c == '[')
+      if (c == '[' || c == '(')
         depth++;
-      else if (c == ']')
+      else if (c == ']' || c == ')')
         depth--;
       else if (c == ',' && depth == 0) {
         if (!trim(current).empty())
