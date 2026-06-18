@@ -51,10 +51,11 @@ namespace WorkerAssignProcess {
       prosched::Worker w(1, makeTestCtx());
       prosched::Process p("assign_running", 1, 0);
 
-      w.Start();
+      bool start = w.Start();
       prosched::Process *result = w.AssignProcess(&p);
-      w.Stop();
+      bool stop = w.Stop();
 
+      EXPECT 
       EXPECT_EQ(result, &p);
   }
 
@@ -182,6 +183,55 @@ namespace WorkerIsRunning {
       EXPECT_TRUE(w.IsRunning());
 
       w.Stop();
+  }
+
+  // Start() returns true on a fresh worker
+  TEST(WorkerIsRunning, StartReturnsTrueOnSuccess) {
+      prosched::Worker w(1, makeTestCtx());
+
+      bool result = w.Start();
+
+      EXPECT_TRUE(result);
+
+      w.Stop();
+  }
+
+  // Stop() returns true when the worker was running
+  TEST(WorkerIsRunning, StopReturnsTrueOnSuccess) {
+      prosched::Worker w(1, makeTestCtx());
+
+      w.Start();
+      bool result = w.Stop();
+
+      EXPECT_TRUE(result);
+  }
+
+  // Multiple start/stop cycles must not deadlock or corrupt state
+  TEST(WorkerIsRunning, MultipleRestartCycles) {
+      prosched::Worker w(1, makeTestCtx());
+
+      for (int i = 0; i < 3; i++) {
+          EXPECT_TRUE(w.Start())  << "Start failed on cycle " << i;
+          EXPECT_TRUE(w.IsRunning());
+          EXPECT_TRUE(w.Stop())   << "Stop failed on cycle " << i;
+          EXPECT_FALSE(w.IsRunning());
+      }
+  }
+
+  // Stop() while the worker is actively executing a process must not deadlock
+  TEST(WorkerIsRunning, StopWhileProcessingDoesNotDeadlock) {
+      prosched::Worker w(1, makeTestCtx());
+      prosched::Process p("stop_mid", 1, 0);
+
+      // 50 instructions — enough that the worker won't finish before we call Stop()
+      for (int i = 0; i < 50; i++)
+          p.AddInstruction("PRINT(\"tick\")");
+
+      w.AssignProcess(&p);
+      w.Start();
+      w.Stop(); // should return cleanly even mid-execution
+
+      EXPECT_FALSE(w.IsRunning());
   }
 
 } // namespace WorkerIsRunning
