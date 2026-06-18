@@ -51,11 +51,10 @@ namespace WorkerAssignProcess {
       prosched::Worker w(1, makeTestCtx());
       prosched::Process p("assign_running", 1, 0);
 
-      bool start = w.Start();
+      w.Start();
       prosched::Process *result = w.AssignProcess(&p);
-      bool stop = w.Stop();
+      w.Stop();
 
-      EXPECT 
       EXPECT_EQ(result, &p);
   }
 
