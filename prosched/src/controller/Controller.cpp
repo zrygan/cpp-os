@@ -77,6 +77,11 @@ void Controller::run() {
       std::getline(std::cin, input);
 
       if (!isInitialized) {
+        /* <RV @zrygan> ==========
+        There must be an easier way to always check if it's initialized
+        perhaps move this outside the code. Everything below SHOUD NOT RUN
+        if it isn't initialized. (Maybe move this to the main loop/outside this function).
+        <RV @zrygan> ========== */
         if (input == "initialize"){
           
             initialize();
@@ -85,6 +90,9 @@ void Controller::run() {
           std::cout << "\nType \"initialize\" to access commands\n";
         }
       } else {
+        /* <RV @zrygan> ==========
+        Refer to the review comment at the top.
+        <RV @zrygan> ========== */
         if (input == "scheduler-start") {
           this->scheduler->Start();
         } else if (input == "scheduler-stop") {
