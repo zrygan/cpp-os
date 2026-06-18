@@ -151,22 +151,53 @@ public:
    */
   void PrintProcesses() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
-    std::cout << "\n--- Running Processes ---\n";
-    for (Process *p : processes) {
-      if (!p->IsFinished()) {
-        std::cout << p->GetName() << "   (PID " << p->GetPID()
-                  << ")   Core: " << p->GetCoreNum() << "\n";
+
+    std::cout << "\n" << std::string(50, '-');
+    std::cout << "\nRunning Processes: \n";
+
+    for (Worker* w : workers) {
+        Process* p = w->GetCurrentProcess();
+        if(p != nullptr) {
+            std::cout << 
+                p->GetName() << 
+                std::string(5, ' ') <<
+                p->GetProcessTimeStart() <<
+                std::string(5, ' ') <<
+                "Core: " << w->GetCoreNum() <<
+                std::string(5, ' ') << 
+                p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
+                "\n";
+        }
+    }
+
+    std::vector<Process*> finished;
+    for (Process* p : processes) {
+        if (p != nullptr && p->IsFinished()) {
+            finished.push_back(p);
+        }
+    }
+
+    int startIdx = std::max(0, (int)finished.size() - 10);
+
+    std::cout << "\n\nFinished Processes: \n";
+    for (int i = startIdx; i < (int)finished.size(); i++) {
+      Process* p = finished[i];
+      if (p != nullptr && p->IsFinished()) {
+        std::cout << p->GetName() << 
+            std::string(5, ' ') <<
+            p->GetProcessTimeStart() <<
+            std::string(5, ' ') <<
+            "Finished" <<
+            std::string(5, ' ') <<
+            p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
+            "\n";
       }
     }
-    std::cout << "\n--- Finished Processes ---\n";
-    for (Process *p : processes) {
-      if (p->IsFinished()) {
-        std::cout << p->GetName() << "   (PID " << p->GetPID()
-                  << ")   Finished\n";
-      }
-    }
+
+    std::cout << std::string(50, '-') << "\n";
     std::cout << std::endl;
   }
+
   /**
    * @brief
    *
@@ -291,14 +322,14 @@ private:
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
 
         // limit to 10 processes -> 10 txt files
-        if (nextPID <= 10) {
+        // if (nextPID <= 10) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
           processQueue.push(p);
           processes.push_back(p);
 
           nextPID++;
-        } 
+        // } 
       }
 
       /*
@@ -317,7 +348,7 @@ private:
         return;
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
 };

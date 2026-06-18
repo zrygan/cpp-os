@@ -81,7 +81,7 @@ public:
 
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
-      SaveLogsToFile();
+      // SaveLogsToFile();
     }
 
     return statements;
@@ -166,6 +166,31 @@ public:
   std::vector<std::string> GetLogs() { return logs; }
 
   /**
+   * @brief Gets the started time of a Process
+   * 
+   * @return the formatted time date string
+   */
+  std::string GetProcessTimeStart() { return StartTime; }
+
+  /**
+   * @brief gets the current index of an instruction being executed
+   * 
+   * for the screen -ls progress count
+   * 
+   * @return the current instruction index
+   */
+  int GetCurrentInstructionIndex() { return currentInstructionIndex; }
+
+  /**
+   * @brief get total number of statements/ instrcutions
+   * 
+   * for screen -ls progress count
+   * 
+   * @return total number of instrcutions in a process
+   */
+  int GetTotalInstructions() { return (int)statements.size(); }
+
+  /**
    * @brief Sets whether the process is owned by the scheduler
    *
    * @param owned boolean value indicating ownership
@@ -189,6 +214,7 @@ private:
   ProcessState currentState = READY;
   std::vector<std::string> logs;
   bool ownedByScheduler = false;
+  std::string StartTime;
 
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;
@@ -204,7 +230,8 @@ private:
     std::tm *tm = std::localtime(&t);
     std::ostringstream oss;
     oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
-    return oss.str();
+    StartTime = oss.str();
+    return StartTime;
   }
 };
 
