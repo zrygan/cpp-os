@@ -15,7 +15,7 @@
 #include <filesystem>
 
 #include "config.h"
-#include "src/commands/interpreter.hpp"
+#include "src/commands/Interpreter.hpp"
 
 using namespace std;
 
