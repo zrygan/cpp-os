@@ -139,7 +139,11 @@ void Controller::ExecuteCommand(const Command &command) {
       break;
 
     case CLI_COMMAND::CLI_SCREEN_LS:
-      this->scheduler->PrintProcesses();
+      if (this->scheduler->IsRunning()) {
+        this->scheduler->PrintProcesses();
+      } else {
+        std::cout << "Start the scheduler before viewing processes, run \"scheduler-start\"\n\n";
+      }
       break;
 
     case CLI_COMMAND::CLI_SCREEN_S:

@@ -191,6 +191,13 @@ public:
   int GetTotalInstructions() { return (int)statements.size(); }
 
   /**
+   * @brief gets the core assigned
+   * 
+   * @return coreNum assigned
+   */
+  int GetAssignedCore() { return coreNum; }
+
+  /**
    * @brief Sets whether the process is owned by the scheduler
    *
    * @param owned boolean value indicating ownership

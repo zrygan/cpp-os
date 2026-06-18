@@ -15,7 +15,7 @@
 using namespace std;
 
 namespace prosched {
-
+    
 class Scheduler {
 public:
   /**
@@ -189,7 +189,6 @@ public:
   }
 
   
-
   /**
    * @brief
    *
@@ -341,14 +340,14 @@ private:
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
 
         // limit to 10 processes -> 10 txt files
-        if (nextPID <= MAX_PROCESSES) {
+        // if (nextPID <= MAX_PROCESSES) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
           processQueue.push(p);
           processes.push_back(p);
 
           nextPID++;
-        } 
+        // } 
       }
 
       if (ctx.schedulerType == SchedulerType::FCFS) {
