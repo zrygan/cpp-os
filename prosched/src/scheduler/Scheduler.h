@@ -27,6 +27,23 @@ public:
   Scheduler(AlgoContext ctx) : ctx(ctx) {}
 
   /**
+   * @brief Destroys the scheduler instance
+   *
+   * Stops the scheduler if running and cleans up all allocated resources
+   */
+  ~Scheduler() {
+    if (running) {
+        Stop();
+    }
+    for (Process* p : processes) {
+        delete p;
+    }
+    for (Worker* w : workers) {
+        delete w;
+    }
+}
+
+  /**
    * @brief starts the main scheduler loop
    *
    * disclaimer: function isnt implemented yet so this is how i think it would
@@ -97,6 +114,11 @@ public:
       w->Stop();
     }
 
+    // Empty the queue without deleting since destructor will handle processes
+    while (!processQueue.empty()) {
+        processQueue.pop();
+    }
+
     std::cout << "Scheduler stopped\n\n";
   }
 
@@ -110,6 +132,7 @@ public:
    * @return self if success, else returns none
    */
   prosched::Process *AddProcess(prosched::Process *p) {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
     try {
       processes.push_back(p);
       return p;
