@@ -34,9 +34,6 @@ target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic)
 
 add_executable(prosched_tests
   tests/ProcessTest.cpp
-  src/scheduler/process/Process.cpp
-  src/scheduler/worker/Worker.cpp
-  src/commands/Command.cpp
 )
 target_include_directories(prosched_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(prosched_tests GTest::gtest_main)
