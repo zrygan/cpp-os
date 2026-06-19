@@ -140,7 +140,7 @@ public:
   void PrintProcesses() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
-    float utilization =0 ;
+    double utilization =0 ;
     int coresUsed = 0;
     int coresAvail = 0;
 
@@ -152,7 +152,7 @@ public:
       }
     }
 
-    utilization = (coresUsed/workers.size())*100;
+    utilization = (static_cast<double>(coresUsed)/workers.size())*100.0;
 
     std::cout << "\nCPU utilization: " << utilization << "%\n";
     std::cout << "Cores used: " << coresUsed << "/" << workers.size() << "\n";
