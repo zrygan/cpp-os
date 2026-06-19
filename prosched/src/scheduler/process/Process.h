@@ -81,7 +81,9 @@ public:
 
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
-      // SaveLogsToFile();
+
+      // remove for full proj
+      SaveLogsToFile();
     }
 
     return statements;

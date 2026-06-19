@@ -15,7 +15,7 @@
 using namespace std;
 
 namespace prosched {
-    
+
 class Scheduler {
 public:
   /**
@@ -140,6 +140,24 @@ public:
   void PrintProcesses() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
+    float utilization =0 ;
+    int coresUsed = 0;
+    int coresAvail = 0;
+
+    for (Worker* w : workers) {
+      if(w->IsBusy()) {
+        coresUsed++;
+      } else {
+        coresAvail++;
+      }
+    }
+
+    utilization = (coresUsed/workers.size())*100;
+
+    std::cout << "\nCPU utilization: " << utilization << "%\n";
+    std::cout << "Cores used: " << coresUsed << "/" << workers.size() << "\n";
+    std::cout << "Cores available: " << coresAvail << "/" << workers.size() << "\n";
+
     std::cout << "\n" << std::string(50, '-');
     std::cout << "\nRunning Processes: \n";
 
@@ -156,7 +174,7 @@ public:
                 p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
                 "\n";
         } else {
-            std::cout << "Core " << w->GetCoreNum() << " (idle)\n";
+            std::cout << "Core "  << w->GetCoreNum() << std::string(5, ' ') << " (idle)\n";
         }
     }
 
@@ -340,14 +358,15 @@ private:
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
 
         // limit to 10 processes -> 10 txt files
-        // if (nextPID <= MAX_PROCESSES) {
+        // remove if for final proj
+        if (nextPID <= MAX_PROCESSES) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
           processQueue.push(p);
           processes.push_back(p);
 
           nextPID++;
-        // } 
+        } 
       }
 
       if (ctx.schedulerType == SchedulerType::FCFS) {
