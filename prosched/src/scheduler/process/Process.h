@@ -33,18 +33,17 @@ public:
    *
    * Appends the specified randomized command to Process' statements vector
    *
-   * @param instruction
+   * @param stmt
    * @return If adding a command is successful it returns the
-   * specific command, else unsuccessful return nullptr
+   * specific statement, else unsuccessful return nullptr
    */
-  std::string AddInstruction(std::string instruction) {
+  Statement* AddInstruction(Statement& stmt) {
     try {
-      std::vector<Statement> stmts = interpreter.parse(instruction);
-      statements.insert(statements.end(), stmts.begin(), stmts.end());
-      return instruction;
+      statements.push_back(stmt);
+      return &statements.back();
     } catch (const std::bad_alloc &e) {
       std::cerr << "Allocation failed: " << e.what();
-      return "";
+      return nullptr;
     }
   }
 
@@ -132,7 +131,9 @@ public:
    * @brief saves the logs vector into a txt file
    *
    * ngl idk if this should be here or insoide the executePrint() in
-   * intepreter.hpp
+   * intepreter.hpp 
+   * 
+   * dw we dont need this function anymore lol
    */
   void SaveLogsToFile() {
     std::filesystem::create_directory("logs");

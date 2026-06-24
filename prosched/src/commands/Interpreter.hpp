@@ -7,6 +7,8 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <random>
+#include <array>
 
 namespace prosched {
 
@@ -40,6 +42,95 @@ struct Statement {
   std::vector<std::string> args;   /*!< Raw parsed arguments (not evaluated yet) */
   std::vector<Statement> nested;   /*!< Child statements (only set for FOR loops) */
 };
+
+inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
+  static constexpr std::array<Keyword, 6> all_keywords {
+    Keyword::PRINT,
+    Keyword::ADD,
+    Keyword::SUBTRACT,
+    Keyword::DECLARE,
+    Keyword::FOR,
+    Keyword::SLEEP,
+  };
+
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+
+  std::vector<Keyword> available(all_keywords.begin(), all_keywords.end());
+  if (maxDepth >= 3) {
+    available.erase(
+      std::remove(available.begin(), available.end(), Keyword::FOR),
+      available.end()
+    );
+  }
+
+  std::uniform_int_distribution<size_t> dist(0, all_keywords.size() - 1);
+  Keyword chosen = available[dist(gen)];
+
+  Statement stmt;
+  stmt.keyword = chosen;
+
+  // for random int values
+  std::uniform_int_distribution<int> uint16Dist(0, 65535);
+
+  // for variable names
+  std::uniform_int_distribution<int> varDist(0, 9);
+  auto randomVarName = [&]() {
+    return "var" + std::to_string(varDist(gen));
+  };
+
+  switch (chosen) {
+    case Keyword::PRINT: {
+      stmt.args = { "\"Hello world from" + processName +"!\"" };
+      break;
+    }
+
+    case Keyword::DECLARE: {
+      stmt.args = {
+        randomVarName(),
+        std::to_string(uint16Dist(gen))
+      };
+      break;
+    }
+
+    case Keyword::ADD:
+    case Keyword::SUBTRACT: {
+      stmt.args = {
+        randomVarName(),
+        randomVarName(),
+        std::to_string(uint16Dist(gen))
+      };
+      break;
+    }
+
+    case Keyword::SLEEP: {
+      std::uniform_int_distribution<int> uint8Dist(0, 255);
+      stmt.args = { std::to_string(uint8Dist(gen)) };
+      break;
+    }
+
+    case Keyword::FOR: {
+      std::uniform_int_distribution<int> repeatDist(1, 5);
+      std::uniform_int_distribution<int> bodySizeDist(1, 3);
+
+      int repeats = repeatDist(gen);
+      int bodySize = bodySizeDist(gen);
+
+      stmt.args = { "", std::to_string(repeats) };
+
+      for (int i = 0; i < bodySize; i++) {
+        stmt.nested.push_back(GetRandomStatement(processName, maxDepth + 1));
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  return stmt;
+
+}
 
 /** @class Interpreter
     @brief A simple string-based language interpreter for the prosched runtime.

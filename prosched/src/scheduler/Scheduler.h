@@ -5,15 +5,13 @@
 #include <stdio.h>
 #include <thread>
 #include <vector>
+#include <random>
 
 #include "src/Constants.hpp"
 #include "config.h"
 #include "process/Process.h"
 #include "src/context.h"
 #include "src/scheduler/worker/Worker.h"
-
-
-
 
 namespace prosched {
 
@@ -235,25 +233,22 @@ public:
    *
    * @return Process generated
    */
-  prosched::Process *generateProcess(AlgoContext */*ctx*/, int pid, int tick) {
+  prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
 
     std::string name = "process" + std::to_string(nextPID);
     Process *p = new Process(name, pid, tick);
     p->SetOwnedByScheduler(true);
+    Statement instruction;
+    // std::vector<std::string> instructions = {"PRINT", "DECLARE", "ADD", 
+    //                                       "SUBTRACT", "SLEEP", "FOR"};
 
     // std::cout << p->GetName() << "\n";
 
-    // uncomment this for future
-    // int commandAmount = this->ctx.minIns + rand() % (this->ctx.maxIns -
-    // this->ctx.minIns + 1);
+    int commandAmount = this->ctx.minIns + rand() % (ctx->maxIns - ctx->minIns + 1);
 
-    // fcfs specs say only 100
-
-    int commandAmount = kNumPrintInstructions;
-
-    // only prints for now
     for (int i = 0; i < commandAmount; i++) {
-      p->AddInstruction("PRINT(\"Hello world from " + name + "!\")");
+      instruction = prosched::GetRandomStatement(name, 3);
+      p->AddInstruction(instruction);
       // std::cout << p->GetName() << " added an instruction\n";
     }
 
