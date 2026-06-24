@@ -48,18 +48,15 @@ public:
     }
   }
 
-  // @stephen @aaron this was previously "Command* ExecuteCurrentCommand(int
-  // currentInstructionIndex) roger
   /**
-   * @brief Executes all commands in statements
+   * @brief Executes the current instruction of the process on a CPU core.
    *
-   * disclaimer: function isnt implemented yet so this is how i think it would
-   * work atm Takes the statements vector and executes each command until
-   * statements is empty
+   * Executes one parsed Statement instruction. If it is the first statement,
+   * sets the process's StartTime. Handles SLEEP operations by moving the process
+   * to WAITING state and detaching from the core.
    *
-   * @param coreNum
-   * @return If executing the instructions were successful the hmmm, else
-   * unsuccessfull a nullptr is returned
+   * @param coreNum The index of the assigned CPU core executing the process.
+   * @return A vector containing all statements of the process.
    */
   std::vector<prosched::Statement> ExecuteInstructions(int coreNum) {
 
@@ -326,10 +323,13 @@ private:
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;
 
-  /**
-   * @brief gets the current timestamp of a process
+   /**
+   * @brief Generates a formatted time string representing the current system clock.
    *
-   * @return the timestamp string
+   * This is a utility function used to timestamp log messages. It does not alter
+   * the process's internal start time.
+   *
+   * @return A string containing the formatted timestamp, e.g. "(06/24/2026 02:15:30PM)"
    */
   std::string GetTimestamp() {
     auto now = std::chrono::system_clock::now();
@@ -337,8 +337,7 @@ private:
     std::tm *tm = std::localtime(&t);
     std::ostringstream oss;
     oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
-    StartTime = oss.str();
-    return StartTime;
+    return oss.str();
   }
 };
 
