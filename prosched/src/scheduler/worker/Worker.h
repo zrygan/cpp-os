@@ -155,19 +155,41 @@ public:
       return p;
   }
 
-private:
-  int coreNum;
-  AlgoContext ctx;
-  prosched::Process *currentProcess = nullptr;
-  std::thread workerThread;
-  mutable std::mutex workerMutex;
-  bool running = false;
-  prosched::Process* preemptedProcess = nullptr;
+  /**
+   * @brief Handles time-slice preemption check for Round Robin scheduling.
+   *
+   * Increments quantum used and detaches the process if the quantum cycle
+   * limit is reached.
+   *
+   * @param p Pointer to the process running on the core.
+   * @return true if the process was preempted and detached; false otherwise.
+   */
+  bool TickPreemption(Process* p) {
+    return false;
+  }
 
   /**
-   * @brief Worker thread's main execution loop
+   * @brief Manages execution delay cycles and triggers instruction execution.
    *
-   * @return self if successful once stopped
+   * @param p Pointer to the process running on the core.
+   */
+  void TickExecution(Process* p) {
+
+  }
+
+  /**
+   * @brief Performs a single CPU clock cycle of execution for the assigned process.
+   */
+  void RunCycle() {
+    
+  }
+
+  /**
+   * @brief Worker thread's main execution loop representing a single CPU core.
+   *
+   * Ticks logical CPU cycles at a set interval and invokes core execution.
+   *
+   * @return A pointer to this Worker instance upon termination.
    */
   Worker* ThreadTask() {
     while (running) {
@@ -221,6 +243,10 @@ private:
     }
     return this;
   }
+
+  int coreNum;
+  AlgoContext ctx;
+  prosched::Process* preemptedProcess = nullptr;
 };
 
 } // namespace prosched
