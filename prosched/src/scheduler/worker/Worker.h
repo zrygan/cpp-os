@@ -9,7 +9,7 @@
 #include "scheduler/process/Process.h"
 #include "Constants.hpp"
 
-using namespace std;
+
 
 namespace prosched {
 
