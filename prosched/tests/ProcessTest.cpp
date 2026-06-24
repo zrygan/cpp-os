@@ -35,7 +35,7 @@ TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
   EXPECT_EQ(result->args[1], "10");
 }
 
-Repeated AddInstruction calls all succeed — no internal cap
+// Repeated AddInstruction calls all succeed — no internal cap
 TEST(ProcessAddInstruction, MultipleInstructionsAllSucceed) {
   prosched::Process p("add_3", 3, 0);
   for (int i = 0; i < 10; i++) {
