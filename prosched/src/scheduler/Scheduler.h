@@ -269,14 +269,12 @@ public:
    */
   void GenerateProcessesCycle(int cpuCycles) {
     if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
-        if (nextPID <= kMaxProcesses) {
-          Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
-          std::lock_guard<std::mutex> lock(schedulerMutex);
-          processQueue.push(p);
-          processes.push_back(p);
+        Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
+        std::lock_guard<std::mutex> lock(schedulerMutex);
+        processQueue.push(p);
+        processes.push_back(p);
 
-          nextPID++;
-        } 
+        nextPID++;
     }
   }
 
