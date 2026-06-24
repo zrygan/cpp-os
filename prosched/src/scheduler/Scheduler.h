@@ -67,7 +67,7 @@ public:
     running = true;
     generatingProcesses = true;
 
-    for (int i = 0; i < this->ctx.numCpu; i++) {
+    for (int i = 0; i < this->ctx.num_cpu; i++) {
       Worker *w = new Worker(i, ctx);
 
       try {
@@ -81,7 +81,7 @@ public:
     }
 
     schedulerThread = std::thread(&Scheduler::SchedulerLoop, this);
-    std::cout << "Scheduler started with " << this->ctx.numCpu << " cores\n";
+    std::cout << "Scheduler started with " << this->ctx.num_cpu << " cores\n";
     return true;
   }
 
@@ -239,7 +239,7 @@ public:
     // std::cout << p->GetName() << "\n";
 
     int commandAmount =
-        this->ctx.minIns + rand() % (ctx->maxIns - ctx->minIns + 1);
+        this->ctx.min_ins + rand() % (ctx->max_ins - ctx->min_ins + 1);
 
     for (int i = 0; i < commandAmount; i++) {
       instruction = prosched::GetRandomStatement(name, 3);
@@ -263,7 +263,7 @@ public:
    * @param cpuCycles Current master clock tick cycle count.
    */
   void GenerateProcessesCycle(int cpuCycles) {
-    if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
+    if (generatingProcesses && cpuCycles % ctx.batch_process_frequency == 0) {
       Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
       std::lock_guard<std::mutex> lock(schedulerMutex);
       processQueue.push(p);
@@ -375,13 +375,13 @@ private:
    */
   void printSchedulerSpecs() {
     std::cout << "\n\nScheduler specs\n";
-    std::cout << "\nNumber of cores: " << this->ctx.numCpu;
+    std::cout << "\nNumber of cores: " << this->ctx.num_cpu;
     std::cout << "\nScheduler: " << schedulerTypeToString();
-    std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
-    std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-"
-              << this->ctx.maxIns;
-    std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
-    std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
+    std::cout << "\nBatch process freq: " << this->ctx.batch_process_frequency;
+    std::cout << "\nMin-ins & Max-ins: " << this->ctx.min_ins << "-"
+              << this->ctx.max_ins;
+    std::cout << "\nDelay per execution: " << this->ctx.delay_per_execution;
+    std::cout << "\nQuantum cycle: " << this->ctx.rr_quantum_cycles << "\n\n";
   }
 
   /**

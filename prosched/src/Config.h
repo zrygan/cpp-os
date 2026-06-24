@@ -14,7 +14,7 @@
 struct ConfigStruct {
   int num_cpu;
   std::string scheduler;
-  int quantum_cycles;
+  int rr_quantum_cycles;
   int batch_process_freq;
   int min_ins;
   int max_ins;
@@ -35,7 +35,7 @@ const std::string CONFIG_FILENAME = "prosched/config.txt";
 inline ConfigStruct *makeDefault() {
   ConfigStruct *cs = new ConfigStruct{.num_cpu = 4,
                                       .scheduler = "rr",
-                                      .quantum_cycles = 5,
+                                      .rr_quantum_cycles = 5,
                                       .batch_process_freq = 1,
                                       .min_ins = 1000,
                                       .max_ins = 2000,
@@ -73,7 +73,7 @@ inline ConfigStruct *fromFile() {
     else if (key == "scheduler")
       iss >> cs->scheduler;
     else if (key == "quantum-cycles")
-      iss >> cs->quantum_cycles;
+      iss >> cs->rr_quantum_cycles;
     else if (key == "batch-process-freq")
       iss >> cs->batch_process_freq;
     else if (key == "min-ins")

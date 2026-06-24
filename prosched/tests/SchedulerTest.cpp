@@ -360,7 +360,7 @@ namespace SchedulerSleepRelinquish {
 // increment its sleep ticks in the scheduler loop, and wake up to finish.
 TEST(SchedulerSleepRelinquish, ProcessSleepsAndWakesUpCorrectly) {
   AlgoContext ctx = makeTestCtx();
-  ctx.numCpu = 1; // single core to make core occupancy issues obvious
+  ctx.num_cpu = 1; // single core to make core occupancy issues obvious
   prosched::Scheduler scheduler(ctx);
 
   prosched::Process *p = new prosched::Process("sleepy_proc", 1, 0);

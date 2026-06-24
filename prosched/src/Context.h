@@ -10,31 +10,34 @@ enum class SchedulerType { FCFS, RR, UNKNOWN };
 
 struct AlgoContext {
   SchedulerType schedulerType = SchedulerType::UNKNOWN;
-  int numCpu;
-  int batchProcessFreq;
-  int minIns;
-  int maxIns;
-  int delayPerExec;
+  int num_cpu;
+  int batch_process_frequency;
+  int min_ins;
+  int max_ins;
+  int delay_per_execution;
   // for rr
-  int quantumCycles;
+  int rr_quantum_cycles;
 
   static AlgoContext buildConfig(ConfigStruct *config) {
     AlgoContext ctx;
 
     std::string sched = config->scheduler;
-    if (sched == "fcfs")
+    if (sched == "fcfs"){
       ctx.schedulerType = SchedulerType::FCFS;
-    else if (sched == "rr")
-      ctx.schedulerType = SchedulerType::RR;
+      ctx.rr_quantum_cycles = -1;
+    }
+    else if (sched == "rr"){
+        ctx.schedulerType = SchedulerType::RR;
+        ctx.rr_quantum_cycles = config->rr_quantum_cycles;
+      }
     else
       ctx.schedulerType = SchedulerType::UNKNOWN;
 
-    ctx.numCpu = config->num_cpu;
-    ctx.batchProcessFreq = config->batch_process_freq;
-    ctx.minIns = config->min_ins;
-    ctx.maxIns = config->max_ins;
-    ctx.delayPerExec = config->delay_per_exec;
-    ctx.quantumCycles = config->quantum_cycles;
+    ctx.num_cpu = config->num_cpu;
+    ctx.batch_process_frequency = config->batch_process_freq;
+    ctx.min_ins = config->min_ins;
+    ctx.max_ins = config->max_ins;
+    ctx.delay_per_execution = config->delay_per_exec;
     return ctx;
   }
 };

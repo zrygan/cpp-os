@@ -147,40 +147,40 @@ TEST(ControllerInitialize, ReturnsCorrectSchedulerType) {
   EXPECT_EQ(ctx.schedulerType, SchedulerType::FCFS);
 }
 
-// num-cpu 4 from config.txt is read into numCpu
-TEST(ControllerInitialize, ReturnsCorrectNumCpu) {
+// num-cpu 4 from config.txt is read into num_cpu
+TEST(ControllerInitialize, ReturnsCorrectnum_cpu) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.numCpu, 4);
+  EXPECT_EQ(ctx.num_cpu, 4);
 }
 
-// batch-process-freq 1 from config.txt is read into batchProcessFreq
-TEST(ControllerInitialize, ReturnsCorrectBatchProcessFreq) {
+// batch-process-freq 1 from config.txt is read into batch_process_frequency
+TEST(ControllerInitialize, ReturnsCorrectbatch_process_frequency) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.batchProcessFreq, 1);
+  EXPECT_EQ(ctx.batch_process_frequency, 1);
 }
 
 // min-ins and max-ins are read together as the instruction range
 TEST(ControllerInitialize, ReturnsCorrectInstructionBounds) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.minIns, 1000);
-  EXPECT_EQ(ctx.maxIns, 2000);
+  EXPECT_EQ(ctx.min_ins, 1000);
+  EXPECT_EQ(ctx.max_ins, 2000);
 }
 
-// quantum-cycles 5 from config.txt is read into quantumCycles
-TEST(ControllerInitialize, ReturnsCorrectQuantumCycles) {
+// quantum-cycles 5 from config.txt is read into rr_quantum_cycles
+TEST(ControllerInitialize, ReturnsCorrectrr_quantum_cycles) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.quantumCycles, 5);
+  EXPECT_EQ(ctx.rr_quantum_cycles, 5);
 }
 
-// delay-per-exec 0 from config.txt is read into delayPerExec
-TEST(ControllerInitialize, ReturnsCorrectDelayPerExec) {
+// delay-per-exec 0 from config.txt is read into delay_per_execution
+TEST(ControllerInitialize, ReturnsCorrectdelay_per_execution) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.delayPerExec, 0);
+  EXPECT_EQ(ctx.delay_per_execution, 0);
 }
 
 // UNKNOWN means fromFile() failed (config.txt not found) or unrecognized

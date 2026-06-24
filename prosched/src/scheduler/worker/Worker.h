@@ -179,7 +179,7 @@ public:
     if (ctx.schedulerType == SchedulerType::RR &&
         p->GetState() == Process::RUNNING) {
       p->IncrementQuantumUsed();
-      if (p->GetQuantumUsed() >= ctx.quantumCycles) {
+      if (p->GetQuantumUsed() >= ctx.rr_quantum_cycles) {
         PreemptProcessUnlocked(); // Sets state READY, detaches, and stores in
                                   // preemptedProcess
         return true;
@@ -206,7 +206,7 @@ public:
           return;
         }
 
-        p->SetCurrentInstructionCyclesLeft(ctx.delayPerExec);
+        p->SetCurrentInstructionCyclesLeft(ctx.delay_per_execution);
       } else {
         p->DecrementInstructionCyclesLeft();
       }
