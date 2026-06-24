@@ -337,7 +337,7 @@ namespace SchedulerGenerateProcess {
     AlgoContext ctx = makeTestCtx();
     prosched::Process *p = scheduler.generateProcess(&ctx, 1, 0);
     ASSERT_NE(p, nullptr);
-    EXPECT_EQ(p->GetTotalInstructions(), prosched::NUM_PRINT_INSTRUCTIONS);
+    EXPECT_EQ(p->GetTotalInstructions(), prosched::kNumPrintInstructions);
     delete p;
   }
 
