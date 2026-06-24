@@ -91,12 +91,13 @@ public:
   }
 
   /**
-   * @brief Preempts the current process from the worker
+   * @brief Preempts the current process from the worker (lock-free version)
+   *
+   * Must be called while holding workerMutex.
    *
    * @return the preempted process, or nullptr if none
    */
-  prosched::Process *PreemptProcess() {
-    std::lock_guard<std::mutex> lock(workerMutex);
+  prosched::Process *PreemptProcessUnlocked() {
     prosched::Process *p = currentProcess;
     if (p != nullptr) {
       p->SetState(prosched::Process::READY);
@@ -105,6 +106,18 @@ public:
       preemptedProcess = p;
     }
     return p;
+  }
+
+  /**
+   * @brief Preempts the current process from the worker
+   *
+   * Thread-safe.
+   *
+   * @return the preempted process, or nullptr if none
+   */
+  prosched::Process *PreemptProcess() {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    return PreemptProcessUnlocked();
   }
 
   /**
@@ -166,7 +179,7 @@ public:
     if (ctx.schedulerType == SchedulerType::RR && p->GetState() == Process::RUNNING) {
         p->IncrementQuantumUsed();
         if (p->GetQuantumUsed() >= ctx.quantumCycles) {
-            PreemptProcess();   // Sets state READY, detaches, and stores in preemptedProcess
+            PreemptProcessUnlocked();   // Sets state READY, detaches, and stores in preemptedProcess
             return true;
         }
     }
