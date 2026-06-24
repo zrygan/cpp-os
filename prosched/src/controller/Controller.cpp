@@ -14,16 +14,6 @@
 AlgoContext Controller::initialize() {
   ConfigStruct *cs = fromFile();
 
-  /*
-    <RV @zrygan> ===========
-    Since this function will inherently fail if cs if not found.
-    This shouldn't just return void. Make it return AlgoContext
-
-    and add test for it
-
-    @stephen
-    <RV @zrygan> ===========
-  */
   if (cs == nullptr) {
     std::cout << "Failed to find config file\n";
     this->ctx = {};
