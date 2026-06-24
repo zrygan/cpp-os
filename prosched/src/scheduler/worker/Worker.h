@@ -244,8 +244,13 @@ public:
     return this;
   }
 
+private:
   int coreNum;
   AlgoContext ctx;
+  prosched::Process *currentProcess = nullptr;
+  std::thread workerThread;
+  mutable std::mutex workerMutex;
+  bool running = false;
   prosched::Process* preemptedProcess = nullptr;
 };
 
