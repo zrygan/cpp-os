@@ -7,6 +7,7 @@
 #include "config.h"
 #include "context.h"
 #include "scheduler/process/Process.h"
+#include "Constants.hpp"
 
 using namespace std;
 
@@ -21,7 +22,7 @@ public:
    * @param ctx Scheduling configuration
    */
   Worker(int coreNum, AlgoContext ctx)
-      : coreNum(coreNum), ctx(ctx), running(false), currentProcess(nullptr) {}
+      : coreNum(coreNum), ctx(ctx), currentProcess(nullptr), running(false) {}
 
   /**
    * @brief Starts worker execution
@@ -83,8 +84,28 @@ public:
       return nullptr;
     }
     currentProcess = p;
-    if (p)
+    if (p) {
       p->AssignCore(coreNum);
+      p->ResetQuantumUsed();
+      p->SetCurrentInstructionCyclesLeft(0);
+    }
+    return p;
+  }
+
+  /**
+   * @brief Preempts the current process from the worker
+   *
+   * @return the preempted process, or nullptr if none
+   */
+  prosched::Process *PreemptProcess() {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    prosched::Process *p = currentProcess;
+    if (p != nullptr) {
+      p->SetState(prosched::Process::READY);
+      p->ResetQuantumUsed();
+      currentProcess = nullptr;
+      preemptedProcess = p;
+    }
     return p;
   }
 
@@ -121,6 +142,18 @@ public:
     std::lock_guard<std::mutex> lock(workerMutex);
     return currentProcess;
   }
+  /**
+   * @brief Returns and clears the last preempted process (if any)
+   * 
+   * Must be called from the scheduler to re-queue preempted processes.
+   * Thread-safe.
+   */
+  prosched::Process* GetAndClearPreemptedProcess() {
+      std::lock_guard<std::mutex> lock(workerMutex);
+      prosched::Process* p = preemptedProcess;
+      preemptedProcess = nullptr;
+      return p;
+  }
 
 private:
   int coreNum;
@@ -129,40 +162,62 @@ private:
   std::thread workerThread;
   mutable std::mutex workerMutex;
   bool running = false;
+  prosched::Process* preemptedProcess = nullptr;
 
   /**
    * @brief Worker thread's main execution loop
    *
    * @return self if successful once stopped
    */
-  Worker *ThreadTask() {
+  Worker* ThreadTask() {
     while (running) {
-      prosched::Process *p = nullptr;
-      {
+        // One CPU tick
+        std::this_thread::sleep_for(std::chrono::milliseconds(TICK_DURATION_MS));
+
         std::lock_guard<std::mutex> lock(workerMutex);
-        p = currentProcess;
-      }
 
-      if (p != nullptr) {
-        p->ExecuteInstructions(coreNum);
-        // std::cout << "Worker on core " << coreNum << " is executing process "
-        // << currentProcess->GetName() << "\n";
+        // Re-check running flag after acquiring lock
+        if (!running) break;
 
-        // std::cout << "Core " << coreNum 
-        //       << " executing " << p->GetName()
-        //       << " [" << p->GetCurrentInstructionIndex() 
-        //       << "/" << p->GetTotalInstructions() << "]\n";
-
-        if (p->IsFinished()) {
-          std::lock_guard<std::mutex> lock(workerMutex);
-          currentProcess = nullptr; // Process finished, core is now free
+        Process* p = currentProcess;
+        if (p == nullptr) {
+            continue;   // idle
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::max(1, ctx.delayPerExec) * 10));
-      } else {
-        // std::cout << "Worker on core " << coreNum << " is idle\n";
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
+        // handle FINISHED state (should not happen, but safe)
+        if (p->GetState() == Process::FINISHED) {
+            currentProcess = nullptr;
+            continue;
+        }
+
+        // Round Robin quantum ticking (only for RR, only if RUNNING)
+        if (ctx.schedulerType == SchedulerType::RR && p->GetState() == Process::RUNNING) {
+            p->IncrementQuantumUsed();
+            if (p->GetQuantumUsed() >= ctx.quantumCycles) {
+                PreemptProcess();   // sets state READY, detaches, stores preemptedProcess
+                continue;
+            }
+        }
+
+
+        // Execute instruction if the process is RUNNING or READY
+        if (p->GetState() == Process::RUNNING || p->GetState() == Process::READY) {
+            if (p->GetCurrentInstructionCyclesLeft() <= 0) {
+                p->ExecuteInstructions(coreNum);
+
+                // After execution, the process may have become WAITING (SLEEP) or FINISHED
+                if (p->GetState() == Process::WAITING || p->GetState() == Process::FINISHED) {
+                    currentProcess = nullptr;  
+                    continue;
+                }
+
+                // Still RUNNING – reset the instruction delay counter
+                p->SetCurrentInstructionCyclesLeft(ctx.delayPerExec);
+            } else {
+                // Wait one more tick before next instruction
+                p->DecrementInstructionCyclesLeft();
+            }
+        }
     }
     return this;
   }

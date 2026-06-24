@@ -352,3 +352,49 @@ namespace SchedulerGenerateProcess {
   }
 
 } // namespace SchedulerGenerateProcess
+
+namespace SchedulerSleepRelinquish {
+
+  // A process containing a SLEEP statement must relinquish the CPU core,
+  // increment its sleep ticks in the scheduler loop, and wake up to finish.
+  TEST(SchedulerSleepRelinquish, ProcessSleepsAndWakesUpCorrectly) {
+    AlgoContext ctx = makeTestCtx();
+    ctx.numCpu = 1; // single core to make core occupancy issues obvious
+    prosched::Scheduler scheduler(ctx);
+
+    prosched::Process *p = new prosched::Process("sleepy_proc", 1, 0);
+    p->AddInstruction("PRINT(\"before\")");
+    p->AddInstruction("SLEEP(5)");
+    p->AddInstruction("PRINT(\"after\")");
+
+    scheduler.AddProcess(p);
+    scheduler.Start();
+    scheduler.StopGenerating();
+
+
+    // Sleep long enough for the process to run, sleep for 5 ticks, wake up, and complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    scheduler.Stop();
+
+    EXPECT_TRUE(p->IsFinished());
+    EXPECT_EQ(p->GetState(), prosched::Process::FINISHED);
+
+    auto logs = p->GetLogs();
+    bool found_before = false;
+    bool found_sleep = false;
+    bool found_after = false;
+
+    for (const auto &log : logs) {
+        if (log.find("before") != std::string::npos) found_before = true;
+        if (log.find("SLEEP") != std::string::npos) found_sleep = true;
+        if (log.find("after") != std::string::npos) found_after = true;
+    }
+
+    EXPECT_TRUE(found_before);
+    EXPECT_TRUE(found_sleep);
+    EXPECT_TRUE(found_after);
+  }
+
+} // namespace SchedulerSleepRelinquish
+

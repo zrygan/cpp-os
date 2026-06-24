@@ -6,11 +6,12 @@
 #include <thread>
 #include <vector>
 
+#include "src/Constants.hpp"
 #include "config.h"
 #include "process/Process.h"
 #include "src/context.h"
 #include "src/scheduler/worker/Worker.h"
-#include "src/Constants.hpp"
+
 
 using namespace std;
 
@@ -66,7 +67,6 @@ public:
     printSchedulerSpecs();
 
     running = true;
-    // ehhh
     generatingProcesses = true;
 
     for (int i = 0; i < this->ctx.numCpu; i++) {
@@ -88,6 +88,21 @@ public:
   }
 
   /**
+   * @brief Resumes process generation
+   */
+  void ResumeGenerating() {
+    generatingProcesses = true;
+  }
+
+  /**
+   * @brief Stops generating new dummy processes
+   */
+  void StopGenerating() {
+    generatingProcesses = false;
+    std::cout << "Stopped generating processes. Scheduler is still running.\n\n";
+  }
+
+  /**
    * @brief Stops the Scheduler from running
    *
    * running = false, stops all worker threads and the scheduler thread
@@ -102,7 +117,9 @@ public:
 
     for (Worker *w : workers) {
       w->Stop();
+      delete w;
     }
+    workers.clear();
 
     // Empty the queue without deleting since destructor will handle processes
     while (!processQueue.empty()) {
@@ -122,9 +139,11 @@ public:
    * @return self if success, else returns none
    */
   prosched::Process *AddProcess(prosched::Process *p) {
+    if (p == nullptr) return nullptr;
     std::lock_guard<std::mutex> lock(schedulerMutex);
     try {
       processes.push_back(p);
+      processQueue.push(p);
       return p;
     } catch (const std::bad_alloc &e) {
       std::cerr << "Allocation failed: " << e.what();
@@ -216,7 +235,7 @@ public:
    *
    * @return Process generated
    */
-  prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
+  prosched::Process *generateProcess(AlgoContext */*ctx*/, int pid, int tick) {
 
     std::string name = "process" + std::to_string(nextPID);
     Process *p = new Process(name, pid, tick);
@@ -303,7 +322,6 @@ private:
   void FCFS() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
-    // std::cout << "\nFCFS Scheduler\n";
     for (Worker *w : workers) {
       if (!processQueue.empty() && !w->IsBusy()) {
         Process *p = processQueue.front();
@@ -315,12 +333,18 @@ private:
 
   /**
    * @brief Round Robin Scheduler
-   *
-   * detailed desc
    */
   void RoundRobin() {
-    // @aaron future func for rr
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (Worker *w : workers) {
+      if (!processQueue.empty() && !w->IsBusy()) {
+        Process *p = processQueue.front();
+        processQueue.pop();
+        w->AssignProcess(p);
+      }
+    }
   }
+
 
   /**
    * @brief the main scheduler loop
@@ -335,30 +359,8 @@ private:
     while (running) {
       cpuCycles++;
 
-      /*
-        <RV @zrygan> ===========
-        So cpuCycles % ctx.batchProcessFreq is required everywhere.
-
-        Can we ensure in the the config loader or whereever the values
-        for these are populated. We check that the values are
-        valid/make sense. This can be a very easy pain point in the future.
-
-        The same thing for limiting the number of processes to 10.
-
-
-        ======
-
-        Also again, separation of concerns. This is a function juggling
-        a lot of things.
-
-        @erin @aaron
-
-        <RV @zrygan> ===========
-      */
+      // 1. Generate Processes
       if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
-
-        // limit to 10 processes -> 10 txt files
-        // remove if for final proj
         if (nextPID <= MAX_PROCESSES) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
@@ -369,16 +371,47 @@ private:
         } 
       }
 
-      if (ctx.schedulerType == SchedulerType::FCFS) {
-        FCFS();
-      } else if (ctx.schedulerType == SchedulerType::RR) {
-        RoundRobin();
-      } else {
-        std::cout << "Invalid scheduler type (check config)\n";
-        return;
+      // 2. Collect preempted processes and re‑queue them
+      for (Worker* w : workers) {
+          Process* preempted = w->GetAndClearPreemptedProcess();
+          if (preempted) {
+              std::lock_guard<std::mutex> lock(schedulerMutex);
+              processQueue.push(preempted);
+          }
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      // 2.5. Update sleeping processes and re-queue them upon wake-up
+      {
+          std::lock_guard<std::mutex> lock(schedulerMutex);
+          for (Process* p : processes) {
+              if (p != nullptr && p->GetState() == Process::WAITING) {
+                  p->DecrementSleepCycles();
+                  if (p->GetCyclesRemainingForSleep() <= 0) {
+                      if (p->GetCurrentInstructionIndex() >= p->GetTotalInstructions()) {
+                          p->SetState(Process::FINISHED);
+                      } else {
+                          p->SetState(Process::READY);
+                          processQueue.push(p);
+                      }
+                  }
+              }
+          }
+      }
+
+      // 3. Dispatch processes to idle workers
+      {
+        std::lock_guard<std::mutex> lock(schedulerMutex);
+        for (Worker* w : workers) {
+          if (!processQueue.empty() && !w->IsBusy()) {
+            Process* p = processQueue.front();
+            processQueue.pop();
+            w->AssignProcess(p);
+          }
+        }
+      }
+
+      // 4. Tick wait
+      std::this_thread::sleep_for(std::chrono::milliseconds(TICK_DURATION_MS));
     }
   }
 };

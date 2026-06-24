@@ -65,9 +65,36 @@ public:
 
     currentState = RUNNING;
 
-    if (currentInstructionIndex >= statements.size()) {
+    if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
       return {};
+    }
+
+    const Statement &stmt = statements[currentInstructionIndex];
+    if (stmt.keyword == Keyword::SLEEP) {
+      currentState = WAITING;
+      if (!stmt.args.empty()) {
+        try {
+            cyclesRemainingForSleep = std::stoi(stmt.args[0]);
+        }
+        catch (const std::invalid_argument&) {
+            cyclesRemainingForSleep = 0;
+        }
+        catch (const std::out_of_range&) {
+            cyclesRemainingForSleep = 0;
+        }
+      } else {
+        cyclesRemainingForSleep = 0;
+      }
+      currentInstructionIndex++;
+
+      logs.push_back(GetTimestamp() + " Core:" + std::to_string(coreNum) +
+                     " \"SLEEP " + (stmt.args.empty() ? "0" : stmt.args[0]) + "\"");
+
+      if (currentInstructionIndex >= (int)statements.size() && cyclesRemainingForSleep == 0) {
+        currentState = FINISHED;
+      }
+      return statements;
     }
 
     interpreter.executeStatements({statements[currentInstructionIndex]});
@@ -81,9 +108,6 @@ public:
 
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
-
-      // remove for full proj
-      SaveLogsToFile();
     }
 
     return statements;
@@ -213,6 +237,75 @@ public:
    */
   bool IsOwnedByScheduler() const { return ownedByScheduler; }
 
+  /**
+   * @brief Gets the current state of the process
+   *
+   * @return the current ProcessState
+   */
+  ProcessState GetState() const { return currentState; }
+
+  /**
+   * @brief Sets the current state of the process
+   *
+   * @param state the ProcessState to set
+   */
+  void SetState(ProcessState state) { currentState = state; }
+
+  /**
+   * @brief Gets the number of cycles remaining for the process to sleep
+   *
+   * @return the number of cycles remaining for sleep
+   */
+  int GetCyclesRemainingForSleep() const { return cyclesRemainingForSleep; }
+
+  /**
+   * @brief Decrements the number of cycles remaining for the process to sleep
+   *
+   * This function reduces the cyclesRemainingForSleep by one, ensuring it does
+   * not go below zero.
+   */
+  void DecrementSleepCycles() { if (cyclesRemainingForSleep > 0) cyclesRemainingForSleep--; }
+
+  /**
+   * @brief Gets the number of cycles left for the current instruction
+   *
+   * @return the number of cycles left for the current instruction
+   */
+  int GetCurrentInstructionCyclesLeft() const { return currentInstructionCyclesLeft; }
+  
+  /**
+   * @brief Sets the number of cycles left for the current instruction
+   *
+   * @param numCycles the number of cycles left for the current instruction
+   */
+  void SetCurrentInstructionCyclesLeft(int numCycles) { currentInstructionCyclesLeft = numCycles; }
+  
+  /**
+   * @brief Decrements the number of cycles left for the current instruction
+   *
+   * This function reduces the currentInstructionCyclesLeft by one, ensuring it does
+   * not go below zero.
+   */
+  void DecrementInstructionCyclesLeft() { if (currentInstructionCyclesLeft > 0) --currentInstructionCyclesLeft; }
+
+  /**
+   * @brief Gets the number of cycles used in the current quantum
+   *
+   * @return the number of cycles used in the current quantum
+   */
+  int GetQuantumUsed() const { return quantumUsed; }
+  
+  /**
+   * @brief Increments the number of cycles used in the current quantum
+   */
+  void IncrementQuantumUsed() { ++quantumUsed; }
+  
+  /**
+   * @brief Resets the number of cycles used in the current quantum to zero
+   */
+  void ResetQuantumUsed() { quantumUsed = 0; }
+
+
   
 private:
   std::string processName;
@@ -224,6 +317,11 @@ private:
   std::vector<std::string> logs;
   bool ownedByScheduler = false;
   std::string StartTime;
+
+  int cyclesRemainingForSleep = 0;
+  int currentInstructionCyclesLeft = 0;
+  int quantumUsed = 0;
+
 
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;

@@ -46,7 +46,7 @@ void Controller::HandleView() {
 
 bool Controller::HandlePreInit(const std::string &input) {
   if (input == "initialize") {
-    AlgoContext result = initialize();
+    initialize();
     if (!isInitialized) {
       std::cout << "Initialization failed. Check config.txt.\n";
     }
@@ -151,16 +151,17 @@ void Controller::ExecuteCommand(const Command &command) {
       break;
 
     case CLI_COMMAND::CLI_SCHEDULER_START:
-      if (!this->scheduler->IsRunning() == true) {
+      if (!this->scheduler->IsRunning()) {
         this->scheduler->Start();
       } else {
-        std::cout << "Scheduler is still running...\n\n";
+        this->scheduler->ResumeGenerating(); 
+        std::cout << "Resumed process generation.\n\n";
       }
       break;
 
     case CLI_COMMAND::CLI_SCHEDULER_STOP:
-      if (this->scheduler->IsRunning() == true) {
-        this->scheduler->Stop();
+      if (this->scheduler->IsRunning()) {
+        this->scheduler->StopGenerating();
       } else {
         std::cout << "Scheduler has not started, run \"scheduler-start\" "
                      "to start\n\n";
