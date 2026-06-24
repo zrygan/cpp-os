@@ -2,15 +2,15 @@
 
 #include <mutex>
 #include <queue>
+#include <random>
 #include <stdio.h>
 #include <thread>
 #include <vector>
-#include <random>
 
-#include "src/Constants.hpp"
-#include "config.h"
+#include "Config.h"
 #include "process/Process.h"
-#include "src/context.h"
+#include "src/Constants.hpp"
+#include "src/Context.h"
 #include "src/scheduler/worker/Worker.h"
 
 namespace prosched {
@@ -35,9 +35,9 @@ public:
     if (running) {
       Stop();
     }
-    for (Process* p : processes) {
+    for (Process *p : processes) {
       if (p && p->IsOwnedByScheduler()) {
-          delete p;
+        delete p;
       }
     }
     for (Worker *w : workers) {
@@ -88,16 +88,15 @@ public:
   /**
    * @brief Resumes process generation
    */
-  void ResumeGenerating() {
-    generatingProcesses = true;
-  }
+  void ResumeGenerating() { generatingProcesses = true; }
 
   /**
    * @brief Stops generating new dummy processes
    */
   void StopGenerating() {
     generatingProcesses = false;
-    std::cout << "Stopped generating processes. Scheduler is still running.\n\n";
+    std::cout
+        << "Stopped generating processes. Scheduler is still running.\n\n";
   }
 
   /**
@@ -137,7 +136,8 @@ public:
    * @return self if success, else returns none
    */
   prosched::Process *AddProcess(prosched::Process *p) {
-    if (p == nullptr) return nullptr;
+    if (p == nullptr)
+      return nullptr;
     std::lock_guard<std::mutex> lock(schedulerMutex);
     try {
       processes.push_back(p);
@@ -157,65 +157,60 @@ public:
   void PrintProcesses() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
-    double utilization =0 ;
+    double utilization = 0;
     int coresUsed = 0;
     int coresAvail = 0;
 
-    for (Worker* w : workers) {
-      if(w->IsBusy()) {
+    for (Worker *w : workers) {
+      if (w->IsBusy()) {
         coresUsed++;
       } else {
         coresAvail++;
       }
     }
 
-    utilization = (static_cast<double>(coresUsed)/workers.size())*100.0;
+    utilization = (static_cast<double>(coresUsed) / workers.size()) * 100.0;
 
     std::cout << "\nCPU utilization: " << utilization << "%\n";
     std::cout << "Cores used: " << coresUsed << "/" << workers.size() << "\n";
-    std::cout << "Cores available: " << coresAvail << "/" << workers.size() << "\n";
+    std::cout << "Cores available: " << coresAvail << "/" << workers.size()
+              << "\n";
 
     std::cout << "\n" << std::string(50, '-');
     std::cout << "\nRunning Processes: \n";
 
-    for (Worker* w : workers) {
-        Process* p = w->GetCurrentProcess();
-        if(p != nullptr) {
-            std::cout << 
-                p->GetName() << 
-                std::string(5, ' ') <<
-                p->GetProcessTimeStart() <<
-                std::string(5, ' ') <<
-                "Core: " << w->GetCoreNum() <<
-                std::string(5, ' ') << 
-                p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
-                "\n";
-        } else {
-            std::cout << "Core "  << w->GetCoreNum() << std::string(5, ' ') << " (idle)\n";
-        }
+    for (Worker *w : workers) {
+      Process *p = w->GetCurrentProcess();
+      if (p != nullptr) {
+        std::cout << p->GetName() << std::string(5, ' ')
+                  << p->GetProcessTimeStart() << std::string(5, ' ')
+                  << "Core: " << w->GetCoreNum() << std::string(5, ' ')
+                  << p->GetCurrentInstructionIndex() << " / "
+                  << p->GetTotalInstructions() << "\n";
+      } else {
+        std::cout << "Core " << w->GetCoreNum() << std::string(5, ' ')
+                  << " (idle)\n";
+      }
     }
 
-    std::vector<Process*> finished;
-    for (Process* p : processes) {
-        if (p != nullptr && p->IsFinished()) {
-            finished.push_back(p);
-        }
+    std::vector<Process *> finished;
+    for (Process *p : processes) {
+      if (p != nullptr && p->IsFinished()) {
+        finished.push_back(p);
+      }
     }
 
     int startIdx = std::max(0, (int)finished.size() - 10);
 
     std::cout << "\n\nFinished Processes: \n";
     for (int i = startIdx; i < (int)finished.size(); i++) {
-      Process* p = finished[i];
+      Process *p = finished[i];
       if (p != nullptr && p->IsFinished()) {
-        std::cout << p->GetName() << 
-            std::string(5, ' ') <<
-            p->GetProcessTimeStart() <<
-            std::string(5, ' ') <<
-            "Finished" <<
-            std::string(5, ' ') <<
-            p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
-            "\n";
+        std::cout << p->GetName() << std::string(5, ' ')
+                  << p->GetProcessTimeStart() << std::string(5, ' ')
+                  << "Finished" << std::string(5, ' ')
+                  << p->GetCurrentInstructionIndex() << " / "
+                  << p->GetTotalInstructions() << "\n";
       }
     }
 
@@ -223,7 +218,6 @@ public:
     std::cout << std::endl;
   }
 
-  
   /**
    * @brief
    *
@@ -239,12 +233,13 @@ public:
     Process *p = new Process(name, pid, tick);
     p->SetOwnedByScheduler(true);
     Statement instruction;
-    // std::vector<std::string> instructions = {"PRINT", "DECLARE", "ADD", 
+    // std::vector<std::string> instructions = {"PRINT", "DECLARE", "ADD",
     //                                       "SUBTRACT", "SLEEP", "FOR"};
 
     // std::cout << p->GetName() << "\n";
 
-    int commandAmount = this->ctx.minIns + rand() % (ctx->maxIns - ctx->minIns + 1);
+    int commandAmount =
+        this->ctx.minIns + rand() % (ctx->maxIns - ctx->minIns + 1);
 
     for (int i = 0; i < commandAmount; i++) {
       instruction = prosched::GetRandomStatement(name, 3);
@@ -269,45 +264,47 @@ public:
    */
   void GenerateProcessesCycle(int cpuCycles) {
     if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
-        Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
-        std::lock_guard<std::mutex> lock(schedulerMutex);
-        processQueue.push(p);
-        processes.push_back(p);
+      Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
+      std::lock_guard<std::mutex> lock(schedulerMutex);
+      processQueue.push(p);
+      processes.push_back(p);
 
-        nextPID++;
+      nextPID++;
     }
   }
 
   /**
-   * @brief Gathers processes preempted by CPU workers and places them back in the queue.
+   * @brief Gathers processes preempted by CPU workers and places them back in
+   * the queue.
    */
   void CollectPreemptedCycle() {
-    for (Worker* w : workers) {
-        Process* preempted = w->GetAndClearPreemptedProcess();
-        if (preempted) {
-            std::lock_guard<std::mutex> lock(schedulerMutex);
-            processQueue.push(preempted);
-        }
+    for (Worker *w : workers) {
+      Process *preempted = w->GetAndClearPreemptedProcess();
+      if (preempted) {
+        std::lock_guard<std::mutex> lock(schedulerMutex);
+        processQueue.push(preempted);
+      }
     }
   }
 
   /**
-   * @brief Updates sleeping processes and re-queues them when their sleep ticks expire.
+   * @brief Updates sleeping processes and re-queues them when their sleep ticks
+   * expire.
    */
   void UpdateSleepingProcessesCycle() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
-    for (Process* p : processes) {
-        if (p != nullptr && p->GetState() == Process::WAITING) {
-            p->DecrementSleepCycles();
-            if (p->GetCyclesRemainingForSleep() <= 0) {
-                if (p->GetCurrentInstructionIndex() >= p->GetTotalInstructions()) {
-                    p->SetState(Process::FINISHED);
-                } else {
-                    p->SetState(Process::READY);
-                    processQueue.push(p);
-                }
-            }
+    for (Process *p : processes) {
+      if (p != nullptr && p->GetState() == Process::WAITING) {
+        p->DecrementSleepCycles();
+        if (p->GetCyclesRemainingForSleep() <= 0) {
+          if (p->GetCurrentInstructionIndex() >= p->GetTotalInstructions()) {
+            p->SetState(Process::FINISHED);
+          } else {
+            p->SetState(Process::READY);
+            processQueue.push(p);
+          }
         }
+      }
     }
   }
 
@@ -316,12 +313,12 @@ public:
    */
   void DispatchProcessesCycle() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
-    for (Worker* w : workers) {
-        if (!processQueue.empty() && !w->IsBusy()) {
-            Process* p = processQueue.front();
-            processQueue.pop();
-            w->AssignProcess(p);
-        }
+    for (Worker *w : workers) {
+      if (!processQueue.empty() && !w->IsBusy()) {
+        Process *p = processQueue.front();
+        processQueue.pop();
+        w->AssignProcess(p);
+      }
     }
   }
 
@@ -359,17 +356,17 @@ private:
 
   /**
    * @brief converts the scheduler type enum to a string for printing
-   * 
+   *
    * @return a string representation of the scheduler type
    */
   std::string schedulerTypeToString() {
     switch (ctx.schedulerType) {
-        case SchedulerType::FCFS: 
-        return "fcfs";
-        case SchedulerType::RR:   
-        return "rr";
-        default:                   
-        return "unknown";
+    case SchedulerType::FCFS:
+      return "fcfs";
+    case SchedulerType::RR:
+      return "rr";
+    default:
+      return "unknown";
     }
   }
 
@@ -385,7 +382,7 @@ private:
               << this->ctx.maxIns;
     std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
     std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
-}
+  }
 
   /**
    * @brief First-Come First-Serve Scheduler Algorithm

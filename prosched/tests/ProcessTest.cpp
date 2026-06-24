@@ -7,11 +7,12 @@ namespace ProcessAddInstruction {
 TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
   prosched::Process p("add_1", 1, 0);
   prosched::Interpreter interpreter;
-  std::vector<prosched::Statement> stmts = interpreter.parse("PRINT(\"hello\")");
+  std::vector<prosched::Statement> stmts =
+      interpreter.parse("PRINT(\"hello\")");
   ASSERT_FALSE(stmts.empty());
 
   prosched::Statement stmt = stmts[0];
-  prosched::Statement* result = p.AddInstruction(stmt);
+  prosched::Statement *result = p.AddInstruction(stmt);
 
   EXPECT_EQ(result->keyword, prosched::Keyword::PRINT);
   ASSERT_FALSE(result->args.empty());
@@ -26,7 +27,7 @@ TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
   ASSERT_FALSE(stmts.empty());
 
   prosched::Statement stmt = stmts[0];
-  prosched::Statement* result = p.AddInstruction(stmt);
+  prosched::Statement *result = p.AddInstruction(stmt);
 
   EXPECT_EQ(result->keyword, prosched::Keyword::DECLARE);
   ASSERT_FALSE(result->args.empty());
@@ -63,7 +64,8 @@ TEST(ProcessAddInstruction, IndependentProcessesDoNotShareInstructions) {
 
   p1.AddInstruction("PRINT(\"from p1\")");
 
-  // p2 has no instructions — executing should finish it immediately (empty return)
+  // p2 has no instructions — executing should finish it immediately (empty
+  // return)
   auto result = p2.ExecuteInstructions(1);
   EXPECT_TRUE(result.empty());
   EXPECT_TRUE(p2.IsFinished());

@@ -7,8 +7,8 @@
 #include <string>
 
 #include "Controller.h"
-#include "config.h"
-#include "context.h"
+#include "Config.h"
+#include "Context.h"
 #include "src/scheduler/Scheduler.h"
 
 AlgoContext Controller::initialize() {
@@ -142,7 +142,8 @@ void Controller::ExecuteCommand(const Command &command) {
       if (this->scheduler->IsRunning()) {
         this->scheduler->PrintProcesses();
       } else {
-        std::cout << "Start the scheduler before viewing processes, run \"scheduler-start\"\n\n";
+        std::cout << "Start the scheduler before viewing processes, run "
+                     "\"scheduler-start\"\n\n";
       }
       break;
 
@@ -154,7 +155,7 @@ void Controller::ExecuteCommand(const Command &command) {
       if (!this->scheduler->IsRunning()) {
         this->scheduler->Start();
       } else {
-        this->scheduler->ResumeGenerating(); 
+        this->scheduler->ResumeGenerating();
         std::cout << "Resumed process generation.\n\n";
       }
       break;

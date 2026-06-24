@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <thread>
 
-#include "config.h"
-#include "context.h"
-#include "scheduler/process/Process.h"
 #include "Constants.hpp"
+#include "Config.h"
+#include "Context.h"
+#include "scheduler/process/Process.h"
 
 namespace prosched {
 
@@ -132,9 +132,9 @@ public:
    *
    * @return true if a process is assigned and executing
    */
-  bool IsBusy() const { 
+  bool IsBusy() const {
     std::lock_guard<std::mutex> lock(workerMutex);
-    return currentProcess != nullptr; 
+    return currentProcess != nullptr;
   }
 
   /**
@@ -155,15 +155,15 @@ public:
   }
   /**
    * @brief Returns and clears the last preempted process (if any)
-   * 
+   *
    * Must be called from the scheduler to re-queue preempted processes.
    * Thread-safe.
    */
-  prosched::Process* GetAndClearPreemptedProcess() {
-      std::lock_guard<std::mutex> lock(workerMutex);
-      prosched::Process* p = preemptedProcess;
-      preemptedProcess = nullptr;
-      return p;
+  prosched::Process *GetAndClearPreemptedProcess() {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    prosched::Process *p = preemptedProcess;
+    preemptedProcess = nullptr;
+    return p;
   }
 
   /**
@@ -175,13 +175,15 @@ public:
    * @param p Pointer to the process running on the core.
    * @return true if the process was preempted and detached; false otherwise.
    */
-  bool TickPreemption(Process* p) {
-    if (ctx.schedulerType == SchedulerType::RR && p->GetState() == Process::RUNNING) {
-        p->IncrementQuantumUsed();
-        if (p->GetQuantumUsed() >= ctx.quantumCycles) {
-            PreemptProcessUnlocked();   // Sets state READY, detaches, and stores in preemptedProcess
-            return true;
-        }
+  bool TickPreemption(Process *p) {
+    if (ctx.schedulerType == SchedulerType::RR &&
+        p->GetState() == Process::RUNNING) {
+      p->IncrementQuantumUsed();
+      if (p->GetQuantumUsed() >= ctx.quantumCycles) {
+        PreemptProcessUnlocked(); // Sets state READY, detaches, and stores in
+                                  // preemptedProcess
+        return true;
+      }
     }
     return false;
   }
@@ -191,40 +193,43 @@ public:
    *
    * @param p Pointer to the process running on the core.
    */
-  void TickExecution(Process* p) {
+  void TickExecution(Process *p) {
     if (p->GetState() == Process::RUNNING || p->GetState() == Process::READY) {
-        if (p->GetCurrentInstructionCyclesLeft() <= 0) {
-            p->ExecuteInstructions(coreNum);
+      if (p->GetCurrentInstructionCyclesLeft() <= 0) {
+        p->ExecuteInstructions(coreNum);
 
-            // Detach immediately if process transitioned to WAITING (SLEEP) or FINISHED
-            if (p->GetState() == Process::WAITING || p->GetState() == Process::FINISHED) {
-                currentProcess = nullptr;
-                return;
-            }
-
-            p->SetCurrentInstructionCyclesLeft(ctx.delayPerExec);
-        } else {
-            p->DecrementInstructionCyclesLeft();
+        // Detach immediately if process transitioned to WAITING (SLEEP) or
+        // FINISHED
+        if (p->GetState() == Process::WAITING ||
+            p->GetState() == Process::FINISHED) {
+          currentProcess = nullptr;
+          return;
         }
+
+        p->SetCurrentInstructionCyclesLeft(ctx.delayPerExec);
+      } else {
+        p->DecrementInstructionCyclesLeft();
+      }
     }
   }
 
   /**
-   * @brief Performs a single CPU clock cycle of execution for the assigned process.
+   * @brief Performs a single CPU clock cycle of execution for the assigned
+   * process.
    */
   void RunCycle() {
-    Process* p = currentProcess;
+    Process *p = currentProcess;
     if (p == nullptr) {
-        return;   // Idle core
+      return; // Idle core
     }
 
     if (p->GetState() == Process::FINISHED) {
-        currentProcess = nullptr;
-        return;
+      currentProcess = nullptr;
+      return;
     }
 
     if (TickPreemption(p)) {
-        return;   // Process preempted and detached
+      return; // Process preempted and detached
     }
 
     TickExecution(p);
@@ -237,15 +242,16 @@ public:
    *
    * @return A pointer to this Worker instance upon termination.
    */
-  Worker* ThreadTask() {
+  Worker *ThreadTask() {
     while (running) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
+      std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
 
-        std::lock_guard<std::mutex> lock(workerMutex);
+      std::lock_guard<std::mutex> lock(workerMutex);
 
-        if (!running) break;
+      if (!running)
+        break;
 
-        RunCycle();
+      RunCycle();
     }
     return this;
   }
@@ -257,7 +263,7 @@ private:
   std::thread workerThread;
   mutable std::mutex workerMutex;
   bool running = false;
-  prosched::Process* preemptedProcess = nullptr;
+  prosched::Process *preemptedProcess = nullptr;
 };
 
 } // namespace prosched

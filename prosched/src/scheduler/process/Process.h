@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "config.h"
+#include "Config.h"
 #include "src/commands/Interpreter.hpp"
 
 namespace prosched {
@@ -37,7 +37,7 @@ public:
    * @return If adding a command is successful it returns the
    * specific statement, else unsuccessful return nullptr
    */
-  Statement* AddInstruction(Statement& stmt) {
+  Statement *AddInstruction(Statement &stmt) {
     try {
       statements.push_back(stmt);
       return &statements.back();
@@ -51,8 +51,8 @@ public:
    * @brief Executes the current instruction of the process on a CPU core.
    *
    * Executes one parsed Statement instruction. If it is the first statement,
-   * sets the process's StartTime. Handles SLEEP operations by moving the process
-   * to WAITING state and detaching from the core.
+   * sets the process's StartTime. Handles SLEEP operations by moving the
+   * process to WAITING state and detaching from the core.
    *
    * @param coreNum The index of the assigned CPU core executing the process.
    * @return A vector containing all statements of the process.
@@ -71,13 +71,11 @@ public:
       currentState = WAITING;
       if (!stmt.args.empty()) {
         try {
-            cyclesRemainingForSleep = std::stoi(stmt.args[0]);
-        }
-        catch (const std::invalid_argument&) {
-            cyclesRemainingForSleep = 0;
-        }
-        catch (const std::out_of_range&) {
-            cyclesRemainingForSleep = 0;
+          cyclesRemainingForSleep = std::stoi(stmt.args[0]);
+        } catch (const std::invalid_argument &) {
+          cyclesRemainingForSleep = 0;
+        } catch (const std::out_of_range &) {
+          cyclesRemainingForSleep = 0;
         }
       } else {
         cyclesRemainingForSleep = 0;
@@ -85,9 +83,11 @@ public:
       currentInstructionIndex++;
 
       logs.push_back(GetTimestamp() + " Core:" + std::to_string(coreNum) +
-                     " \"SLEEP " + (stmt.args.empty() ? "0" : stmt.args[0]) + "\"");
+                     " \"SLEEP " + (stmt.args.empty() ? "0" : stmt.args[0]) +
+                     "\"");
 
-      if (currentInstructionIndex >= (int)statements.size() && cyclesRemainingForSleep == 0) {
+      if (currentInstructionIndex >= (int)statements.size() &&
+          cyclesRemainingForSleep == 0) {
         currentState = FINISHED;
       }
       return statements;
@@ -131,8 +131,8 @@ public:
    * @brief saves the logs vector into a txt file
    *
    * ngl idk if this should be here or insoide the executePrint() in
-   * intepreter.hpp 
-   * 
+   * intepreter.hpp
+   *
    * dw we dont need this function anymore lol
    */
   void SaveLogsToFile() {
@@ -191,32 +191,32 @@ public:
 
   /**
    * @brief Gets the started time of a Process
-   * 
+   *
    * @return the formatted time date string
    */
   std::string GetProcessTimeStart() { return StartTime; }
 
   /**
    * @brief gets the current index of an instruction being executed
-   * 
+   *
    * for the screen -ls progress count
-   * 
+   *
    * @return the current instruction index
    */
   int GetCurrentInstructionIndex() { return currentInstructionIndex; }
 
   /**
    * @brief get total number of statements/ instrcutions
-   * 
+   *
    * for screen -ls progress count
-   * 
+   *
    * @return total number of instrcutions in a process
    */
   int GetTotalInstructions() { return (int)statements.size(); }
 
   /**
    * @brief gets the core assigned
-   * 
+   *
    * @return coreNum assigned
    */
   int GetAssignedCore() { return coreNum; }
@@ -262,29 +262,39 @@ public:
    * This function reduces the cyclesRemainingForSleep by one, ensuring it does
    * not go below zero.
    */
-  void DecrementSleepCycles() { if (cyclesRemainingForSleep > 0) cyclesRemainingForSleep--; }
+  void DecrementSleepCycles() {
+    if (cyclesRemainingForSleep > 0)
+      cyclesRemainingForSleep--;
+  }
 
   /**
    * @brief Gets the number of cycles left for the current instruction
    *
    * @return the number of cycles left for the current instruction
    */
-  int GetCurrentInstructionCyclesLeft() const { return currentInstructionCyclesLeft; }
-  
+  int GetCurrentInstructionCyclesLeft() const {
+    return currentInstructionCyclesLeft;
+  }
+
   /**
    * @brief Sets the number of cycles left for the current instruction
    *
    * @param numCycles the number of cycles left for the current instruction
    */
-  void SetCurrentInstructionCyclesLeft(int numCycles) { currentInstructionCyclesLeft = numCycles; }
-  
+  void SetCurrentInstructionCyclesLeft(int numCycles) {
+    currentInstructionCyclesLeft = numCycles;
+  }
+
   /**
    * @brief Decrements the number of cycles left for the current instruction
    *
-   * This function reduces the currentInstructionCyclesLeft by one, ensuring it does
-   * not go below zero.
+   * This function reduces the currentInstructionCyclesLeft by one, ensuring it
+   * does not go below zero.
    */
-  void DecrementInstructionCyclesLeft() { if (currentInstructionCyclesLeft > 0) --currentInstructionCyclesLeft; }
+  void DecrementInstructionCyclesLeft() {
+    if (currentInstructionCyclesLeft > 0)
+      --currentInstructionCyclesLeft;
+  }
 
   /**
    * @brief Gets the number of cycles used in the current quantum
@@ -292,19 +302,17 @@ public:
    * @return the number of cycles used in the current quantum
    */
   int GetQuantumUsed() const { return quantumUsed; }
-  
+
   /**
    * @brief Increments the number of cycles used in the current quantum
    */
   void IncrementQuantumUsed() { ++quantumUsed; }
-  
+
   /**
    * @brief Resets the number of cycles used in the current quantum to zero
    */
   void ResetQuantumUsed() { quantumUsed = 0; }
 
-
-  
 private:
   std::string processName;
   int pid;
@@ -320,17 +328,18 @@ private:
   int currentInstructionCyclesLeft = 0;
   int quantumUsed = 0;
 
-
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;
 
-   /**
-   * @brief Generates a formatted time string representing the current system clock.
+  /**
+   * @brief Generates a formatted time string representing the current system
+   * clock.
    *
-   * This is a utility function used to timestamp log messages. It does not alter
-   * the process's internal start time.
+   * This is a utility function used to timestamp log messages. It does not
+   * alter the process's internal start time.
    *
-   * @return A string containing the formatted timestamp, e.g. "(06/24/2026 02:15:30PM)"
+   * @return A string containing the formatted timestamp, e.g. "(06/24/2026
+   * 02:15:30PM)"
    */
   std::string GetTimestamp() {
     auto now = std::chrono::system_clock::now();
