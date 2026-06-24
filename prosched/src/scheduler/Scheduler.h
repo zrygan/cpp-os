@@ -309,20 +309,6 @@ public:
   }
 
   /**
-   * @brief Dispatches ready processes to idle worker CPU cores.
-   */
-  void DispatchProcessesCycle() {
-    std::lock_guard<std::mutex> lock(schedulerMutex);
-    for (Worker *w : workers) {
-      if (!processQueue.empty() && !w->IsBusy()) {
-        Process *p = processQueue.front();
-        processQueue.pop();
-        w->AssignProcess(p);
-      }
-    }
-  }
-
-  /**
    * @brief The main scheduler control loop running in a dedicated thread.
    *
    * Drives the master scheduler clock and invokes sub-cycle operations.
@@ -334,9 +320,15 @@ public:
       cpuCycles++;
 
       GenerateProcessesCycle(cpuCycles);
+
+      if (ctx.schedulerType == SchedulerType::FCFS) {
+        FCFS();
+      } else if (ctx.schedulerType == SchedulerType::RR) {
+        RoundRobin();
+      }
+
       CollectPreemptedCycle();
       UpdateSleepingProcessesCycle();
-      DispatchProcessesCycle();
 
       std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
     }
@@ -403,9 +395,21 @@ private:
   }
 
   /**
-   * @brief Round Robin Scheduler
+   * @brief Round Robin Scheduler Algorithm
+   *
+   * A preemptive algorithm in which processes are given a fixed time slice (quantum).
+   * Increments quantum used for running processes on cores and preempts them if
+   * the quantum limit is reached. Then dispatches ready processes to available cores.
    */
   void RoundRobin() {
+    // 1. Quantum preemption check
+    for (Worker *w : workers) {
+      if (w->CheckAndIncrementQuantum(ctx.rr_quantum_cycles)) {
+        w->PreemptProcess();
+      }
+    }
+
+    // 2. Dispatch ready processes
     std::lock_guard<std::mutex> lock(schedulerMutex);
     for (Worker *w : workers) {
       if (!processQueue.empty() && !w->IsBusy()) {

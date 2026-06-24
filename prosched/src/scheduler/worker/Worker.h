@@ -21,6 +21,27 @@ private:
   bool running = false;
   prosched::Process *preemptedProcess = nullptr;
 
+  /**
+   * @brief Preempts the current process from the worker (lock-free version)
+   *
+   * Must be called while holding workerMutex.
+   *
+   * @return the preempted process, or nullptr if none
+   */
+  prosched::Process *PreemptProcessUnlocked() {
+    prosched::Process *p = currentProcess;
+    if (p != nullptr) {
+      p->SetState(prosched::ProcessState::READY);
+      currentProcess = nullptr;
+      preemptedProcess = p;
+
+      if (ctx.schedulerType == SchedulerType::RR) {
+        p->ResetQuantumUsed();
+      }
+    }
+    return p;
+  }
+
 public:
   /**
    * @brief Creates a worker associated with a CPU core
@@ -93,43 +114,18 @@ public:
     if (p) {
       p->AssignCore(coreNum);
 
-      // <REVIEW>
-      // shouldn't this check if we're RR?
-      p->ResetQuantumUsed();
+      if (ctx.schedulerType == SchedulerType::RR) {
+        p->ResetQuantumUsed();
+      }
       p->SetCurrentInstructionCyclesLeft(0);
     }
     return p;
   }
 
   /**
-   * @brief Preempts the current process from the worker (lock-free version)
-   *
-   * Must be called while holding workerMutex.
-   *
-   * @return the preempted process, or nullptr if none
-   */
-  prosched::Process *PreemptProcessUnlocked() {
-    prosched::Process *p = currentProcess;
-    if (p != nullptr) {
-      p->SetState(prosched::ProcessState::READY);
-      currentProcess = nullptr;
-      preemptedProcess = p;
-
-      // <REVIEW>
-      // Shouldn't this check if RR is used (just to be explicit
-      // and transparent)
-      p->ResetQuantumUsed();
-    }
-    return p;
-  }
-
-  // <REVIEW> This is simply a wrapper for PeemptProcessUnlocked?
-  // If not, the documentation doesn't really help the case that this
-  // function should exist.
-  /**
    * @brief Preempts the current process from the worker
    *
-   * Thread-safe.
+   * Thread-safe wrapper around PreemptProcessUnlocked.
    *
    * @return the preempted process, or nullptr if none
    */
@@ -185,24 +181,17 @@ public:
   }
 
   /**
-   * @brief Handles time-slice preemption check for Round Robin scheduling.
+   * @brief Increments quantum of the current running process and checks if it has expired.
    *
-   * Increments quantum used and detaches the process if the quantum cycle
-   * limit is reached.
-   *
-   * @param p Pointer to the process running on the core.
-   * @return true if the process was preempted and detached; false otherwise.
+   * Thread-safe.
+   * @param limit The quantum cycles limit.
+   * @return true if quantum is exceeded, false otherwise.
    */
-  bool TickPreemption(Process *p) {
-    if (ctx.schedulerType == SchedulerType::RR &&
-        p->GetState() == ProcessState::RUNNING) {
-      p->IncrementQuantumUsed();
-
-      if (p->GetQuantumUsed() >= ctx.rr_quantum_cycles) {
-        PreemptProcessUnlocked(); // Sets state READY, detaches, and stores in
-                                  // preemptedProcess
-        return true;
-      }
+  bool CheckAndIncrementQuantum(int limit) {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    if (currentProcess != nullptr && currentProcess->GetState() == ProcessState::RUNNING) {
+      currentProcess->IncrementQuantumUsed();
+      return currentProcess->GetQuantumUsed() >= limit;
     }
     return false;
   }
@@ -246,10 +235,6 @@ public:
     if (p->GetState() == ProcessState::FINISHED) {
       currentProcess = nullptr;
       return;
-    }
-
-    if (TickPreemption(p)) {
-      return; // Process preempted and detached
     }
 
     TickExecution(p);
