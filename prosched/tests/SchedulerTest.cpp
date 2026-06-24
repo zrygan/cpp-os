@@ -6,6 +6,13 @@
 #include <gtest/gtest.h>
 #include <thread>
 
+static void AddRaw(prosched::Process &p, const std::string &src) {
+  prosched::Interpreter interp;
+  auto stmts = interp.parse(src);
+  for (auto &s : stmts)
+    p.AddInstruction(s);
+}
+
 static AlgoContext makeTestCtx() {
   ConfigStruct *cs = makeDefault();
   cs->scheduler = "fcfs";
@@ -142,7 +149,7 @@ TEST(SchedulerAddProcess, AddWhileRunningReturnsSamePointer) {
   scheduler.Start();
 
   prosched::Process p("live_add", 1, 0);
-  p.AddInstruction("PRINT(\"hi\")");
+  AddRaw(p, "PRINT(\"hi\")");
 
   prosched::Process *result = scheduler.AddProcess(&p);
   EXPECT_EQ(result, &p);
@@ -230,7 +237,7 @@ TEST(SchedulerStartStop, StopWhileWorkersExecutingDoesNotDeadlock) {
     prosched::Process *p =
         new prosched::Process("pre_" + std::to_string(i), i, 0);
     for (int j = 0; j < 20; j++)
-      p->AddInstruction("PRINT(\"tick\")");
+      AddRaw(*p, "PRINT(\"tick\")");
     scheduler.AddProcess(p);
   }
 
@@ -364,9 +371,9 @@ TEST(SchedulerSleepRelinquish, ProcessSleepsAndWakesUpCorrectly) {
   prosched::Scheduler scheduler(ctx);
 
   prosched::Process *p = new prosched::Process("sleepy_proc", 1, 0);
-  p->AddInstruction("PRINT(\"before\")");
-  p->AddInstruction("SLEEP(5)");
-  p->AddInstruction("PRINT(\"after\")");
+  AddRaw(*p, "PRINT(\"before\")");
+  AddRaw(*p, "SLEEP(5)");
+  AddRaw(*p, "PRINT(\"after\")");
 
   scheduler.AddProcess(p);
   scheduler.Start();
@@ -379,7 +386,7 @@ TEST(SchedulerSleepRelinquish, ProcessSleepsAndWakesUpCorrectly) {
   scheduler.Stop();
 
   EXPECT_TRUE(p->IsFinished());
-  EXPECT_EQ(p->GetState(), prosched::Process::FINISHED);
+  EXPECT_EQ(p->GetState(), prosched::FINISHED);
 
   auto logs = p->GetLogs();
   bool found_before = false;

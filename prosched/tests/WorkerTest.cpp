@@ -4,6 +4,13 @@
 #include <gtest/gtest.h>
 #include <thread>
 
+static void AddRaw(prosched::Process &p, const std::string &src) {
+  prosched::Interpreter interp;
+  auto stmts = interp.parse(src);
+  for (auto &s : stmts)
+    p.AddInstruction(s);
+}
+
 static AlgoContext makeTestCtx() {
   ConfigStruct *cs = makeDefault();
   cs->scheduler = "fcfs";
@@ -63,7 +70,7 @@ TEST(WorkerAssignProcess, CanAssignAgainAfterProcessFinishes) {
   prosched::Worker w(1, makeTestCtx());
   prosched::Process p1("assign_after_1", 1, 0);
   prosched::Process p2("assign_after_2", 2, 0);
-  p1.AddInstruction("PRINT(\"done\")");
+  AddRaw(p1, "PRINT(\"done\")");
 
   w.AssignProcess(&p1);
   w.Start();
@@ -128,7 +135,7 @@ TEST(WorkerIsBusy, FalseAfterNullAssignOnIdleWorker) {
 TEST(WorkerIsBusy, FalseAfterProcessFinishes) {
   prosched::Worker w(1, makeTestCtx());
   prosched::Process p("busy_thread", 1, 0);
-  p.AddInstruction("PRINT(\"hi\")");
+  AddRaw(p, "PRINT(\"hi\")");
 
   w.AssignProcess(&p);
   w.Start();
@@ -246,7 +253,7 @@ TEST(WorkerIsRunning, StopWhileProcessingDoesNotDeadlock) {
 
   // 50 instructions — enough that the worker won't finish before we call Stop()
   for (int i = 0; i < 50; i++)
-    p.AddInstruction("PRINT(\"tick\")");
+    AddRaw(p, "PRINT(\"tick\")");
 
   w.AssignProcess(&p);
   w.Start();
@@ -298,7 +305,7 @@ TEST(WorkerGetCurrentProcess, ReturnsAssignedProcess) {
 TEST(WorkerGetCurrentProcess, NullAfterProcessFinishes) {
   prosched::Worker w(1, makeTestCtx());
   prosched::Process p("cur_done", 1, 0);
-  p.AddInstruction("PRINT(\"bye\")");
+  AddRaw(p, "PRINT(\"bye\")");
 
   w.AssignProcess(&p);
   w.Start();

@@ -1,12 +1,21 @@
 #include "scheduler/process/Process.h"
 #include <gtest/gtest.h>
 
+// Helper: parse a raw instruction string and add each resulting Statement.
+static void AddRaw(prosched::Process &p, const std::string &src) {
+  prosched::Interpreter interp;
+  auto stmts = interp.parse(src);
+  for (auto &s : stmts)
+    p.AddInstruction(s);
+}
+
 namespace ProcessAddInstruction {
+prosched::Interpreter interpreter;
 
 // AddInstruction returns the original instruction string on success
 TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
   prosched::Process p("add_1", 1, 0);
-  prosched::Interpreter interpreter;
+
   std::vector<prosched::Statement> stmts =
       interpreter.parse("PRINT(\"hello\")");
   ASSERT_FALSE(stmts.empty());
@@ -22,7 +31,7 @@ TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
 // Works with non-PRINT instructions (DECLARE) too
 TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
   prosched::Process p("add_2", 2, 0);
-  prosched::Interpreter interpreter;
+
   std::vector<prosched::Statement> stmts = interpreter.parse("DECLARE(x, 10)");
   ASSERT_FALSE(stmts.empty());
 
@@ -39,22 +48,33 @@ TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
 // Repeated AddInstruction calls all succeed — no internal cap
 TEST(ProcessAddInstruction, MultipleInstructionsAllSucceed) {
   prosched::Process p("add_3", 3, 0);
+
   for (int i = 0; i < 10; i++) {
-    std::string r = p.AddInstruction("PRINT(\"line\")");
-    EXPECT_FALSE(r.empty()) << "Failed at index " << i;
+    auto stmts = interpreter.parse("PRINT(\"line\")");
+    ASSERT_FALSE(stmts.empty()) << "Parse failed at index " << i;
+    prosched::Statement *result = p.AddInstruction(stmts[0]);
+    EXPECT_NE(result, nullptr) << "AddInstruction failed at index " << i;
   }
 }
 
 // Unknown keyword is absorbed by the interpreter — should not throw
 TEST(ProcessAddInstruction, UnknownKeywordDoesNotCrash) {
   prosched::Process p("add_4", 4, 0);
-  EXPECT_NO_THROW(p.AddInstruction("UNKNOWNCMD(x)"));
+  EXPECT_NO_THROW({
+    auto stmts = interpreter.parse("UNKNOWNCMD(x)");
+    for (auto &s : stmts)
+      p.AddInstruction(s);
+  });
 }
 
 // Empty string produces no statements — should not crash
 TEST(ProcessAddInstruction, EmptyStringDoesNotCrash) {
   prosched::Process p("add_5", 5, 0);
-  EXPECT_NO_THROW(p.AddInstruction(""));
+  EXPECT_NO_THROW({
+    auto stmts = interpreter.parse("");
+    for (auto &s : stmts)
+      p.AddInstruction(s);
+  });
 }
 
 // Two separate Process instances must not share their statement vectors
@@ -62,7 +82,7 @@ TEST(ProcessAddInstruction, IndependentProcessesDoNotShareInstructions) {
   prosched::Process p1("add_6a", 6, 0);
   prosched::Process p2("add_6b", 7, 0);
 
-  p1.AddInstruction("PRINT(\"from p1\")");
+  AddRaw(p1, "PRINT(\"from p1\")");
 
   // p2 has no instructions — executing should finish it immediately (empty
   // return)
@@ -78,9 +98,9 @@ namespace ProcessExecuteInstructions {
 // Each call should advance by exactly one statement
 TEST(ProcessExecuteInstructions, ExecutesOneStatementPerCall) {
   prosched::Process p("exec_1", 1, 0);
-  p.AddInstruction("PRINT(\"a\")");
-  p.AddInstruction("PRINT(\"b\")");
-  p.AddInstruction("PRINT(\"c\")");
+  AddRaw(p, "PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"b\")");
+  AddRaw(p, "PRINT(\"c\")");
 
   p.ExecuteInstructions(1);
   p.ExecuteInstructions(1);
@@ -92,8 +112,8 @@ TEST(ProcessExecuteInstructions, ExecutesOneStatementPerCall) {
 // Should return a non-empty vector while there are still statements left
 TEST(ProcessExecuteInstructions, ReturnsStatementsWhileRunning) {
   prosched::Process p("exec_2", 2, 0);
-  p.AddInstruction("PRINT(\"a\")");
-  p.AddInstruction("PRINT(\"b\")");
+  AddRaw(p, "PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"b\")");
 
   auto result = p.ExecuteInstructions(1);
   EXPECT_FALSE(result.empty());
@@ -102,7 +122,7 @@ TEST(ProcessExecuteInstructions, ReturnsStatementsWhileRunning) {
 // Should return empty vector when called on an already-finished process
 TEST(ProcessExecuteInstructions, CallingAfterFinishedReturnsEmpty) {
   prosched::Process p("exec_3", 3, 0);
-  p.AddInstruction("PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"a\")");
 
   p.ExecuteInstructions(1);               // finishes the process
   auto result = p.ExecuteInstructions(1); // already finished
@@ -120,7 +140,7 @@ TEST(ProcessExecuteInstructions, NoInstructionsFinishesOnFirstCall) {
 // Non-PRINT instructions execute without generating logs
 TEST(ProcessExecuteInstructions, DeclareInstructionProducesNoLog) {
   prosched::Process p("exec_5", 5, 0);
-  p.AddInstruction("DECLARE(x, 42)");
+  AddRaw(p, "DECLARE(x, 42)");
   p.ExecuteInstructions(1);
 
   EXPECT_TRUE(p.GetLogs().empty());
@@ -129,10 +149,10 @@ TEST(ProcessExecuteInstructions, DeclareInstructionProducesNoLog) {
 // Arithmetic result is visible when PRINTed after ADD
 TEST(ProcessExecuteInstructions, AddResultVisibleInPrint) {
   prosched::Process p("exec_6", 6, 0);
-  p.AddInstruction("DECLARE(x, 3)");
-  p.AddInstruction("DECLARE(y, 7)");
-  p.AddInstruction("ADD(z, x, y)");
-  p.AddInstruction("PRINT(z)");
+  AddRaw(p, "DECLARE(x, 3)");
+  AddRaw(p, "DECLARE(y, 7)");
+  AddRaw(p, "ADD(z, x, y)");
+  AddRaw(p, "PRINT(z)");
 
   p.ExecuteInstructions(1); // DECLARE x
   p.ExecuteInstructions(1); // DECLARE y
@@ -157,8 +177,8 @@ TEST(ProcessIsFinished, FalseOnConstruction) {
 // Not finished until the very last instruction runs
 TEST(ProcessIsFinished, FalseAfterPartialExecution) {
   prosched::Process p("fin_2", 2, 0);
-  p.AddInstruction("PRINT(\"a\")");
-  p.AddInstruction("PRINT(\"b\")");
+  AddRaw(p, "PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"b\")");
 
   p.ExecuteInstructions(1); // only first of two done
   EXPECT_FALSE(p.IsFinished());
@@ -167,7 +187,7 @@ TEST(ProcessIsFinished, FalseAfterPartialExecution) {
 // Finishes exactly on the call that runs the last instruction
 TEST(ProcessIsFinished, TrueAfterLastInstructionRuns) {
   prosched::Process p("fin_3", 3, 0);
-  p.AddInstruction("PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"a\")");
 
   p.ExecuteInstructions(1);
   EXPECT_TRUE(p.IsFinished());
@@ -178,7 +198,7 @@ TEST(ProcessIsFinished, TrueAfterAllOfManyInstructions) {
   prosched::Process p("fin_4", 4, 0);
   const int count = 5;
   for (int i = 0; i < count; i++)
-    p.AddInstruction("PRINT(\"x\")");
+    AddRaw(p, "PRINT(\"x\")");
 
   for (int i = 0; i < count; i++)
     p.ExecuteInstructions(1);
@@ -189,7 +209,7 @@ TEST(ProcessIsFinished, TrueAfterAllOfManyInstructions) {
 // Calling again after finish must not flip back to not-finished
 TEST(ProcessIsFinished, RemainsFinishedAfterExtraCall) {
   prosched::Process p("fin_5", 5, 0);
-  p.AddInstruction("PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"a\")");
 
   p.ExecuteInstructions(1);
   p.ExecuteInstructions(1); // extra call on finished process
@@ -203,14 +223,14 @@ namespace ProcessLogs {
 // Logs are empty before any execution
 TEST(ProcessLogs, EmptyBeforeExecution) {
   prosched::Process p("log_1", 1, 0);
-  p.AddInstruction("PRINT(\"hello\")");
+  AddRaw(p, "PRINT(\"hello\")");
   EXPECT_TRUE(p.GetLogs().empty());
 }
 
 // Each PRINT statement adds exactly one log entry
 TEST(ProcessLogs, PrintAddsOneLogEntry) {
   prosched::Process p("log_2", 2, 0);
-  p.AddInstruction("PRINT(\"hello\")");
+  AddRaw(p, "PRINT(\"hello\")");
   p.ExecuteInstructions(1);
   EXPECT_EQ(p.GetLogs().size(), 1u);
 }
@@ -218,7 +238,7 @@ TEST(ProcessLogs, PrintAddsOneLogEntry) {
 // Log entry must contain the string that was printed
 TEST(ProcessLogs, LogContainsPrintedValue) {
   prosched::Process p("log_3", 3, 0);
-  p.AddInstruction("PRINT(\"hello world\")");
+  AddRaw(p, "PRINT(\"hello world\")");
   p.ExecuteInstructions(1);
 
   ASSERT_FALSE(p.GetLogs().empty());
@@ -228,7 +248,7 @@ TEST(ProcessLogs, LogContainsPrintedValue) {
 // Log entry must contain the core number passed to ExecuteInstructions
 TEST(ProcessLogs, LogContainsCoreNumber) {
   prosched::Process p("log_4", 4, 0);
-  p.AddInstruction("PRINT(\"msg\")");
+  AddRaw(p, "PRINT(\"msg\")");
   p.ExecuteInstructions(3); // core 3
 
   ASSERT_FALSE(p.GetLogs().empty());
@@ -238,7 +258,7 @@ TEST(ProcessLogs, LogContainsCoreNumber) {
 // Non-PRINT instructions must not add log entries
 TEST(ProcessLogs, NonPrintInstructionAddsNoLog) {
   prosched::Process p("log_5", 5, 0);
-  p.AddInstruction("DECLARE(x, 10)");
+  AddRaw(p, "DECLARE(x, 10)");
   p.ExecuteInstructions(1);
   EXPECT_TRUE(p.GetLogs().empty());
 }
@@ -246,9 +266,9 @@ TEST(ProcessLogs, NonPrintInstructionAddsNoLog) {
 // Logs accumulate across multiple executions
 TEST(ProcessLogs, LogsAccumulateAcrossCalls) {
   prosched::Process p("log_6", 6, 0);
-  p.AddInstruction("PRINT(\"a\")");
-  p.AddInstruction("PRINT(\"b\")");
-  p.AddInstruction("PRINT(\"c\")");
+  AddRaw(p, "PRINT(\"a\")");
+  AddRaw(p, "PRINT(\"b\")");
+  AddRaw(p, "PRINT(\"c\")");
 
   p.ExecuteInstructions(1);
   p.ExecuteInstructions(1);
@@ -262,7 +282,7 @@ TEST(ProcessLogs, IndependentProcessesDoNotShareLogs) {
   prosched::Process p1("log_7a", 7, 0);
   prosched::Process p2("log_7b", 8, 0);
 
-  p1.AddInstruction("PRINT(\"from p1\")");
+  AddRaw(p1, "PRINT(\"from p1\")");
   p1.ExecuteInstructions(1);
 
   EXPECT_TRUE(p2.GetLogs().empty());
