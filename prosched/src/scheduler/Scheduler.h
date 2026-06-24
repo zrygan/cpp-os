@@ -267,85 +267,37 @@ public:
    */
   bool IsRunning() { return running == true; }
 
-private:
-  AlgoContext ctx;
-  std::thread schedulerThread;
-  std::vector<prosched::Process *> processes;
-  std::queue<prosched::Process *> processQueue;
-  std::vector<Worker *> workers;
-  std::mutex schedulerMutex;
-  bool running = false;
-
-  bool generatingProcesses = false;
-  int nextPID = 1;
-
   /**
-   * @brief converts the scheduler type enum to a string for printing
-   * 
-   * @return a string representation of the scheduler type
-   */
-  std::string schedulerTypeToString() {
-    switch (ctx.schedulerType) {
-        case SchedulerType::FCFS: 
-        return "fcfs";
-        case SchedulerType::RR:   
-        return "rr";
-        default:                   
-        return "unknown";
-    }
-  }
-
-  /**
-   * @brief prints the scheduler specs when "screen -ls" is called
-   */
-  void printSchedulerSpecs() {
-    std::cout << "\n\nScheduler specs\n";
-    std::cout << "\nNumber of cores: " << this->ctx.numCpu;
-    std::cout << "\nScheduler: " << schedulerTypeToString();
-    std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
-    std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-"
-              << this->ctx.maxIns;
-    std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
-    std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
-}
-
-
-
-  /**
-   * @brief First-Come First-Serve Scheduler Algorithm
+   * @brief Handles periodic batch process generation.
    *
-   * A non-preemptive algorithm in which processes are attended to in
-   * the order they arrive in the process queue. For each CPU worker
-   * in the workers vector assign processes from the process queue to
-   * a specific Worker to be executed.
+   * @param cpuCycles Current master clock tick cycle count.
    */
-  void FCFS() {
-    std::lock_guard<std::mutex> lock(schedulerMutex);
-
-    for (Worker *w : workers) {
-      if (!processQueue.empty() && !w->IsBusy()) {
-        Process *p = processQueue.front();
-        processQueue.pop();
-        w->AssignProcess(p);
-      }
-    }
+  void GenerateProcessesCycle(int cpuCycles) {
+    
   }
 
   /**
-   * @brief Round Robin Scheduler
+   * @brief Gathers processes preempted by CPU workers and places them back in the queue.
    */
-  void RoundRobin() {
-    std::lock_guard<std::mutex> lock(schedulerMutex);
-    for (Worker *w : workers) {
-      if (!processQueue.empty() && !w->IsBusy()) {
-        Process *p = processQueue.front();
-        processQueue.pop();
-        w->AssignProcess(p);
-      }
-    }
+  void CollectPreemptedCycle() {
+    
   }
 
+  /**
+   * @brief Updates sleeping processes and re-queues them when their sleep ticks expire.
+   */
+  void UpdateSleepingProcessesCycle() {
+    
+  }
 
+  /**
+   * @brief Dispatches ready processes to idle worker CPU cores.
+   */
+  void DispatchProcessesCycle() {
+    
+  }
+
+  
   /**
    * @brief the main scheduler loop
    *
@@ -412,6 +364,82 @@ private:
 
       // 4. Tick wait
       std::this_thread::sleep_for(std::chrono::milliseconds(TICK_DURATION_MS));
+    }
+  }
+
+private:
+  AlgoContext ctx;
+  std::thread schedulerThread;
+  std::vector<prosched::Process *> processes;
+  std::queue<prosched::Process *> processQueue;
+  std::vector<Worker *> workers;
+  std::mutex schedulerMutex;
+  bool running = false;
+
+  bool generatingProcesses = false;
+  int nextPID = 1;
+
+  /**
+   * @brief converts the scheduler type enum to a string for printing
+   * 
+   * @return a string representation of the scheduler type
+   */
+  std::string schedulerTypeToString() {
+    switch (ctx.schedulerType) {
+        case SchedulerType::FCFS: 
+        return "fcfs";
+        case SchedulerType::RR:   
+        return "rr";
+        default:                   
+        return "unknown";
+    }
+  }
+
+  /**
+   * @brief prints the scheduler specs when "screen -ls" is called
+   */
+  void printSchedulerSpecs() {
+    std::cout << "\n\nScheduler specs\n";
+    std::cout << "\nNumber of cores: " << this->ctx.numCpu;
+    std::cout << "\nScheduler: " << schedulerTypeToString();
+    std::cout << "\nBatch process freq: " << this->ctx.batchProcessFreq;
+    std::cout << "\nMin-ins & Max-ins: " << this->ctx.minIns << "-"
+              << this->ctx.maxIns;
+    std::cout << "\nDelay per execution: " << this->ctx.delayPerExec;
+    std::cout << "\nQuantum cycle: " << this->ctx.quantumCycles << "\n\n";
+}
+
+  /**
+   * @brief First-Come First-Serve Scheduler Algorithm
+   *
+   * A non-preemptive algorithm in which processes are attended to in
+   * the order they arrive in the process queue. For each CPU worker
+   * in the workers vector assign processes from the process queue to
+   * a specific Worker to be executed.
+   */
+  void FCFS() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+
+    for (Worker *w : workers) {
+      if (!processQueue.empty() && !w->IsBusy()) {
+        Process *p = processQueue.front();
+        processQueue.pop();
+        w->AssignProcess(p);
+      }
+    }
+  }
+
+  /**
+   * @brief Round Robin Scheduler
+   */
+  void RoundRobin() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (Worker *w : workers) {
+      if (!processQueue.empty() && !w->IsBusy()) {
+        Process *p = processQueue.front();
+        processQueue.pop();
+        w->AssignProcess(p);
+      }
     }
   }
 };
