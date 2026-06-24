@@ -239,7 +239,7 @@ public:
    */
   Worker* ThreadTask() {
     while (running) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(TICK_DURATION_MS));
+        std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
 
         std::lock_guard<std::mutex> lock(workerMutex);
 

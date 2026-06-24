@@ -249,7 +249,7 @@ public:
 
     // fcfs specs say only 100
 
-    int commandAmount = NUM_PRINT_INSTRUCTIONS;
+    int commandAmount = kNumPrintInstructions;
 
     // only prints for now
     for (int i = 0; i < commandAmount; i++) {
@@ -274,7 +274,7 @@ public:
    */
   void GenerateProcessesCycle(int cpuCycles) {
     if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
-        if (nextPID <= MAX_PROCESSES) {
+        if (nextPID <= kMaxProcesses) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
           processQueue.push(p);
@@ -348,7 +348,7 @@ public:
       UpdateSleepingProcessesCycle();
       DispatchProcessesCycle();
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(TICK_DURATION_MS));
+      std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
     }
   }
 
