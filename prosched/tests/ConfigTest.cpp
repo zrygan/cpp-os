@@ -220,7 +220,7 @@ TEST(ConfigBuildConfig, MapsMinAndmax_ins) {
 // rr_quantum_cycles transfers to rr_quantum_cycles
 TEST(ConfigBuildConfig, Mapsrr_quantum_cycles) {
   ConfigStruct cs{.num_cpu = 4,
-                  .scheduler = "fcfs",
+                  .scheduler = "rr",
                   .rr_quantum_cycles = 7,
                   .batch_process_freq = 1,
                   .min_ins = 1000,

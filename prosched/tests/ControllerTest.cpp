@@ -169,11 +169,11 @@ TEST(ControllerInitialize, ReturnsCorrectInstructionBounds) {
   EXPECT_EQ(ctx.max_ins, 2000);
 }
 
-// quantum-cycles 5 from config.txt is read into rr_quantum_cycles
+// config.txt uses fcfs, so rr_quantum_cycles is -1 (not applicable)
 TEST(ControllerInitialize, ReturnsCorrectrr_quantum_cycles) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.rr_quantum_cycles, 5);
+  EXPECT_EQ(ctx.rr_quantum_cycles, -1);
 }
 
 // delay-per-exec 0 from config.txt is read into delay_per_execution

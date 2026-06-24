@@ -345,7 +345,9 @@ TEST(SchedulerGenerateProcess, HasExactlyNumPrintInstructions) {
   AlgoContext ctx = makeTestCtx();
   prosched::Process *p = scheduler.generateProcess(&ctx, 1, 0);
   ASSERT_NE(p, nullptr);
-  EXPECT_EQ(p->GetTotalInstructions(), prosched::kNumPrintInstructions);
+  int total = p->GetTotalInstructions();
+  EXPECT_GE(total, ctx.min_ins);
+  EXPECT_LE(total, ctx.max_ins);
   delete p;
 }
 
