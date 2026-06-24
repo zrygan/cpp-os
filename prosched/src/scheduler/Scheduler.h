@@ -13,7 +13,7 @@
 #include "src/scheduler/worker/Worker.h"
 
 
-using namespace std;
+
 
 namespace prosched {
 
