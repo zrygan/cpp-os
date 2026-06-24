@@ -294,13 +294,13 @@ public:
   void UpdateSleepingProcessesCycle() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
     for (Process *p : processes) {
-      if (p != nullptr && p->GetState() == Process::WAITING) {
+      if (p != nullptr && p->GetState() == ProcessState::WAITING) {
         p->DecrementSleepCycles();
         if (p->GetCyclesRemainingForSleep() <= 0) {
           if (p->GetCurrentInstructionIndex() >= p->GetTotalInstructions()) {
-            p->SetState(Process::FINISHED);
+            p->SetState(ProcessState::FINISHED);
           } else {
-            p->SetState(Process::READY);
+            p->SetState(ProcessState::READY);
             processQueue.push(p);
           }
         }
@@ -350,7 +350,6 @@ private:
   std::vector<Worker *> workers;
   std::mutex schedulerMutex;
   bool running = false;
-
   bool generatingProcesses = false;
   int nextPID = 1;
 
@@ -394,7 +393,6 @@ private:
    */
   void FCFS() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
-
     for (Worker *w : workers) {
       if (!processQueue.empty() && !w->IsBusy()) {
         Process *p = processQueue.front();

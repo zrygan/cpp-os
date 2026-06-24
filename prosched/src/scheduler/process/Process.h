@@ -19,10 +19,47 @@
 
 namespace prosched {
 
-class Process {
-public:
-  enum ProcessState { READY, RUNNING, WAITING, FINISHED };
+enum ProcessState { READY, RUNNING, WAITING, FINISHED };
 
+class Process {
+private:
+  std::string processName;
+  int pid;
+  int coreNum;
+  int currentInstructionIndex = 0;
+  int arrivalTick = 0;
+  ProcessState currentState = READY;
+  std::vector<std::string> logs;
+  bool ownedByScheduler = false;
+  std::string StartTime;
+
+  int cyclesRemainingForSleep = 0;
+  int currentInstructionCyclesLeft = 0;
+  int quantumUsed = 0;
+
+  prosched::Interpreter interpreter;
+  std::vector<prosched::Statement> statements;
+
+  /**
+   * @brief Generates a formatted time string representing the current system
+   * clock.
+   *
+   * This is a utility function used to timestamp log messages. It does not
+   * alter the process's internal start time.
+   *
+   * @return A string containing the formatted timestamp, e.g. "(06/24/2026
+   * 02:15:30PM)"
+   */
+  std::string GetTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::tm *tm = std::localtime(&t);
+    std::ostringstream oss;
+    oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
+    return oss.str();
+  }
+
+public:
   Process(std::string processName, int pid, int arrivalTick)
       : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
 
@@ -58,7 +95,6 @@ public:
    * @return A vector containing all statements of the process.
    */
   std::vector<prosched::Statement> ExecuteInstructions(int coreNum) {
-
     currentState = RUNNING;
 
     if (currentInstructionIndex >= (int)statements.size()) {
@@ -312,43 +348,6 @@ public:
    * @brief Resets the number of cycles used in the current quantum to zero
    */
   void ResetQuantumUsed() { quantumUsed = 0; }
-
-private:
-  std::string processName;
-  int pid;
-  int coreNum;
-  int currentInstructionIndex = 0;
-  int arrivalTick = 0;
-  ProcessState currentState = READY;
-  std::vector<std::string> logs;
-  bool ownedByScheduler = false;
-  std::string StartTime;
-
-  int cyclesRemainingForSleep = 0;
-  int currentInstructionCyclesLeft = 0;
-  int quantumUsed = 0;
-
-  prosched::Interpreter interpreter;
-  std::vector<prosched::Statement> statements;
-
-  /**
-   * @brief Generates a formatted time string representing the current system
-   * clock.
-   *
-   * This is a utility function used to timestamp log messages. It does not
-   * alter the process's internal start time.
-   *
-   * @return A string containing the formatted timestamp, e.g. "(06/24/2026
-   * 02:15:30PM)"
-   */
-  std::string GetTimestamp() {
-    auto now = std::chrono::system_clock::now();
-    std::time_t t = std::chrono::system_clock::to_time_t(now);
-    std::tm *tm = std::localtime(&t);
-    std::ostringstream oss;
-    oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
-    return oss.str();
-  }
 };
 
 } // namespace prosched

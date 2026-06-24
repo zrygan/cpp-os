@@ -4,14 +4,23 @@
 #include <stdio.h>
 #include <thread>
 
-#include "Constants.hpp"
 #include "Config.h"
+#include "Constants.hpp"
 #include "Context.h"
 #include "scheduler/process/Process.h"
 
 namespace prosched {
 
 class Worker {
+private:
+  int coreNum;
+  AlgoContext ctx;
+  prosched::Process *currentProcess = nullptr;
+  std::thread workerThread;
+  mutable std::mutex workerMutex;
+  bool running = false;
+  prosched::Process *preemptedProcess = nullptr;
+
 public:
   /**
    * @brief Creates a worker associated with a CPU core
@@ -29,7 +38,6 @@ public:
    * @return true if start is successful
    */
   bool Start() {
-
     std::lock_guard<std::mutex> lock(workerMutex);
 
     if (running) {
@@ -84,6 +92,9 @@ public:
     currentProcess = p;
     if (p) {
       p->AssignCore(coreNum);
+
+      // <REVIEW>
+      // shouldn't this check if we're RR?
       p->ResetQuantumUsed();
       p->SetCurrentInstructionCyclesLeft(0);
     }
@@ -100,14 +111,21 @@ public:
   prosched::Process *PreemptProcessUnlocked() {
     prosched::Process *p = currentProcess;
     if (p != nullptr) {
-      p->SetState(prosched::Process::READY);
-      p->ResetQuantumUsed();
+      p->SetState(prosched::ProcessState::READY);
       currentProcess = nullptr;
       preemptedProcess = p;
+
+      // <REVIEW>
+      // Shouldn't this check if RR is used (just to be explicit
+      // and transparent)
+      p->ResetQuantumUsed();
     }
     return p;
   }
 
+  // <REVIEW> This is simply a wrapper for PeemptProcessUnlocked?
+  // If not, the documentation doesn't really help the case that this
+  // function should exist.
   /**
    * @brief Preempts the current process from the worker
    *
@@ -177,8 +195,9 @@ public:
    */
   bool TickPreemption(Process *p) {
     if (ctx.schedulerType == SchedulerType::RR &&
-        p->GetState() == Process::RUNNING) {
+        p->GetState() == ProcessState::RUNNING) {
       p->IncrementQuantumUsed();
+
       if (p->GetQuantumUsed() >= ctx.rr_quantum_cycles) {
         PreemptProcessUnlocked(); // Sets state READY, detaches, and stores in
                                   // preemptedProcess
@@ -194,23 +213,24 @@ public:
    * @param p Pointer to the process running on the core.
    */
   void TickExecution(Process *p) {
-    if (p->GetState() == Process::RUNNING || p->GetState() == Process::READY) {
-      if (p->GetCurrentInstructionCyclesLeft() <= 0) {
-        p->ExecuteInstructions(coreNum);
+    if ((p->GetState() == ProcessState::RUNNING ||
+         p->GetState() == ProcessState::READY) &&
+        p->GetCurrentInstructionCyclesLeft() <= 0) {
+      p->ExecuteInstructions(coreNum);
 
-        // Detach immediately if process transitioned to WAITING (SLEEP) or
-        // FINISHED
-        if (p->GetState() == Process::WAITING ||
-            p->GetState() == Process::FINISHED) {
-          currentProcess = nullptr;
-          return;
-        }
-
-        p->SetCurrentInstructionCyclesLeft(ctx.delay_per_execution);
-      } else {
-        p->DecrementInstructionCyclesLeft();
+      // Detach immediately if process transitioned to WAITING (SLEEP) or
+      // FINISHED
+      if (p->GetState() == ProcessState::WAITING ||
+          p->GetState() == ProcessState::FINISHED) {
+        currentProcess = nullptr;
+        return;
       }
+
+      p->SetCurrentInstructionCyclesLeft(ctx.delay_per_execution);
+      return;
     }
+
+    p->DecrementInstructionCyclesLeft();
   }
 
   /**
@@ -223,7 +243,7 @@ public:
       return; // Idle core
     }
 
-    if (p->GetState() == Process::FINISHED) {
+    if (p->GetState() == ProcessState::FINISHED) {
       currentProcess = nullptr;
       return;
     }
@@ -255,15 +275,6 @@ public:
     }
     return this;
   }
-
-private:
-  int coreNum;
-  AlgoContext ctx;
-  prosched::Process *currentProcess = nullptr;
-  std::thread workerThread;
-  mutable std::mutex workerMutex;
-  bool running = false;
-  prosched::Process *preemptedProcess = nullptr;
 };
 
 } // namespace prosched

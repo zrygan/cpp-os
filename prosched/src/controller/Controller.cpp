@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <string>
 
-#include "Controller.h"
 #include "Config.h"
 #include "Context.h"
+#include "Controller.h"
 #include "src/scheduler/Scheduler.h"
 
 AlgoContext Controller::initialize() {

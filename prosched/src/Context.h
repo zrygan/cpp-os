@@ -22,15 +22,13 @@ struct AlgoContext {
     AlgoContext ctx;
 
     std::string sched = config->scheduler;
-    if (sched == "fcfs"){
+    if (sched == "fcfs") {
       ctx.schedulerType = SchedulerType::FCFS;
       ctx.rr_quantum_cycles = -1;
-    }
-    else if (sched == "rr"){
-        ctx.schedulerType = SchedulerType::RR;
-        ctx.rr_quantum_cycles = config->rr_quantum_cycles;
-      }
-    else
+    } else if (sched == "rr") {
+      ctx.schedulerType = SchedulerType::RR;
+      ctx.rr_quantum_cycles = config->rr_quantum_cycles;
+    } else
       ctx.schedulerType = SchedulerType::UNKNOWN;
 
     ctx.num_cpu = config->num_cpu;
