@@ -273,46 +273,7 @@ public:
    * @param cpuCycles Current master clock tick cycle count.
    */
   void GenerateProcessesCycle(int cpuCycles) {
-    
-  }
-
-  /**
-   * @brief Gathers processes preempted by CPU workers and places them back in the queue.
-   */
-  void CollectPreemptedCycle() {
-    
-  }
-
-  /**
-   * @brief Updates sleeping processes and re-queues them when their sleep ticks expire.
-   */
-  void UpdateSleepingProcessesCycle() {
-    
-  }
-
-  /**
-   * @brief Dispatches ready processes to idle worker CPU cores.
-   */
-  void DispatchProcessesCycle() {
-    
-  }
-
-  
-  /**
-   * @brief the main scheduler loop
-   *
-   * Continuously selects and dispatches processes according to
-   * the configured scheduling algorithm until the scheduler is stopped.
-   *
-   */
-  void SchedulerLoop() {
-    int cpuCycles = 0;
-
-    while (running) {
-      cpuCycles++;
-
-      // 1. Generate Processes
-      if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
+    if (generatingProcesses && cpuCycles % ctx.batchProcessFreq == 0) {
         if (nextPID <= MAX_PROCESSES) {
           Process *p = generateProcess(&this->ctx, nextPID, cpuCycles);
           std::lock_guard<std::mutex> lock(schedulerMutex);
@@ -321,48 +282,72 @@ public:
 
           nextPID++;
         } 
-      }
+    }
+  }
 
-      // 2. Collect preempted processes and re‑queue them
-      for (Worker* w : workers) {
-          Process* preempted = w->GetAndClearPreemptedProcess();
-          if (preempted) {
-              std::lock_guard<std::mutex> lock(schedulerMutex);
-              processQueue.push(preempted);
-          }
-      }
+  /**
+   * @brief Gathers processes preempted by CPU workers and places them back in the queue.
+   */
+  void CollectPreemptedCycle() {
+    for (Worker* w : workers) {
+        Process* preempted = w->GetAndClearPreemptedProcess();
+        if (preempted) {
+            std::lock_guard<std::mutex> lock(schedulerMutex);
+            processQueue.push(preempted);
+        }
+    }
+  }
 
-      // 2.5. Update sleeping processes and re-queue them upon wake-up
-      {
-          std::lock_guard<std::mutex> lock(schedulerMutex);
-          for (Process* p : processes) {
-              if (p != nullptr && p->GetState() == Process::WAITING) {
-                  p->DecrementSleepCycles();
-                  if (p->GetCyclesRemainingForSleep() <= 0) {
-                      if (p->GetCurrentInstructionIndex() >= p->GetTotalInstructions()) {
-                          p->SetState(Process::FINISHED);
-                      } else {
-                          p->SetState(Process::READY);
-                          processQueue.push(p);
-                      }
-                  }
-              }
-          }
-      }
+  /**
+   * @brief Updates sleeping processes and re-queues them when their sleep ticks expire.
+   */
+  void UpdateSleepingProcessesCycle() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (Process* p : processes) {
+        if (p != nullptr && p->GetState() == Process::WAITING) {
+            p->DecrementSleepCycles();
+            if (p->GetCyclesRemainingForSleep() <= 0) {
+                if (p->GetCurrentInstructionIndex() >= p->GetTotalInstructions()) {
+                    p->SetState(Process::FINISHED);
+                } else {
+                    p->SetState(Process::READY);
+                    processQueue.push(p);
+                }
+            }
+        }
+    }
+  }
 
-      // 3. Dispatch processes to idle workers
-      {
-        std::lock_guard<std::mutex> lock(schedulerMutex);
-        for (Worker* w : workers) {
-          if (!processQueue.empty() && !w->IsBusy()) {
+  /**
+   * @brief Dispatches ready processes to idle worker CPU cores.
+   */
+  void DispatchProcessesCycle() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (Worker* w : workers) {
+        if (!processQueue.empty() && !w->IsBusy()) {
             Process* p = processQueue.front();
             processQueue.pop();
             w->AssignProcess(p);
-          }
         }
-      }
+    }
+  }
 
-      // 4. Tick wait
+  /**
+   * @brief The main scheduler control loop running in a dedicated thread.
+   *
+   * Drives the master scheduler clock and invokes sub-cycle operations.
+   */
+  void SchedulerLoop() {
+    int cpuCycles = 0;
+
+    while (running) {
+      cpuCycles++;
+
+      GenerateProcessesCycle(cpuCycles);
+      CollectPreemptedCycle();
+      UpdateSleepingProcessesCycle();
+      DispatchProcessesCycle();
+
       std::this_thread::sleep_for(std::chrono::milliseconds(TICK_DURATION_MS));
     }
   }
