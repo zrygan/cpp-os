@@ -1,8 +1,11 @@
 #pragma once
 
+#include <iomanip>
 #include <mutex>
+#include <ostream>
 #include <queue>
 #include <random>
+#include <sstream>
 #include <stdio.h>
 #include <thread>
 #include <vector>
@@ -154,68 +157,73 @@ public:
    *
    * Outputs the current process list and their states
    */
-  void PrintProcesses() {
+  void PrintProcesses(std::ostream &out = std::cout) {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
-    double utilization = 0;
-    int coresUsed = 0;
-    int coresAvail = 0;
-
+    int coresUsed = 0, coresAvail = 0;
     for (Worker *w : workers) {
-      if (w->IsBusy()) {
-        coresUsed++;
-      } else {
-        coresAvail++;
-      }
+      if (w->IsBusy()) coresUsed++;
+      else coresAvail++;
     }
+    double utilization = workers.empty() ? 0.0 :
+        (static_cast<double>(coresUsed) / workers.size()) * 100.0;
 
-    utilization = (static_cast<double>(coresUsed) / workers.size()) * 100.0;
+    out << "\nCPU utilization: " << utilization << "%\n";
+    out << "Cores used: " << coresUsed << "\n";
+    out << "Cores available: " << coresAvail << "\n";
 
-    std::cout << "\nCPU utilization: " << utilization << "%\n";
-    std::cout << "Cores used: " << coresUsed << "/" << workers.size() << "\n";
-    std::cout << "Cores available: " << coresAvail << "/" << workers.size()
-              << "\n";
-
-    std::cout << "\n" << std::string(50, '-');
-    std::cout << "\nRunning Processes: \n";
-
-    for (Worker *w : workers) {
-      Process *p = w->GetCurrentProcess();
-      if (p != nullptr) {
-        std::cout << p->GetName() << std::string(5, ' ')
-                  << p->GetProcessTimeStart() << std::string(5, ' ')
-                  << "Core: " << w->GetCoreNum() << std::string(5, ' ')
-                  << p->GetCurrentInstructionIndex() << " / "
-                  << p->GetTotalInstructions() << "\n";
-      } else {
-        std::cout << "Core " << w->GetCoreNum() << std::string(5, ' ')
-                  << " (idle)\n";
-      }
-    }
-
-    std::vector<Process *> finished;
+    std::vector<Process *> running, finished;
     for (Process *p : processes) {
-      if (p != nullptr && p->IsFinished()) {
-        finished.push_back(p);
-      }
+      if (p == nullptr) continue;
+      if (p->IsFinished()) finished.push_back(p);
+      else running.push_back(p);
     }
 
-    int startIdx = std::max(0, (int)finished.size() - 10);
+    // Fixed timestamp width: "(mm/dd/yyyy hh:mm:ssAM/PM)" = 23 chars
+    const size_t GAP = 5;
+    const size_t TIME_W = 23;
 
-    std::cout << "\n\nFinished Processes: \n";
-    for (int i = startIdx; i < (int)finished.size(); i++) {
-      Process *p = finished[i];
-      if (p != nullptr && p->IsFinished()) {
-        std::cout << p->GetName() << std::string(5, ' ')
-                  << p->GetProcessTimeStart() << std::string(5, ' ')
-                  << "Finished" << std::string(5, ' ')
-                  << p->GetCurrentInstructionIndex() << " / "
-                  << p->GetTotalInstructions() << "\n";
-      }
-    }
+    size_t nameW = 0, coreW = 0, progW = 0;
+    auto measure = [&](Process *p, bool fin) {
+      nameW = std::max(nameW, p->GetName().size());
+      std::string c = "Core: " + std::to_string(p->GetAssignedCore());
+      coreW = std::max(coreW, c.size());
+      int cur = fin ? p->GetTotalInstructions() : p->GetCurrentInstructionIndex();
+      std::string g = std::to_string(cur) + " / " + std::to_string(p->GetTotalInstructions());
+      progW = std::max(progW, g.size());
+    };
+    for (Process *p : running) measure(p, false);
+    for (Process *p : finished) measure(p, true);
 
-    std::cout << std::string(50, '-') << "\n";
-    std::cout << std::endl;
+    size_t rowLen = nameW + GAP + TIME_W + GAP + coreW + GAP + progW;
+    std::string sep(rowLen, '-');
+
+    auto padR = [](const std::string &s, size_t w) -> std::string {
+      return s.size() < w ? s + std::string(w - s.size(), ' ') : s;
+    };
+
+    auto printRow = [&](Process *p, bool fin) {
+      int cur = fin ? p->GetTotalInstructions() : p->GetCurrentInstructionIndex();
+      std::string prog = std::to_string(cur) + " / " + std::to_string(p->GetTotalInstructions());
+      std::string coreStr = "Core: " + std::to_string(p->GetAssignedCore());
+      std::string ts = p->GetProcessTimeStart();
+      if (ts.empty()) ts = "N/A";
+      out << padR(p->GetName(), nameW + GAP)
+          << padR(ts, TIME_W + GAP)
+          << padR(coreStr, coreW + GAP)
+          << prog << "\n";
+    };
+
+    out << "\n" << sep << "\n";
+    out << "Running processes:\n";
+    if (running.empty()) out << "(none)\n";
+    else for (Process *p : running) printRow(p, false);
+
+    out << "\nFinished processes:\n";
+    if (finished.empty()) out << "(none)\n";
+    else for (Process *p : finished) printRow(p, true);
+
+    out << sep << "\n" << std::endl;
   }
 
   /**
@@ -229,7 +237,9 @@ public:
    */
   prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
 
-    std::string name = "process" + std::to_string(nextPID);
+    std::ostringstream oss;
+    oss << "p" << std::setw(2) << std::setfill('0') << nextPID;
+    std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
     p->SetOwnedByScheduler(true);
     Statement instruction;
@@ -256,6 +266,56 @@ public:
    * @return boolean value if scheduler is running or not
    */
   bool IsRunning() { return running == true; }
+
+  /**
+   * @brief Creates a new named process with random instructions and assigns it
+   * the next available PID.
+   *
+   * @param name The name to give the new process
+   * @return Pointer to the newly created process
+   */
+  prosched::Process *CreateNamedProcess(const std::string &name) {
+    int pid;
+    {
+      std::lock_guard<std::mutex> lock(schedulerMutex);
+      pid = nextPID++;
+    }
+    Process *p = new Process(name, pid, 0);
+    p->SetOwnedByScheduler(true);
+    int commandAmount =
+        this->ctx.min_ins + rand() % (this->ctx.max_ins - this->ctx.min_ins + 1);
+    for (int i = 0; i < commandAmount; i++) {
+      Statement instruction = prosched::GetRandomStatement(name, 3);
+      p->AddInstruction(instruction);
+    }
+    return p;
+  }
+
+  /**
+   * @brief Finds the first non-finished process matching the given name.
+   *
+   * @param name The process name to search for
+   * @return Pointer to the matching process, or nullptr if not found or finished
+   */
+  prosched::Process *FindProcessByName(const std::string &name) {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (Process *p : processes) {
+      if (p && p->GetName() == name && !p->IsFinished()) {
+        return p;
+      }
+    }
+    return nullptr;
+  }
+
+  /**
+   * @brief Returns a snapshot of all known processes (running and finished).
+   *
+   * @return Vector of process pointers
+   */
+  std::vector<prosched::Process *> GetAllProcesses() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    return processes;
+  }
 
   /**
    * @brief Handles periodic batch process generation.

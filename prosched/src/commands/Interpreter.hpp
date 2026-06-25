@@ -81,7 +81,7 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
 
   switch (chosen) {
     case Keyword::PRINT: {
-      stmt.args = { "\"Hello world from" + processName +"!\"" };
+      stmt.args = { "\"Hello world from " + processName + "!\"" };
       break;
     }
 

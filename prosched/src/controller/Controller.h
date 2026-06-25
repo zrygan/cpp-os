@@ -7,8 +7,10 @@
 
 enum class CLI_COMMAND {
   CLI_EXIT,
+  CLI_CLEAR,
   CLI_SCREEN_LS,
   CLI_SCREEN_S,
+  CLI_SCREEN_R,
   CLI_SCHEDULER_START,
   CLI_SCHEDULER_STOP,
   CLI_REPORT_UTIL,
@@ -41,6 +43,8 @@ public:
   void ExecuteCommand(const Command &command);
   CLI_COMMAND IdentifyCommand(const std::vector<std::string> &command);
   void ExitOS();
+  void EnterProcessScreen(prosched::Process *p);
+  void PrintReportUtil();
 };
 
 #endif

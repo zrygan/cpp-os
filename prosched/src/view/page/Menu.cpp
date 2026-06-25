@@ -51,6 +51,7 @@ void CommandSet() {
   std::cout << "List of accessible commands:\n"
             << "- exit\n"
             << "- screen -s <process name>\n"
+            << "- screen -r <process name>\n"
             << "- screen -ls\n"
             << "- scheduler-start\n"
             << "- scheduler-stop\n"

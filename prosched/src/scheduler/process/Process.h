@@ -25,7 +25,7 @@ class Process {
 private:
   std::string processName;
   int pid;
-  int coreNum;
+  int coreNum = -1;
   int currentInstructionIndex = 0;
   int arrivalTick = 0;
   ProcessState currentState = READY;
@@ -36,6 +36,7 @@ private:
   int cyclesRemainingForSleep = 0;
   int currentInstructionCyclesLeft = 0;
   int quantumUsed = 0;
+  std::string finishTime;
 
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;
@@ -97,8 +98,13 @@ public:
   std::vector<prosched::Statement> ExecuteInstructions(int coreNum) {
     currentState = RUNNING;
 
+    if (StartTime.empty())
+      StartTime = GetTimestamp();
+
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
+      if (finishTime.empty())
+        finishTime = GetTimestamp();
       return {};
     }
 
@@ -125,6 +131,8 @@ public:
       if (currentInstructionIndex >= (int)statements.size() &&
           cyclesRemainingForSleep == 0) {
         currentState = FINISHED;
+        if (finishTime.empty())
+          finishTime = GetTimestamp();
       }
       return statements;
     }
@@ -140,6 +148,8 @@ public:
 
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
+      if (finishTime.empty())
+        finishTime = GetTimestamp();
     }
 
     return statements;
@@ -231,6 +241,13 @@ public:
    * @return the formatted time date string
    */
   std::string GetProcessTimeStart() { return StartTime; }
+
+  /**
+   * @brief Gets the finish time of the process
+   *
+   * @return the formatted time date string, or empty if not yet finished
+   */
+  std::string GetProcessTimeFinish() { return finishTime; }
 
   /**
    * @brief gets the current index of an instruction being executed

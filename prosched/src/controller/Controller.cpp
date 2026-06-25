@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
@@ -45,6 +46,12 @@ bool Controller::HandlePreInit(const std::string &input) {
 
   if (input == "exit") {
     ExitOS();
+  }
+
+  if (input == "clear") {
+    view.DisplayClear();
+    view.DisplayMenu();
+    return true;
   }
 
   std::cout << "Type \"initialize\" to access commands.\n";
@@ -113,8 +120,11 @@ Command Controller::GetParsedInput(const std::string &input) {
     return commands;
   }
 
-  if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S) {
-    commands.processName = trimmed[2];
+  if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S ||
+      commands.cliCommand == CLI_COMMAND::CLI_SCREEN_R) {
+    if (trimmed.size() >= 3) {
+      commands.processName = trimmed[2];
+    }
     return commands;
   }
 
@@ -128,6 +138,11 @@ void Controller::ExecuteCommand(const Command &command) {
       ExitOS();
       break;
 
+    case CLI_COMMAND::CLI_CLEAR:
+      view.DisplayClear();
+      view.DisplayCommands();
+      break;
+
     case CLI_COMMAND::CLI_SCREEN_LS:
       if (this->scheduler->IsRunning()) {
         this->scheduler->PrintProcesses();
@@ -137,9 +152,29 @@ void Controller::ExecuteCommand(const Command &command) {
       }
       break;
 
-    case CLI_COMMAND::CLI_SCREEN_S:
-      // none for now
+    case CLI_COMMAND::CLI_SCREEN_S: {
+      if (!this->scheduler->IsRunning()) {
+        std::cout << "Start the scheduler before creating a process, run "
+                     "\"scheduler-start\"\n\n";
+        break;
+      }
+      prosched::Process *p =
+          this->scheduler->CreateNamedProcess(command.processName);
+      this->scheduler->AddProcess(p);
+      EnterProcessScreen(p);
       break;
+    }
+
+    case CLI_COMMAND::CLI_SCREEN_R: {
+      prosched::Process *p =
+          this->scheduler->FindProcessByName(command.processName);
+      if (p == nullptr) {
+        std::cout << "Process " << command.processName << " not found.\n\n";
+      } else {
+        EnterProcessScreen(p);
+      }
+      break;
+    }
 
     case CLI_COMMAND::CLI_SCHEDULER_START:
       if (!this->scheduler->IsRunning()) {
@@ -160,7 +195,7 @@ void Controller::ExecuteCommand(const Command &command) {
       break;
 
     case CLI_COMMAND::CLI_REPORT_UTIL:
-      // none for now
+      PrintReportUtil();
       break;
 
     case CLI_COMMAND::UNKNOWN:
@@ -174,6 +209,55 @@ void Controller::ExecuteCommand(const Command &command) {
   }
 }
 
+void Controller::EnterProcessScreen(prosched::Process *p) {
+  system("clear");
+  std::string cmd;
+
+  while (true) {
+    std::cout << "root:\\> ";
+    std::getline(std::cin, cmd);
+
+    // trim leading/trailing whitespace
+    size_t start = cmd.find_first_not_of(" \t\r\n");
+    size_t end = cmd.find_last_not_of(" \t\r\n");
+    cmd = (start == std::string::npos) ? "" : cmd.substr(start, end - start + 1);
+
+    if (cmd == "process-smi") {
+      std::cout << "\nProcess Name: " << p->GetName() << "\n";
+      std::cout << "ID: " << p->GetPID() << "\n\n";
+
+      auto logs = p->GetLogs();
+      for (const auto &log : logs) {
+        std::cout << log << "\n";
+      }
+
+      if (p->IsFinished()) {
+        std::cout << "\nFinished!\n";
+      }
+      std::cout << "\n";
+    } else if (cmd == "exit") {
+      system("clear");
+      this->view.DisplayCommands();
+      break;
+    } else if (!cmd.empty()) {
+      std::cout << "Unknown command. Use 'process-smi' or 'exit'.\n\n";
+    }
+  }
+}
+
+void Controller::PrintReportUtil() {
+  this->scheduler->PrintProcesses(std::cout);
+
+  std::ofstream file("csopesy-log.txt");
+  if (file.is_open()) {
+    this->scheduler->PrintProcesses(file);
+    file.close();
+    std::cout << "Report saved to csopesy-log.txt\n\n";
+  } else {
+    std::cerr << "Warning: could not write csopesy-log.txt\n";
+  }
+}
+
 CLI_COMMAND
 Controller::IdentifyCommand(const std::vector<std::string> &command) {
   if (command[0] == "screen") {
@@ -183,11 +267,15 @@ Controller::IdentifyCommand(const std::vector<std::string> &command) {
       return CLI_COMMAND::CLI_SCREEN_LS;
     } else if (command[1] == "-s") {
       return CLI_COMMAND::CLI_SCREEN_S;
+    } else if (command[1] == "-r") {
+      return CLI_COMMAND::CLI_SCREEN_R;
     } else {
       return CLI_COMMAND::UNKNOWN;
     }
   } else if (command[0] == "exit") {
     return CLI_COMMAND::CLI_EXIT;
+  } else if (command[0] == "clear") {
+    return CLI_COMMAND::CLI_CLEAR;
   } else if (command[0] == "scheduler-start") {
     return CLI_COMMAND::CLI_SCHEDULER_START;
   } else if (command[0] == "scheduler-stop") {
