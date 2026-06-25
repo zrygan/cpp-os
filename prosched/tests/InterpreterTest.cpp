@@ -499,7 +499,7 @@ namespace InterpreterExecuteFor {
     auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                           std::chrono::steady_clock::now() - start)
                           .count();
-    EXPECT_LT(elapsed_ms, 5); // 10 ms nominal; 8 ms lower bound absorbs OS scheduling jitter
+    EXPECT_GE(elapsed_ms, 8); // 10 ms nominal; 8 ms lower bound absorbs OS scheduling jitter
   }
 
 } // namespace InterpreterExecuteSleep
