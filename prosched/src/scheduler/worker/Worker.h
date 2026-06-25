@@ -3,6 +3,8 @@
 #include <mutex>
 #include <stdio.h>
 #include <thread>
+#include <condition_variable>
+#include <functional>
 
 #include "Config.h"
 #include "Constants.hpp"
@@ -20,6 +22,11 @@ private:
   mutable std::mutex workerMutex;
   bool running = false;
   prosched::Process *preemptedProcess = nullptr;
+
+  int lastProcessedTick = 0;
+  int currentMasterTick = 0;
+  std::condition_variable cv;
+  std::function<void()> onCycleComplete;
 
   /**
    * @brief Preempts the current process from the worker (lock-free version)
@@ -85,6 +92,7 @@ public:
         return false;
       }
       running = false;
+      cv.notify_all();
     }
 
     if (workerThread.joinable()) {
@@ -184,6 +192,31 @@ public:
   }
 
   /**
+   * @brief Registers a callback to invoke when this worker completes a tick cycle.
+   *
+   * Used by the scheduler to hook worker completion into the tick barrier sync.
+   *
+   * @param callback Function to execute upon completing a cycle.
+   */
+  void SetCycleCompleteCallback(std::function<void()> callback) {
+    onCycleComplete = callback;
+  }
+
+  /**
+   * @brief Signals the worker thread that a new master clock tick cycle has started.
+   *
+   * Updates the worker's master tick clock and notifies the wait condition variable
+   * to wake up the worker thread task. Thread-safe.
+   *
+   * @param masterTick The current master clock cycle count.
+   */
+  void SignalNewTick(int masterTick) {
+    std::lock_guard<std::mutex> lock(workerMutex);
+    currentMasterTick = masterTick;
+    cv.notify_one();
+  }
+
+  /**
    * @brief Increments quantum of the current running process and checks if it has expired.
    *
    * Thread-safe.
@@ -252,14 +285,28 @@ public:
    */
   Worker *ThreadTask() {
     while (running) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
+      if (onCycleComplete) {
+        std::unique_lock<std::mutex> lock(workerMutex);
+        cv.wait(lock, [this] {
+          return !running || currentMasterTick > lastProcessedTick;
+        });
 
-      std::lock_guard<std::mutex> lock(workerMutex);
+        if (!running)
+          break;
 
-      if (!running)
-        break;
+        RunCycle();
+        lastProcessedTick = currentMasterTick;
+        onCycleComplete();
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
 
-      RunCycle();
+        std::lock_guard<std::mutex> lock(workerMutex);
+
+        if (!running)
+          break;
+
+        RunCycle();
+      }
     }
     return this;
   }

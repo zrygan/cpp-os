@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <thread>
 #include <vector>
+#include <condition_variable>
 
 #include "Config.h"
 #include "process/Process.h"
@@ -72,6 +73,7 @@ public:
 
     for (int i = 0; i < this->ctx.num_cpu; i++) {
       Worker *w = new Worker(i, ctx);
+      w->SetCycleCompleteCallback([this] { this->NotifyWorkerDone(); });
 
       try {
         workers.push_back(w);
@@ -108,8 +110,12 @@ public:
    * running = false, stops all worker threads and the scheduler thread
    */
   void Stop() {
-    running = false;
-    generatingProcesses = false;
+    {
+      std::lock_guard<std::mutex> lock(tickMutex);
+      running = false;
+      generatingProcesses = false;
+      tickCv.notify_all();
+    }
 
     if (schedulerThread.joinable()) {
       schedulerThread.join();
@@ -375,6 +381,42 @@ public:
   }
 
   /**
+   * @brief Callback invoked by each worker core thread when its cycle execution finishes.
+   *
+   * Increments the count of completed workers for the current tick and notifies
+   * the scheduler thread waiting inside TriggerWorkersTick. Thread-safe.
+   */
+  void NotifyWorkerDone() {
+    std::lock_guard<std::mutex> lock(tickMutex);
+    workersCompleted++;
+    tickCv.notify_one();
+  }
+
+  /**
+   * @brief Triggers one clock cycle of execution for all active workers.
+   *
+   * Signals all worker cores to start the cycle and blocks the scheduler thread until
+   * all worker threads have completed their cycle execution. Thread-safe.
+   *
+   * @param cpuCycles The current master clock cycle count.
+   */
+  void TriggerWorkersTick(int cpuCycles) {
+    {
+      std::lock_guard<std::mutex> lock(tickMutex);
+      workersCompleted = 0;
+    }
+
+    for (Worker *w : workers) {
+      w->SignalNewTick(cpuCycles);
+    }
+
+    std::unique_lock<std::mutex> lock(tickMutex);
+    tickCv.wait(lock, [this] {
+      return !running || workersCompleted >= (int)workers.size();
+    });
+  }
+
+  /**
    * @brief The main scheduler control loop running in a dedicated thread.
    *
    * Drives the master scheduler clock and invokes sub-cycle operations.
@@ -386,6 +428,8 @@ public:
       cpuCycles++;
 
       GenerateProcessesCycle(cpuCycles);
+
+      TriggerWorkersTick(cpuCycles);
 
       if (ctx.schedulerType == SchedulerType::FCFS) {
         FCFS();
@@ -410,6 +454,9 @@ private:
   bool running = false;
   bool generatingProcesses = false;
   int nextPID = 1;
+  std::mutex tickMutex;
+  std::condition_variable tickCv;
+  int workersCompleted = 0;
 
   /**
    * @brief converts the scheduler type enum to a string for printing
