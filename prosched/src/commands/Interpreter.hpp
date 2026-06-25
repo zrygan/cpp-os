@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -505,7 +506,9 @@ public:
   std::optional<uint16_t> executeDeclare(const Statement &stmt) {
     if (stmt.args.size() < 2)
         return std::nullopt;
-    memory[stmt.args[0]] = static_cast<uint16_t>(std::stoul(stmt.args[1]));
+    long val = std::stol(stmt.args[1]);
+    memory[stmt.args[0]] = static_cast<uint16_t>(
+        std::clamp(val, 0L, static_cast<long>(UINT16_MAX)));
     return memory[stmt.args[0]];
 }
 
