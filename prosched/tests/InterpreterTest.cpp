@@ -460,6 +460,16 @@ namespace InterpreterExecuteStatements {
     EXPECT_EQ(buf[0], "7");
   }
 
+  // An UNKNOWN statement pushes a "[!]" warning to the buffer and does not throw
+  TEST(InterpreterExecuteStatements, UnknownStatementPushesWarning) {
+    prosched::Interpreter interp;
+    std::vector<prosched::Statement> stmts = {makeStmt(prosched::Keyword::UNKNOWN)};
+    EXPECT_NO_THROW(interp.executeStatements(stmts));
+    auto buf = interp.flushBuffer();
+    ASSERT_FALSE(buf.empty());
+    EXPECT_NE(buf[0].find("[!]"), std::string::npos);
+  }
+
 } // namespace InterpreterExecuteStatements
 
 // ─── executeFor (additional) ────────────────────────────────────────────────
