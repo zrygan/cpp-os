@@ -1,0 +1,45 @@
+TEST 03 — screen -r: reattach and not-found cases
+==================================================
+Config: config_slow.txt  (see configs/ folder — high min/max-ins so processes run a long time)
+
+GOAL: Verify "screen -r" reattaches to a running process, and that it
+      correctly prints "not found" for unknown or finished processes.
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: Initialized successfully.
+
+2. Type: scheduler-start
+   EXPECT: Scheduler started.
+
+3. Type: screen -s longjob
+   EXPECT: Screen clears, process screen for "longjob".
+
+4. Type: process-smi
+   EXPECT: Process Name: longjob, ID: <n>, some initial logs.
+
+5. Type: exit
+   EXPECT: Returns to main menu.
+
+6. Type: screen -r longjob
+   EXPECT: Screen clears, re-enters the process screen for "longjob".
+           process-smi should now show MORE logs than step 4 (process continued
+           running while you were in the main menu).
+
+7. Type: exit
+   EXPECT: Returns to main menu.
+
+--- NOT-FOUND CASES ---
+
+8. Type: screen -r doesnotexist
+   EXPECT: "Process doesnotexist not found."
+
+9. Type: screen -r
+   EXPECT: Command treated as unknown (no process name given).
+
+10. Create a fast process: screen -s quickie
+    Wait until "Finished!" appears in process-smi, then type: exit.
+
+11. Type: screen -r quickie
+    EXPECT: "Process quickie not found."  (finished processes are not reattachable)

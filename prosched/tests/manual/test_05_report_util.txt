@@ -1,0 +1,48 @@
+TEST 05 — report-util: screen output and csopesy-log.txt
+=========================================================
+Config: default config.txt
+
+GOAL: Verify that "report-util" prints the same info as "screen -ls" to the
+      console AND writes the same content to "csopesy-log.txt".
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: Initialized successfully.
+
+2. Type: scheduler-start
+   EXPECT: Scheduler started.
+
+3. Wait ~3 seconds for processes to accumulate.
+
+4. Type: report-util
+   EXPECT: Same format as screen -ls:
+       CPU utilization: X%
+       Cores used: X/N
+       Cores available: X/N
+       --------------------------------------------------
+       Running processes:
+       <list of running processes with core and progress>
+
+       Finished processes:
+       <list of all finished processes>
+       --------------------------------------------------
+       Report saved to csopesy-log.txt
+
+5. Open csopesy-log.txt (in the directory where the binary runs, i.e. build/).
+   EXPECT: Identical content to what was printed in step 4.
+
+6. Type: report-util  (again after a few more seconds)
+   EXPECT: csopesy-log.txt is overwritten with updated data.
+           Instruction counts are higher, more processes may have finished.
+
+7. Type: scheduler-stop, then wait for all cores to go idle.
+   Type: report-util
+   EXPECT:
+       CPU utilization: 0%
+       Cores used: 0/N
+       Cores available: N/N
+       Running processes:
+       (none)
+       Finished processes:
+       <all previously generated processes listed as Finished>

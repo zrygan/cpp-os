@@ -1,0 +1,55 @@
+TEST 04 — scheduler-start, scheduler-stop, screen -ls
+======================================================
+Config: default config.txt (fcfs, 4 cores, batch-process-freq 1)
+
+GOAL: Verify that scheduler-start generates dummy processes automatically,
+      screen -ls shows their status and utilization, and scheduler-stop
+      halts new process generation (existing processes still run).
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: Initialized successfully.
+
+2. Type: screen -ls   (before scheduler-start)
+   EXPECT: "Start the scheduler before viewing processes, run 'scheduler-start'"
+
+3. Type: scheduler-start
+   EXPECT: Scheduler specs printed, "Scheduler started with N cores."
+
+4. Type: scheduler-start  (again, while running)
+   EXPECT: "Resumed process generation."
+
+5. Wait ~2 seconds, then type: screen -ls
+   EXPECT: Something like:
+       CPU utilization: 100%
+       Cores used: 4/4
+       Cores available: 0/4
+
+       --------------------------------------------------
+       Running processes:
+       process1     (MM/DD/YYYY ...) Core: 0    45 / 1234
+       process2     (MM/DD/YYYY ...) Core: 1    12 / 1500
+       process3     (MM/DD/YYYY ...) Core: 2    89 / 900
+       process4     (MM/DD/YYYY ...) Core: 3    200 / 1800
+
+       Finished processes:
+       process0     (MM/DD/YYYY ...) Finished    1000 / 1000
+       --------------------------------------------------
+
+6. Type: scheduler-stop
+   EXPECT: "Stopped generating processes. Scheduler is still running."
+
+7. Wait ~2 seconds, then type: screen -ls  (again)
+   EXPECT: Instruction counts advanced (processes are still executing),
+           but no new process names appear.
+
+8. Type: scheduler-start
+   EXPECT: "Resumed process generation."
+           New auto-named processes will appear in subsequent screen -ls calls.
+
+9. Type: scheduler-stop
+   EXPECT: Stops generation again.
+
+10. Type: exit
+    EXPECT: Program exits cleanly.

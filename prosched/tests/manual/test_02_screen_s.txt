@@ -1,0 +1,43 @@
+TEST 02 — screen -s: create process and process-smi
+====================================================
+Config: config_fast.txt  (see configs/ folder — low min/max-ins so processes finish quickly)
+
+GOAL: Verify that "screen -s" creates a named process, clears the screen,
+      and that "process-smi" shows updated logs. Also verify "Finished!"
+      appears once the process completes.
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: Initialized successfully.
+
+2. Type: scheduler-start
+   EXPECT: Scheduler started with N cores.
+
+3. Type: screen -s myproc
+   EXPECT: Screen clears. Prompt changes to  root:\>
+
+4. At the process screen, type: process-smi
+   EXPECT:
+       Process Name: myproc
+       ID: <some number>
+       <blank line>
+       <timestamped log lines, e.g.>
+       (MM/DD/YYYY HH:MM:SSam/pm) Core:0 "Hello world from myproc!"
+       ...
+
+5. Wait a few seconds, then type: process-smi  (again)
+   EXPECT: More log lines have appeared since the last call (process advanced).
+
+6. Keep repeating process-smi until "Finished!" appears at the bottom.
+   EXPECT:
+       Process Name: myproc
+       ID: <number>
+       <all logs>
+       Finished!
+
+7. Type: exit
+   EXPECT: Screen clears, main menu command list reprinted.
+
+8. Type: screen -r myproc
+   EXPECT: "Process myproc not found."  (process is finished, cannot reattach)
