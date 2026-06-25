@@ -238,7 +238,7 @@ public:
   prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
 
     std::ostringstream oss;
-    oss << "p" << std::setw(2) << std::setfill('0') << nextPID;
+    oss << "process" << nextPID;
     std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
     p->SetOwnedByScheduler(true);
