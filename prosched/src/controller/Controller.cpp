@@ -144,20 +144,10 @@ void Controller::ExecuteCommand(const Command &command) {
       break;
 
     case CLI_COMMAND::CLI_SCREEN_LS:
-      if (this->scheduler->IsRunning()) {
-        this->scheduler->PrintProcesses();
-      } else {
-        std::cout << "Start the scheduler before viewing processes, run "
-                     "\"scheduler-start\"\n\n";
-      }
+      this->scheduler->PrintProcesses();
       break;
 
     case CLI_COMMAND::CLI_SCREEN_S: {
-      if (!this->scheduler->IsRunning()) {
-        std::cout << "Start the scheduler before creating a process, run "
-                     "\"scheduler-start\"\n\n";
-        break;
-      }
       prosched::Process *p =
           this->scheduler->CreateNamedProcess(command.processName);
       this->scheduler->AddProcess(p);
