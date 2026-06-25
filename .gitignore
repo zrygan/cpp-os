@@ -75,3 +75,6 @@ Testing/
 
 # logs printed from PRINT
 /logs
+
+# prosched files
+csopesy.logs
