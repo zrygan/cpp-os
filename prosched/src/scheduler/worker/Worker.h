@@ -117,7 +117,9 @@ public:
       if (ctx.schedulerType == SchedulerType::RR) {
         p->ResetQuantumUsed();
       }
-      p->SetCurrentInstructionCyclesLeft(0);
+      if (p->GetCurrentInstructionIndex() == 0) {
+        p->SetCurrentInstructionCyclesLeft(0);
+      }
     }
     return p;
   }
