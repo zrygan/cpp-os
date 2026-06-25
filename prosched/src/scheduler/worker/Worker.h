@@ -113,6 +113,7 @@ public:
     currentProcess = p;
     if (p) {
       p->AssignCore(coreNum);
+      p->SetState(ProcessState::RUNNING);
 
       if (ctx.schedulerType == SchedulerType::RR) {
         p->ResetQuantumUsed();
