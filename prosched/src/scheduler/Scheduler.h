@@ -278,10 +278,16 @@ public:
    * the queue.
    */
   void CollectPreemptedCycle() {
+    std::vector<Process *> preemptedList;
     for (Worker *w : workers) {
       Process *preempted = w->GetAndClearPreemptedProcess();
       if (preempted) {
-        std::lock_guard<std::mutex> lock(schedulerMutex);
+        preemptedList.push_back(preempted);
+      }
+    }
+    if (!preemptedList.empty()) {
+      std::lock_guard<std::mutex> lock(schedulerMutex);
+      for (Process *preempted : preemptedList) {
         processQueue.push(preempted);
       }
     }
