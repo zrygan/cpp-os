@@ -1,0 +1,26 @@
+TEST 01 — Initialization and pre-init guard
+===========================================
+Config: default config.txt (fcfs, 4 cores, min-ins 1000, max-ins 2000)
+
+GOAL: Verify that no commands are accepted before "initialize", and that
+      "initialize" correctly loads config.txt.
+
+--- STEPS ---
+
+1. Launch the program.
+   EXPECT: ASCII banner, welcome message, prompt to type "initialize".
+
+2. Type: screen -ls
+   EXPECT: "Type 'initialize' to access commands."  (command rejected)
+
+3. Type: scheduler-start
+   EXPECT: "Type 'initialize' to access commands."  (command rejected)
+
+4. Type: initialize
+   EXPECT: "Initialized successfully." followed by the list of commands.
+
+5. Type: initialize   (a second time)
+   EXPECT: The system re-initializes without crashing.
+
+6. Type: exit
+   EXPECT: "Stopping prosched..." and program terminates cleanly.
