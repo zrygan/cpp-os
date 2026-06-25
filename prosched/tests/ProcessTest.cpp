@@ -356,3 +356,262 @@ TEST(ProcessIdentity, GetNameReturnsCtrValue) {
 }
 
 } // namespace ProcessIdentity
+
+// ─── ProcessExecuteInstructions (SLEEP path) ──────────────────────────────
+
+namespace ProcessExecuteInstructions {
+
+  // After a SLEEP instruction the process transitions to WAITING
+  TEST(ProcessExecuteInstructions, SleepInstructionSetsWaitingState) {
+    prosched::Process p("sleep_1", 1, 0);
+    AddRaw(p, "SLEEP(5)");
+    p.ExecuteInstructions(1);
+    EXPECT_EQ(p.GetState(), prosched::ProcessState::WAITING);
+  }
+
+  // cyclesRemainingForSleep reflects the argument passed to SLEEP
+  TEST(ProcessExecuteInstructions, SleepInstructionSetsCyclesRemaining) {
+    prosched::Process p("sleep_2", 2, 0);
+    AddRaw(p, "SLEEP(5)");
+    p.ExecuteInstructions(1);
+    EXPECT_EQ(p.GetCyclesRemainingForSleep(), 5);
+  }
+
+  // SLEEP returns the full statements vector, not an empty result
+  TEST(ProcessExecuteInstructions, SleepInstructionReturnsNonEmpty) {
+    prosched::Process p("sleep_3", 3, 0);
+    AddRaw(p, "SLEEP(5)");
+    auto result = p.ExecuteInstructions(1);
+    EXPECT_FALSE(result.empty());
+  }
+
+} // namespace ProcessExecuteInstructions
+
+// ─── ProcessTimeStart ─────────────────────────────────────────────────────
+
+namespace ProcessTimeStart {
+
+  // Empty before any execution
+  TEST(ProcessTimeStart, EmptyBeforeExecution) {
+    prosched::Process p("ts_1", 1, 0);
+    AddRaw(p, "PRINT(\"hi\")");
+    EXPECT_TRUE(p.GetProcessTimeStart().empty());
+  }
+
+  // Set after the first ExecuteInstructions call
+  TEST(ProcessTimeStart, SetAfterFirstExecution) {
+    prosched::Process p("ts_2", 2, 0);
+    AddRaw(p, "PRINT(\"hi\")");
+    p.ExecuteInstructions(1);
+    EXPECT_FALSE(p.GetProcessTimeStart().empty());
+  }
+
+  // Does not change on subsequent calls — timestamp is locked to first execution
+  TEST(ProcessTimeStart, DoesNotChangeOnSubsequentCalls) {
+    prosched::Process p("ts_3", 3, 0);
+    AddRaw(p, "PRINT(\"a\")");
+    AddRaw(p, "PRINT(\"b\")");
+    p.ExecuteInstructions(1);
+    std::string first_ts = p.GetProcessTimeStart();
+    p.ExecuteInstructions(1);
+    EXPECT_EQ(p.GetProcessTimeStart(), first_ts);
+  }
+
+} // namespace ProcessTimeStart
+
+// ─── ProcessTimeFinish ────────────────────────────────────────────────────
+
+namespace ProcessTimeFinish {
+
+  // Empty while the process still has instructions remaining
+  TEST(ProcessTimeFinish, EmptyWhileRunning) {
+    prosched::Process p("tf_1", 1, 0);
+    AddRaw(p, "PRINT(\"a\")");
+    AddRaw(p, "PRINT(\"b\")");
+    p.ExecuteInstructions(1);
+    EXPECT_TRUE(p.GetProcessTimeFinish().empty());
+  }
+
+  // Set once the last instruction executes and state becomes FINISHED
+  TEST(ProcessTimeFinish, SetAfterLastInstruction) {
+    prosched::Process p("tf_2", 2, 0);
+    AddRaw(p, "PRINT(\"a\")");
+    p.ExecuteInstructions(1);
+    EXPECT_FALSE(p.GetProcessTimeFinish().empty());
+  }
+
+} // namespace ProcessTimeFinish
+
+// ─── ProcessCurrentInstructionIndex ──────────────────────────────────────
+
+namespace ProcessCurrentInstructionIndex {
+
+  // Starts at 0 before any execution
+  TEST(ProcessCurrentInstructionIndex, StartsAtZero) {
+    prosched::Process p("idx_1", 1, 0);
+    AddRaw(p, "PRINT(\"a\")");
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 0);
+  }
+
+  // Increments by exactly 1 per ExecuteInstructions call
+  TEST(ProcessCurrentInstructionIndex, IncrementsOnePerCall) {
+    prosched::Process p("idx_2", 2, 0);
+    AddRaw(p, "PRINT(\"a\")");
+    AddRaw(p, "PRINT(\"b\")");
+    AddRaw(p, "PRINT(\"c\")");
+    p.ExecuteInstructions(1);
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
+    p.ExecuteInstructions(1);
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 2);
+  }
+
+} // namespace ProcessCurrentInstructionIndex
+
+// ─── ProcessTotalInstructions ─────────────────────────────────────────────
+
+namespace ProcessTotalInstructions {
+
+  // Zero on construction before any instructions are added
+  TEST(ProcessTotalInstructions, ZeroOnConstruction) {
+    prosched::Process p("tot_1", 1, 0);
+    EXPECT_EQ(p.GetTotalInstructions(), 0);
+  }
+
+  // Equals the number of AddInstruction calls
+  TEST(ProcessTotalInstructions, EqualsAddInstructionCallCount) {
+    prosched::Process p("tot_2", 2, 0);
+    AddRaw(p, "PRINT(\"a\")");
+    AddRaw(p, "PRINT(\"b\")");
+    AddRaw(p, "PRINT(\"c\")");
+    EXPECT_EQ(p.GetTotalInstructions(), 3);
+  }
+
+} // namespace ProcessTotalInstructions
+
+// ─── ProcessGetSetState ───────────────────────────────────────────────────
+
+namespace ProcessGetSetState {
+
+  // Default state on construction is READY
+  TEST(ProcessGetSetState, DefaultStateIsReady) {
+    prosched::Process p("st_1", 1, 0);
+    EXPECT_EQ(p.GetState(), prosched::ProcessState::READY);
+  }
+
+  // SetState(RUNNING) is immediately visible through GetState
+  TEST(ProcessGetSetState, SetRunningReflectsInGetter) {
+    prosched::Process p("st_2", 2, 0);
+    p.SetState(prosched::ProcessState::RUNNING);
+    EXPECT_EQ(p.GetState(), prosched::ProcessState::RUNNING);
+  }
+
+  // SetState(WAITING) is immediately visible through GetState
+  TEST(ProcessGetSetState, SetWaitingReflectsInGetter) {
+    prosched::Process p("st_3", 3, 0);
+    p.SetState(prosched::ProcessState::WAITING);
+    EXPECT_EQ(p.GetState(), prosched::ProcessState::WAITING);
+  }
+
+  // SetState(FINISHED) is immediately visible through GetState
+  TEST(ProcessGetSetState, SetFinishedReflectsInGetter) {
+    prosched::Process p("st_4", 4, 0);
+    p.SetState(prosched::ProcessState::FINISHED);
+    EXPECT_EQ(p.GetState(), prosched::ProcessState::FINISHED);
+  }
+
+} // namespace ProcessGetSetState
+
+// ─── ProcessSleepCycles ───────────────────────────────────────────────────
+
+namespace ProcessSleepCycles {
+
+  // cyclesRemainingForSleep starts at 0 on construction
+  TEST(ProcessSleepCycles, StartsAtZero) {
+    prosched::Process p("sc_1", 1, 0);
+    EXPECT_EQ(p.GetCyclesRemainingForSleep(), 0);
+  }
+
+  // DecrementSleepCycles reduces the counter by 1 each call
+  TEST(ProcessSleepCycles, DecrementsOnePerCall) {
+    prosched::Process p("sc_2", 2, 0);
+    AddRaw(p, "SLEEP(3)");
+    p.ExecuteInstructions(1); // sets cyclesRemainingForSleep = 3
+    p.DecrementSleepCycles();
+    EXPECT_EQ(p.GetCyclesRemainingForSleep(), 2);
+  }
+
+  // Does not go below 0 on repeated calls when already at 0
+  TEST(ProcessSleepCycles, FloorsAtZero) {
+    prosched::Process p("sc_3", 3, 0);
+    p.DecrementSleepCycles();
+    p.DecrementSleepCycles();
+    EXPECT_EQ(p.GetCyclesRemainingForSleep(), 0);
+  }
+
+} // namespace ProcessSleepCycles
+
+// ─── ProcessInstructionCycles ─────────────────────────────────────────────
+
+namespace ProcessInstructionCycles {
+
+  // Starts at 0 on construction
+  TEST(ProcessInstructionCycles, StartsAtZero) {
+    prosched::Process p("ic_1", 1, 0);
+    EXPECT_EQ(p.GetCurrentInstructionCyclesLeft(), 0);
+  }
+
+  // SetCurrentInstructionCyclesLeft is visible through the getter
+  TEST(ProcessInstructionCycles, SetAndGetRoundTrip) {
+    prosched::Process p("ic_2", 2, 0);
+    p.SetCurrentInstructionCyclesLeft(5);
+    EXPECT_EQ(p.GetCurrentInstructionCyclesLeft(), 5);
+  }
+
+  // DecrementInstructionCyclesLeft reduces by 1 each call
+  TEST(ProcessInstructionCycles, DecrementsOnePerCall) {
+    prosched::Process p("ic_3", 3, 0);
+    p.SetCurrentInstructionCyclesLeft(3);
+    p.DecrementInstructionCyclesLeft();
+    EXPECT_EQ(p.GetCurrentInstructionCyclesLeft(), 2);
+  }
+
+  // Does not go below 0 on repeated calls when already at 0
+  TEST(ProcessInstructionCycles, FloorsAtZero) {
+    prosched::Process p("ic_4", 4, 0);
+    p.SetCurrentInstructionCyclesLeft(0);
+    p.DecrementInstructionCyclesLeft();
+    p.DecrementInstructionCyclesLeft();
+    EXPECT_EQ(p.GetCurrentInstructionCyclesLeft(), 0);
+  }
+
+} // namespace ProcessInstructionCycles
+
+// ─── ProcessQuantum ───────────────────────────────────────────────────────
+
+namespace ProcessQuantum {
+
+  // Starts at 0 on construction
+  TEST(ProcessQuantum, StartsAtZero) {
+    prosched::Process p("q_1", 1, 0);
+    EXPECT_EQ(p.GetQuantumUsed(), 0);
+  }
+
+  // IncrementQuantumUsed increases the counter by 1 per call
+  TEST(ProcessQuantum, IncrementsOnePerCall) {
+    prosched::Process p("q_2", 2, 0);
+    p.IncrementQuantumUsed();
+    EXPECT_EQ(p.GetQuantumUsed(), 1);
+    p.IncrementQuantumUsed();
+    EXPECT_EQ(p.GetQuantumUsed(), 2);
+  }
+
+  // ResetQuantumUsed returns the counter to 0
+  TEST(ProcessQuantum, ResetReturnsToZero) {
+    prosched::Process p("q_3", 3, 0);
+    p.IncrementQuantumUsed();
+    p.IncrementQuantumUsed();
+    p.ResetQuantumUsed();
+    EXPECT_EQ(p.GetQuantumUsed(), 0);
+  }
+
+} // namespace ProcessQuantum
