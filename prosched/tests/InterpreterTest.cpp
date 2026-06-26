@@ -428,6 +428,32 @@ namespace InterpreterParse {
     EXPECT_EQ(stmts[0].keyword, prosched::Keyword::UNKNOWN);
 }
 
+  // The top-level splitter respects bracket depth: commas inside a FOR body are
+  // NOT treated as statement separators. A FOR (whose body has its own commas)
+  // followed by a PRINT must yield exactly 2 top-level statements.
+  TEST(InterpreterParse, CommasInsideForBodyDoNotSplitTopLevel) {
+    prosched::Interpreter interp;
+    auto stmts = interp.parse(R"(FOR([PRINT("a"), PRINT("b")], 2), PRINT("after"))");
+    ASSERT_EQ(stmts.size(), 2u);
+    EXPECT_EQ(stmts[0].keyword, prosched::Keyword::FOR);
+    EXPECT_EQ(stmts[1].keyword, prosched::Keyword::PRINT);
+    // The FOR's body keeps both of its inner statements
+    EXPECT_EQ(stmts[0].nested.size(), 2u);
+  }
+
+  // Deeply nested FOR([FOR([...])]) parses into a tree of the right shape —
+  // the inner FOR is preserved as a nested child, not flattened or mis-split.
+  TEST(InterpreterParse, NestedForParsesIntoNestedTree) {
+    prosched::Interpreter interp;
+    auto stmts = interp.parse(R"(FOR([FOR([PRINT("x")], 2)], 3))");
+    ASSERT_EQ(stmts.size(), 1u);
+    ASSERT_EQ(stmts[0].keyword, prosched::Keyword::FOR);
+    ASSERT_EQ(stmts[0].nested.size(), 1u);
+    ASSERT_EQ(stmts[0].nested[0].keyword, prosched::Keyword::FOR);
+    ASSERT_EQ(stmts[0].nested[0].nested.size(), 1u);
+    EXPECT_EQ(stmts[0].nested[0].nested[0].keyword, prosched::Keyword::PRINT);
+  }
+
 } // namespace InterpreterParse
 
 // ─── executeStatements ─────────────────────────────────────────────────────
