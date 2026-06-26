@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "Context.h"
 #include "scheduler/process/Process.h"
+#include <algorithm>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <sstream>
@@ -978,3 +979,159 @@ namespace SchedulerSleepLifecycle {
   }
 
 } // namespace SchedulerSleepLifecycle
+
+// ─── SchedulerReadyQueueTieBreak ──────────────────────────────────────────
+// Tie-break rules for ready-queue ordering when several events land on the
+// SAME scheduler tick.
+//
+// SchedulerLoop pushes to processQueue in this fixed order each tick:
+//   1. GenerateProcessesCycle      → newly generated / added processes
+//   2. TriggerWorkersTick          → (workers run; RR may flag a preemption)
+//   3. RoundRobin dispatch         → preemption is stored on the worker only
+//   4. CollectPreemptedCycle       → RR-preempted processes re-queued
+//   5. UpdateSleepingProcessesCycle→ woken-from-sleep processes re-queued
+//
+// Therefore, among events that coincide on one tick, the ready queue holds
+// them front→back in the order:
+//     newly-added  <  preempted  <  woken-from-sleep
+// and within a single source, FIFO by insertion order (processes-vector order).
+//
+// Worked answer to "RR preempts process 2, process 1 wakes, process 4 is added
+// — what is the queue order?":  front→back = process 4, process 2, process 1.
+//
+// processQueue is private, so these tests observe order via the read-only
+// GetReadyQueueSnapshot() accessor (index 0 = front / next dispatched).
+
+namespace SchedulerReadyQueueTieBreak {
+
+// Small context: generation enabled, every tick, exactly 1 instruction per
+// generated process so generation is cheap and deterministic.
+static AlgoContext makeGenCtx() {
+  ConfigStruct *cs = makeDefault();
+  cs->scheduler = "rr";
+  cs->num_cpu = 1;
+  cs->rr_quantum_cycles = 2;
+  cs->batch_process_freq = 1; // every tick is a generation tick
+  cs->min_ins = 1;
+  cs->max_ins = 1;
+  AlgoContext ctx = AlgoContext::buildConfig(cs);
+  delete cs;
+  return ctx;
+}
+
+// Helper: index of the LAST occurrence of p in the snapshot (-1 if absent).
+static long lastIndexOf(const std::vector<prosched::Process *> &v,
+                        prosched::Process *p) {
+  long idx = -1;
+  for (long i = 0; i < (long)v.size(); ++i)
+    if (v[i] == p)
+      idx = i;
+  return idx;
+}
+
+// Plain AddProcess ordering is FIFO: first added is at the front of the queue.
+TEST(SchedulerReadyQueueTieBreak, ArrivalOrderIsFIFO) {
+  prosched::Scheduler scheduler(makeGenCtx());
+  prosched::Process a("a", 1, 0), b("b", 2, 0), c("c", 3, 0);
+
+  scheduler.AddProcess(&a);
+  scheduler.AddProcess(&b);
+  scheduler.AddProcess(&c);
+
+  auto q = scheduler.GetReadyQueueSnapshot();
+  ASSERT_EQ(q.size(), 3u);
+  EXPECT_EQ(q[0], &a); // front = first added
+  EXPECT_EQ(q[1], &b);
+  EXPECT_EQ(q[2], &c); // back = last added
+}
+
+// A process generated during a tick is appended to the BACK, behind any
+// process already waiting in the ready queue.
+TEST(SchedulerReadyQueueTieBreak, GeneratedProcessAppendsToBack) {
+  prosched::Scheduler scheduler(makeGenCtx());
+  scheduler.ResumeGenerating();
+
+  prosched::Process a("already_ready", 1, 0);
+  scheduler.AddProcess(&a); // queue: [a]
+
+  scheduler.GenerateProcessesCycle(1); // pushes a generated process to back
+
+  auto q = scheduler.GetReadyQueueSnapshot();
+  ASSERT_EQ(q.size(), 2u);
+  EXPECT_EQ(q[0], &a);   // pre-existing ready process stays at the front
+  EXPECT_NE(q[1], &a);   // generated process is behind it
+}
+
+// THE tie-break (generate vs wake on the same tick): a process generated in
+// GenerateProcessesCycle (tick step 1) is enqueued AHEAD of a process woken in
+// UpdateSleepingProcessesCycle (tick step 5).
+//
+// Note: because no worker dispatches in this synchronous test, the sleeper's
+// original AddProcess entry is still parked at the front of the queue. We assert
+// on the woken (re-queued) entry, which is the LAST element after waking.
+TEST(SchedulerReadyQueueTieBreak, GeneratedEnqueuedBeforeWokenSleeper) {
+  prosched::Scheduler scheduler(makeGenCtx());
+  scheduler.ResumeGenerating();
+
+  // Sleeper: SLEEP(1) then PRINT — wakes after one UpdateSleeping call and has
+  // a remaining instruction, so it re-enters the queue (does not FINISH).
+  prosched::Process *s = new prosched::Process("sleeper", 1, 0);
+  AddRaw(*s, "SLEEP(1)");
+  AddRaw(*s, "PRINT(\"x\")");
+  s->SetOwnedByScheduler(true);
+  scheduler.AddProcess(s);
+  s->ExecuteInstructions(0); // run SLEEP → WAITING, cyclesRemaining = 1
+  ASSERT_EQ(s->GetState(), prosched::WAITING);
+
+  // Reproduce one SchedulerLoop tick's enqueue order (the relevant steps):
+  scheduler.GenerateProcessesCycle(1);       // step 1: push generated G
+  scheduler.UpdateSleepingProcessesCycle();  // step 5: wake s, push to back
+
+  auto q = scheduler.GetReadyQueueSnapshot();
+  // Find the generated process: the only pointer in the queue that isn't s.
+  prosched::Process *g = nullptr;
+  for (auto *p : q)
+    if (p != s) { g = p; break; }
+  ASSERT_NE(g, nullptr) << "no generated process found in queue";
+
+  long gPos = std::find(q.begin(), q.end(), g) - q.begin();
+  long wokenPos = lastIndexOf(q, s); // the re-queued (woken) entry is last
+  EXPECT_EQ(q.back(), s) << "woken sleeper should be at the back of the queue";
+  EXPECT_LT(gPos, wokenPos)
+      << "generated process must be enqueued ahead of the woken sleeper";
+}
+
+// FIFO is preserved AMONG processes woken on the same tick: two sleepers that
+// expire in the same UpdateSleepingProcessesCycle re-enter in their original
+// insertion order (processes-vector order), not reversed.
+TEST(SchedulerReadyQueueTieBreak, MultipleWokenPreserveFIFOOrder) {
+  prosched::Scheduler scheduler(makeGenCtx());
+
+  prosched::Process *s1 = new prosched::Process("sleeper1", 1, 0);
+  AddRaw(*s1, "SLEEP(1)");
+  AddRaw(*s1, "PRINT(\"x\")");
+  s1->SetOwnedByScheduler(true);
+
+  prosched::Process *s2 = new prosched::Process("sleeper2", 2, 0);
+  AddRaw(*s2, "SLEEP(1)");
+  AddRaw(*s2, "PRINT(\"y\")");
+  s2->SetOwnedByScheduler(true);
+
+  scheduler.AddProcess(s1); // inserted first
+  scheduler.AddProcess(s2); // inserted second
+  s1->ExecuteInstructions(0);
+  s2->ExecuteInstructions(0);
+  ASSERT_EQ(s1->GetState(), prosched::WAITING);
+  ASSERT_EQ(s2->GetState(), prosched::WAITING);
+
+  scheduler.UpdateSleepingProcessesCycle(); // both wake; pushed s1 then s2
+
+  auto q = scheduler.GetReadyQueueSnapshot();
+  // The two woken (re-queued) entries are the last two; order must be s1, s2.
+  ASSERT_GE(q.size(), 2u);
+  EXPECT_EQ(q[q.size() - 2], s1)
+      << "first-inserted sleeper must wake ahead of the second";
+  EXPECT_EQ(q.back(), s2);
+}
+
+} // namespace SchedulerReadyQueueTieBreak

@@ -324,6 +324,26 @@ public:
   }
 
   /**
+   * @brief Returns a non-destructive front-to-back snapshot of the ready queue.
+   *
+   * Index 0 is the front of the queue (next to be dispatched); the last index
+   * is the back (most recently enqueued). Used to observe enqueue tie-break
+   * ordering when several events land on the same scheduler tick.
+   *
+   * @return Vector of process pointers in queue order (front first)
+   */
+  std::vector<prosched::Process *> GetReadyQueueSnapshot() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    std::vector<prosched::Process *> snapshot;
+    std::queue<prosched::Process *> copy = processQueue;
+    while (!copy.empty()) {
+      snapshot.push_back(copy.front());
+      copy.pop();
+    }
+    return snapshot;
+  }
+
+  /**
    * @brief Handles periodic batch process generation.
    *
    * @param cpuCycles Current master clock tick cycle count.
