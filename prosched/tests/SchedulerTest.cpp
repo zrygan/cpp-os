@@ -1135,3 +1135,106 @@ TEST(SchedulerReadyQueueTieBreak, MultipleWokenPreserveFIFOOrder) {
 }
 
 } // namespace SchedulerReadyQueueTieBreak
+
+// ─── SchedulerRoundRobinTimeSlice ─────────────────────────────────────────
+// Faithful reproduction of the GIVEN round-robin time-slice scenario:
+//
+//   time slice (quantum) = 3
+//
+//   p1:
+//     loop 5:
+//       print 1
+//       print 2
+//       print 3
+//       print 4
+//
+//   START:
+//     p1 runs print 1, print 2, print 3   (one quantum = 3 instructions)
+//     (pre-empt) ── p1 goes to the back of the ready queue
+//     p2 runs and finishes while p1 waits
+//     p1 resumes ── print 4, then loop continues (print 1, print 2, ...)
+//     ...until p1 completes all of its instructions.
+//
+// Each PRINT inside the FOR counts as ONE statement toward the quantum, so the
+// FOR([PRINT x4], 5) body flattens to 5 * 4 = 20 individual instructions.
+// With delay_per_exec = 0, the process executes exactly `quantum` instructions
+// per turn before being preempted.
+
+namespace SchedulerRoundRobinTimeSlice {
+
+// The core of the scenario: with quantum 3 and one CPU, p1 must yield the core
+// after its first time slice so that p2 — queued behind it — runs and FINISHES
+// while p1 is still only partway through its instructions.  If preemption did
+// NOT happen, FCFS-style, p1 would run all of its instructions first and p2
+// would finish last.  p1 is given a long loop so it cannot possibly complete in
+// the tiny window between p2 finishing and our observation of p1.
+TEST(SchedulerRoundRobinTimeSlice, PreemptedProcessYieldsSoNextProcessFinishesFirst) {
+  prosched::Scheduler scheduler(makeSmallCtx("rr", 1, 3));
+
+  // p1: loop 100 { print 1; print 2; print 3; print 4 } → 400 instructions
+  prosched::Process *p1 = new prosched::Process("p1", 1, 0);
+  AddRaw(*p1,
+         R"(FOR([PRINT("1"), PRINT("2"), PRINT("3"), PRINT("4")], 100))");
+  p1->SetOwnedByScheduler(true);
+
+  // p2: a single instruction — finishes in one quantum once it gets the core
+  prosched::Process *p2 = new prosched::Process("p2", 2, 0);
+  AddRaw(*p2, R"(PRINT("p2_done"))");
+  p2->SetOwnedByScheduler(true);
+
+  scheduler.AddProcess(p1); // p1 is first in the ready queue
+  scheduler.AddProcess(p2); // p2 is queued behind p1
+  scheduler.Start();
+
+  // Wait for p2 to finish.
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+  while (!p2->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
+
+  // p2 finished — and p1 must NOT have finished, proving p1 was preempted after
+  // its time slice and p2 ran ahead of p1's remaining instructions.
+  EXPECT_TRUE(p2->IsFinished());
+  EXPECT_FALSE(p1->IsFinished());
+
+  scheduler.Stop();
+}
+
+// Faithful "loop 5" version: p1 is preempted at quantum boundaries, but always
+// resumes from exactly where it left off and ultimately executes every one of
+// its 20 instructions (5 iterations * 4 prints).  p2 also finishes.  This
+// proves the preempted process is re-queued (never dropped) and that the FOR
+// body is correctly counted as individual statements.
+TEST(SchedulerRoundRobinTimeSlice, PreemptedProcessResumesAndCompletesAllInstructions) {
+  prosched::Scheduler scheduler(makeSmallCtx("rr", 1, 3));
+
+  // p1: loop 5 { print 1; print 2; print 3; print 4 } → 20 instructions
+  prosched::Process *p1 = new prosched::Process("p1", 1, 0);
+  AddRaw(*p1, R"(FOR([PRINT("1"), PRINT("2"), PRINT("3"), PRINT("4")], 5))");
+  p1->SetOwnedByScheduler(true);
+  ASSERT_EQ(p1->GetTotalInstructions(), 20)
+      << "FOR body must flatten to 5 * 4 = 20 individual statements";
+
+  prosched::Process *p2 = new prosched::Process("p2", 2, 0);
+  AddRaw(*p2, R"(PRINT("p2_done"))");
+  p2->SetOwnedByScheduler(true);
+
+  scheduler.AddProcess(p1);
+  scheduler.AddProcess(p2);
+  scheduler.Start();
+
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+  while ((!p1->IsFinished() || !p2->IsFinished()) &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
+
+  scheduler.Stop();
+
+  EXPECT_TRUE(p1->IsFinished());
+  EXPECT_TRUE(p2->IsFinished());
+  // Every instruction ran — resumed exactly from each preemption point.
+  EXPECT_EQ(p1->GetCurrentInstructionIndex(), 20);
+}
+
+} // namespace SchedulerRoundRobinTimeSlice
