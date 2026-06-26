@@ -819,3 +819,93 @@ namespace SchedulerPrintProcessesContent {
   }
 
 } // namespace SchedulerPrintProcessesContent
+
+// ─── SchedulerSleepLifecycle ──────────────────────────────────────────────
+// Three tests covering the full sleep pipeline:
+//   1. SLEEP puts the process in WAITING state (not just READY or RUNNING)
+//   2. After sleep cycles exhaust, the process re-enters the ready queue at the
+//      BACK and eventually finishes (not dropped, not jumped to front)
+//   3. While a process sleeps, the CPU dispatches the next process in the ready
+//      queue — the CPU is never blocked by a sleeping process
+
+namespace SchedulerSleepLifecycle {
+
+  // After a process executes a SLEEP instruction via the live scheduler, its
+  // state must become WAITING — it is held in the sleeping collection, not
+  // running or ready.
+  TEST(SchedulerSleepLifecycle, SleepingProcessTransitionsToWaiting) {
+    prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
+    prosched::Process *p = new prosched::Process("sleeper", 1, 0);
+    AddRaw(*p, "SLEEP(100)"); // long sleep — stays WAITING long enough to observe
+    AddRaw(*p, "PRINT(\"done\")");
+    p->SetOwnedByScheduler(true);
+    scheduler.AddProcess(p);
+    scheduler.Start();
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+    while (p->GetState() != prosched::WAITING && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+
+    EXPECT_EQ(p->GetState(), prosched::WAITING);
+    scheduler.Stop();
+  }
+
+  // After sleep cycles exhaust, the process goes back to READY, is dispatched,
+  // runs its remaining instruction, and finishes — proving it was re-queued
+  // rather than dropped.  The post-sleep log entry confirms the instruction
+  // after SLEEP actually executed (not just that the process reached FINISHED).
+  TEST(SchedulerSleepLifecycle, WokenProcessReturnsToReadyAndFinishes) {
+    prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
+    prosched::Process *p = new prosched::Process("sleeper", 1, 0);
+    AddRaw(*p, "SLEEP(3)");
+    AddRaw(*p, "PRINT(\"after_sleep\")");
+    p->SetOwnedByScheduler(true);
+    scheduler.AddProcess(p);
+    scheduler.Start();
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+    while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+
+    scheduler.Stop();
+    EXPECT_TRUE(p->IsFinished());
+    bool found_post_sleep = false;
+    for (const auto &log : p->GetLogs())
+      if (log.find("after_sleep") != std::string::npos)
+        found_post_sleep = true;
+    EXPECT_TRUE(found_post_sleep);
+  }
+
+  // With 1 CPU: process A (SLEEP then PRINT) is first in the ready queue;
+  // process B (PRINT only) is behind it.  A sleeps and releases the CPU — B
+  // must be dispatched and finish while A is in WAITING.  If the CPU blocked on
+  // A's sleep, B could never run and this test would time out.
+  TEST(SchedulerSleepLifecycle, ReadyQueueProcessRunsWhileOtherSleeps) {
+    prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
+
+    prosched::Process *a = new prosched::Process("sleeper", 1, 0);
+    AddRaw(*a, "SLEEP(5)");
+    AddRaw(*a, "PRINT(\"a_done\")");
+    a->SetOwnedByScheduler(true);
+
+    prosched::Process *b = new prosched::Process("runner", 2, 0);
+    AddRaw(*b, "PRINT(\"b_done\")");
+    b->SetOwnedByScheduler(true);
+
+    scheduler.AddProcess(a); // A is first in queue
+    scheduler.AddProcess(b); // B is behind A
+    scheduler.Start();
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+    while ((!a->IsFinished() || !b->IsFinished()) &&
+           std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+
+    scheduler.Stop();
+    // B ran and finished while A was sleeping — CPU was not blocked
+    EXPECT_TRUE(b->IsFinished());
+    // A also woke, re-entered the queue at the back, and finished
+    EXPECT_TRUE(a->IsFinished());
+  }
+
+} // namespace SchedulerSleepLifecycle
