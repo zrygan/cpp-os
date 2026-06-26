@@ -159,8 +159,6 @@ public:
       return statements;
     }
 
-    Statement& stmt = statements[currentInstructionIndex];
-
     if (stmt.keyword == Keyword::FOR) {
         currentInstructionIndex++;
         return statements;
