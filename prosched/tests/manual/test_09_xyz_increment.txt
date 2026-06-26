@@ -1,0 +1,71 @@
+TEST 09 — Demo: x/y/z increasing across a fixed FOR-loop instruction set
+=========================================================================
+Config: configs/config_demo_xyz.txt
+        num-cpu 1, scheduler rr, quantum-cycles 20, batch-process-freq 1,
+        min-ins 1000, max-ins 1000, delay-per-exec 0
+
+REQUIRED CODE CHANGES BEFORE RECORDING (prerequisites — these are NOT yet in
+the emulator and must be added first):
+
+  (a) Every process created must start with x, y, z in its symbol table, each
+      initialized to 0.
+        => Seed the Interpreter's `memory` map with x=0, y=0, z=0 at process
+           construction (Process.h / Interpreter.hpp).
+
+  (b) Every generated process must use this EXACT instruction set instead of
+      random instructions:
+
+        FOR([ ADD(x, x, 1), PRINT("Value from: " +x),
+              ADD(y, y, 1), PRINT("Value from: " +y),
+              ADD(z, z, 1), PRINT("Value from: " +z) ], 100)
+
+        => In Scheduler::generateProcess / CreateNamedProcess, instead of
+           GetRandomStatement(), parse and AddInstruction the fixed string
+           above. (min-ins/max-ins are pinned to 1000 so the loop body of
+           6 statements x 100 iterations stays within range.)
+
+GOAL: Verify that across a process's lifetime, x, y, and z visibly increase.
+      Because every iteration does PRINT("Value from: " +x/y/z), the value is
+      observable directly in the process-smi log lines.
+
+--- STEPS (matches grading rubric video) ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: "Scheduler started with 1 core."
+
+3. Wait 5 seconds.
+
+4. Type: screen -r process1   (attach to any running process)
+   EXPECT: Enters the process screen at root:\>
+
+5. Type: process-smi every 2 seconds for 10 seconds (≈5 calls).
+   EXPECT: Each call shows MORE log lines than the previous, and the printed
+           values climb, e.g.:
+       (... ) Core:0 "Value from: 1"
+       (... ) Core:0 "Value from: 1"
+       (... ) Core:0 "Value from: 1"
+       (... ) Core:0 "Value from: 2"
+       ...
+       "Value from: 7"  ...  "Value from: 12"  ...
+   => x, y, z are clearly increasing.
+
+6. Type: exit
+   EXPECT: Returns to the main menu command list.
+
+7. Repeat steps 4-6 TWO more times, each time attaching to a DIFFERENT
+   process (e.g. screen -r process2, then screen -r process3).
+   EXPECT: For all three processes viewed, x/y/z values clearly increase.
+
+   PASS CRITERIA:
+     - For each of the 3 processes inspected, the "Value from: N" log values
+       grow monotonically over successive process-smi calls.
+
+8. Type: exit
+   EXPECT: Program exits cleanly.
+
+NOTE: With num-cpu 1 only one process runs at a time; the others sit READY in
+      the queue. Pick a process that is currently RUNNING (visible in screen
+      -ls) so process-smi actually advances between calls.

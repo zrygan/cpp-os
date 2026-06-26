@@ -1,0 +1,61 @@
+TEST 07 — Demo: stop generation, drain to 0% util, report-util parity
+======================================================================
+Config: configs/config_demo_drain.txt
+        num-cpu 32, scheduler rr, quantum-cycles 1, batch-process-freq 2,
+        min-ins 100, max-ins 100, delay-per-exec 0
+
+NOTE: Copy configs/config_demo_drain.txt over prosched/config.txt before
+      launching. 32 short (100-instruction) processes finish quickly once
+      generation stops, so the cores drain to idle.
+
+GOAL: After scheduler-stop, all in-flight processes finish and the system
+      settles to 0% CPU utilization with mostly FINISHED processes. report-util
+      must print the SAME snapshot as screen -ls AND write it to csopesy-log.txt.
+
+--- STEPS (matches grading rubric video) ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: "Scheduler started with 32 cores."
+
+3. Wait 10 seconds.   (processes are being generated and running)
+
+4. Type: scheduler-stop
+   EXPECT: "Stopped generating processes. Scheduler is still running."
+           No NEW processes are created after this point.
+
+5. Wait 30 seconds.   (all remaining short processes drain to completion)
+
+6. Type: screen -ls
+   EXPECT:
+       CPU utilization: 0%
+       Cores used: 0/32
+       Cores available: 32/32
+
+       --------------------------------------------------
+       Running processes:
+       (none)
+
+       Finished processes:
+       process1    (MM/DD/YYYY ...) Finished   100 / 100
+       process2    (MM/DD/YYYY ...) Finished   100 / 100
+       ... (all generated processes listed as Finished)
+       --------------------------------------------------
+
+7. Type: report-util
+   EXPECT: Identical snapshot to step 6 printed to console, then
+           "Report saved to csopesy-log.txt".
+
+8. Open csopesy-log.txt (written to the binary's working directory).
+   EXPECT: Byte-for-byte the same content shown in step 7 — same 0% util,
+           same Finished process list.
+
+   PASS CRITERIA:
+     - CPU utilization is 0% (0/32 cores used).
+     - Process list is dominated by FINISHED processes.
+     - report-util console output == screen -ls output == csopesy-log.txt.
+
+9. Type: exit
+   EXPECT: Program exits cleanly.

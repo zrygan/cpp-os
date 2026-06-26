@@ -1,0 +1,46 @@
+TEST 11 — Demo: delay-per-exec slows per-instruction progress
+==============================================================
+Config: configs/config_demo_delay.txt
+        num-cpu 4, scheduler rr, quantum-cycles 5, batch-process-freq 1,
+        min-ins 1000, max-ins 1000, delay-per-exec 5
+
+NOTE: Copy configs/config_demo_delay.txt over prosched/config.txt before
+      launching. Every process has exactly 1000 instructions. delay-per-exec 5
+      inserts 5 busy cycles between each executed instruction, so instruction
+      counts climb noticeably slower than with delay-per-exec 0.
+
+GOAL: Show that delay-per-exec throttles how fast each instruction completes.
+      The "current / total" instruction count in screen -ls advances slowly.
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: "Scheduler started with 4 cores."
+
+3. Wait 5 seconds, then type: screen -ls
+   EXPECT: CPU utilization: 100%, 4/4 cores busy.
+           Note the progress counts, e.g. process1  ...  120 / 1000.
+           >>> Write down the current count for one process.
+
+4. Wait another 5 seconds, then type: screen -ls again.
+   EXPECT: The same processes' counts have advanced only modestly
+           (e.g. 120 -> ~250), demonstrably slower than the delay-0 configs
+           (test_06 would show much larger jumps over the same interval).
+
+   PASS CRITERIA:
+     - Processes still run (100% util) but each one's instruction counter
+       increases slowly, confirming delay-per-exec is in effect.
+
+5. (Optional) Type: screen -r process1  then  process-smi
+   EXPECT: New log lines accrue slowly between repeated process-smi calls.
+   Type: exit
+
+6. Type: exit
+   EXPECT: Program exits cleanly.
+
+SANITY CHECK: Re-run this whole test with delay-per-exec 0 (edit config.txt)
+              and confirm the counts climb much faster — that difference IS
+              the feature being demonstrated.

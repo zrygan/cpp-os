@@ -1,0 +1,51 @@
+TEST 10 — Demo: FCFS runs to completion, no preemption
+=======================================================
+Config: configs/config_demo_fcfs.txt
+        num-cpu 2, scheduler fcfs, quantum-cycles 5 (ignored by FCFS),
+        batch-process-freq 1, min-ins 500, max-ins 1000, delay-per-exec 0
+
+NOTE: Copy configs/config_demo_fcfs.txt over prosched/config.txt before
+      launching. Run the binary from the repo root.
+
+GOAL: Under FCFS a process keeps its core until it finishes — there is NO
+      quantum preemption. Demonstrate that the two cores stay 100% busy and
+      that processes complete in first-come-first-served arrival order.
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: Specs printed with "Scheduler: fcfs", "Scheduler started with 2 cores."
+
+3. Wait 5 seconds.
+
+4. Type: screen -ls
+   EXPECT:
+       CPU utilization: 100%
+       Cores used: 2/2
+       Cores available: 0/2
+       Running processes:  process1 (Core: 0 ...), process2 (Core: 1 ...)
+       Finished processes: (a growing list)
+
+   PASS CRITERIA:
+     - Exactly 2 cores busy (100% util).
+     - A process, once on a core, advances every screen -ls until it finishes
+       (it is never bumped back to the queue mid-run).
+
+5. Type: scheduler-stop
+   EXPECT: "Stopped generating processes. Scheduler is still running."
+
+6. Repeatedly type screen -ls every couple seconds until all cores idle.
+   EXPECT:
+       - The two currently-running processes finish first.
+       - Finished list grows in arrival order (process1, process2, process3 ...).
+       - Eventually CPU utilization: 0%, Cores used: 0/2.
+
+7. Type: exit
+   EXPECT: Program exits cleanly.
+
+CONTRAST: Compare with test_06 (RR) — there the same load shows processes
+          being preempted and rotated across cores rather than running to
+          completion uninterrupted.

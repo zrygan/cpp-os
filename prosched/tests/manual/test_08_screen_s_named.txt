@@ -1,0 +1,74 @@
+TEST 08 — Demo: screen -s named processes, screen -ls listing, process-smi
+===========================================================================
+Config: configs/config_demo_named.txt
+        num-cpu 4, scheduler rr, quantum-cycles 5, batch-process-freq 1,
+        min-ins 1000, max-ins 1000, delay-per-exec 0
+
+NOTE: Copy configs/config_demo_named.txt over prosched/config.txt before
+      launching. min-ins == max-ins == 1000 means every process has exactly
+      1000 instructions.
+
+GOAL: Manually create three named processes (proc-01, proc-02, proc-03) with
+      screen -s, confirm they all appear in screen -ls, then reattach to each
+      with screen -r and inspect its progress with process-smi.
+
+--- STEPS (matches grading rubric video) ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: "Scheduler started with 4 cores."
+   (Required: screen -ls and process tracking only work while the scheduler
+    is running.)
+
+3. Create the three processes (each clears the screen into its process view;
+   type exit to return to the menu between creations):
+
+       screen -s proc-01      -> enters proc-01 screen; type: exit
+       screen -s proc-02      -> enters proc-02 screen; type: exit
+       screen -s proc-03      -> enters proc-03 screen; type: exit
+
+   EXPECT: Each screen -s clears the screen and shows the root:\> prompt for
+           that process — i.e. the 3 processes are created successfully.
+
+4. Type: screen -ls
+   EXPECT: All three appear in the listing:
+       proc-01   (MM/DD/YYYY ...) Core: <c>   <n> / 1000
+       proc-02   (MM/DD/YYYY ...) Core: <c>   <n> / 1000
+       proc-03   (MM/DD/YYYY ...) Core: <c>   <n> / 1000
+       (auto-generated processN entries may also appear — batch-process-freq 1)
+
+5. Wait 5 seconds.   (lets the processes advance)
+
+6. For each process, reattach and inspect:
+
+       screen -r proc-01      -> type: process-smi      -> type: exit
+       screen -r proc-02      -> type: process-smi      -> type: exit
+       screen -r proc-03      -> type: process-smi      -> type: exit
+
+   EXPECT (each process-smi):
+       Process Name: proc-0X
+       ID: <number>
+
+       (MM/DD/YYYY HH:MM:SSam/pm) Core:<c> "Hello world from proc-0X!"
+       ... (log lines accumulated so far)
+
+   PASS CRITERIA:
+     - All 3 named processes were created and listed in screen -ls.
+     - screen -r successfully attaches to each.
+     - process-smi shows that process's progress.
+
+7. Type: exit
+   EXPECT: Program exits cleanly.
+
+KNOWN-ISSUE WATCH (IMPORTANT for this rubric):
+  - The rubric expects process-smi to print the "current instruction line"
+    and "total lines of code". The current EnterProcessScreen (Controller.cpp
+    ~line 215) prints only Name, ID, logs and "Finished!" — it does NOT print
+    a "current / total" instruction line (known bug #5).
+    => Add e.g.  "Current instruction line: <GetCurrentInstructionIndex()> / "
+                 "<GetTotalInstructions()>"  to process-smi before recording,
+       otherwise this scenario will be marked incomplete.
+  - A process that already hit 1000/1000 is FINISHED and screen -r will report
+    "Process proc-0X not found." Reattach within a few seconds of creation.

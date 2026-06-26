@@ -1,0 +1,52 @@
+TEST 06 — Demo: 100% CPU utilization under load (RR)
+=====================================================
+Config: configs/config_demo_high_util.txt
+        num-cpu 4, scheduler rr, quantum-cycles 5, batch-process-freq 1,
+        min-ins 1000, max-ins 2000, delay-per-exec 0
+
+NOTE: Copy configs/config_demo_high_util.txt over the config.txt that the
+      binary reads (Config.h CONFIG_FILENAME = "prosched/config.txt") before
+      launching. Run the binary from the repo root so the path resolves.
+
+GOAL: With batch-process-freq 1 the scheduler spawns a process every tick, so
+      all 4 cores stay saturated. screen -ls should report 100% utilization
+      with mostly RUNNING processes.
+
+--- STEPS (matches grading rubric video) ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully." + command list.
+
+2. Type: scheduler-start
+   EXPECT: Scheduler specs printed, "Scheduler started with 4 cores."
+
+3. Wait 5 seconds.
+
+4. Type: screen -ls
+   EXPECT:
+       CPU utilization: 100%
+       Cores used: 4/4
+       Cores available: 0/4
+
+       --------------------------------------------------
+       Running processes:
+       process1   (MM/DD/YYYY ...) Core: 0    <n> / <total>
+       process2   (MM/DD/YYYY ...) Core: 1    <n> / <total>
+       process3   (MM/DD/YYYY ...) Core: 2    <n> / <total>
+       process4   (MM/DD/YYYY ...) Core: 3    <n> / <total>
+       ... (many more queued/running processes)
+
+       Finished processes:
+       (few or none this early)
+       --------------------------------------------------
+
+   PASS CRITERIA:
+     - CPU utilization shows 100% (4/4 cores used).
+     - The list is dominated by RUNNING processes, few/no Finished ones.
+
+5. Type: exit
+   EXPECT: Program exits cleanly.
+
+KNOWN-ISSUE WATCH:
+  - Utilization may render as "100.0%" instead of "100%" (known bug #9).
+    Acceptable for the demo but note it if the rubric requires integer format.

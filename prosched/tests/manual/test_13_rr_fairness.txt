@@ -1,0 +1,56 @@
+TEST 13 — Demo: Round-Robin preemption and fairness
+====================================================
+Config: configs/config_demo_rr_fair.txt
+        num-cpu 2, scheduler rr, quantum-cycles 3, batch-process-freq 1,
+        min-ins 1000, max-ins 2000, delay-per-exec 0
+
+NOTE: Copy configs/config_demo_rr_fair.txt over prosched/config.txt before
+      launching. Small quantum (3) + only 2 cores + steady generation means
+      many processes share the CPU and get preempted frequently.
+
+GOAL: Show RR behavior: a running process is preempted after its quantum and
+      sent back to the queue so a waiting process can run. Over time progress
+      is spread across MANY processes rather than finishing a few at a time.
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: Specs show "Scheduler: rr", "Quantum: 3", "Scheduler started with 2 cores."
+
+3. Wait 3 seconds, then type: screen -ls
+   EXPECT:
+       CPU utilization: 100%, Cores used: 2/2
+       Running processes:  2 entries (the 2 currently on-core)
+       A LARGE queue of other processes exists but only 2 hold cores at once.
+       >>> Note WHICH two process names are on Core 0 / Core 1.
+
+4. Type: screen -ls again a few times in a row.
+   EXPECT: The pair of process names occupying the cores CHANGES between
+           calls — processes are rotating on/off the cores (preemption),
+           and the Core column for a given process may change over time.
+
+5. Demonstrate per-process pausing:
+       screen -r process1
+       type: process-smi      (note the number of log lines)
+       wait ~2 seconds
+       type: process-smi      (log lines may be UNCHANGED if process1 is
+                               currently preempted/queued, then jump once it
+                               regains a core)
+       type: exit
+
+   PASS CRITERIA:
+     - Many processes make partial progress concurrently (RR fairness),
+       rather than 2 processes running start-to-finish before others begin.
+     - Core assignments rotate across successive screen -ls calls.
+
+6. Type: scheduler-stop, then screen -ls every couple seconds.
+   EXPECT: The backlog drains; finished list grows; util eventually 0%.
+
+7. Type: exit
+   EXPECT: Program exits cleanly.
+
+CONTRAST: test_10 (FCFS, same 2-core load) keeps each process on its core
+          until done — no rotation. This test is the RR counterpart.

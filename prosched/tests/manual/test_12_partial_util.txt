@@ -1,0 +1,57 @@
+TEST 12 — Demo: partial CPU utilization (fewer processes than cores)
+=====================================================================
+Config: configs/config_demo_partial.txt
+        num-cpu 4, scheduler rr, quantum-cycles 5, batch-process-freq 1,
+        min-ins 2000, max-ins 3000, delay-per-exec 0
+
+NOTE: Copy configs/config_demo_partial.txt over prosched/config.txt before
+      launching. Long (2000-3000 instruction) processes so the few we keep
+      stay RUNNING for the whole demo.
+
+GOAL: Show that CPU utilization reflects how many cores are actually busy.
+      With only 2 live processes on a 4-core machine, utilization is 50%
+      (2/4 cores used), not 100%.
+
+--- STEPS ---
+
+1. Launch and type: initialize
+   EXPECT: "Initialized successfully."
+
+2. Type: scheduler-start
+   EXPECT: "Scheduler started with 4 cores."
+
+3. IMMEDIATELY type: scheduler-stop
+   EXPECT: "Stopped generating processes."
+   (Goal: halt auto-generation while only a couple of processes exist.)
+
+4. Type: screen -ls
+   EXPECT: Whatever small number of processes were generated (often 1-3)
+           are running; CPU utilization is BELOW 100% if fewer than 4 exist.
+
+5. Create named long-running processes to reach a known busy-core count.
+   To demonstrate a clean 50%, ensure exactly 2 cores are occupied:
+
+       screen -s longA     -> type: exit
+       screen -s longB     -> type: exit
+
+   (If step 4 already left some auto processes running, account for them —
+    the point is "cores used < num-cpu", not a magic number.)
+
+6. Type: screen -ls
+   EXPECT (example with 2 busy cores):
+       CPU utilization: 50%
+       Cores used: 2/4
+       Cores available: 2/4
+       Running processes:  longA (Core: 0 ...), longB (Core: 1 ...)
+       Finished processes: (possibly a few short auto processes)
+
+   PASS CRITERIA:
+     - Cores used is strictly less than num-cpu (4).
+     - CPU utilization == (cores used / 4) * 100, i.e. partial, not 100%.
+
+7. (Optional) Type: scheduler-start to resume generation.
+   Wait a few seconds, screen -ls -> utilization climbs back toward 100% as
+   new processes fill the idle cores.
+
+8. Type: exit
+   EXPECT: Program exits cleanly.
