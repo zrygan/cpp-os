@@ -86,6 +86,10 @@ public:
               repeats = 1; 
             }
         }
+
+        // statements.push_back(stmt);
+        // Statement* lastAdded = &statements.back();
+
         Statement* lastAdded = nullptr;
         for (int r = 0; r < repeats; r++) {
             for (auto& nested : stmt.nested) {
@@ -155,7 +159,14 @@ public:
       return statements;
     }
 
-    interpreter.executeStatements({statements[currentInstructionIndex]});
+    Statement& stmt = statements[currentInstructionIndex];
+
+    if (stmt.keyword == Keyword::FOR) {
+        currentInstructionIndex++;
+        return statements;
+    }
+
+    interpreter.executeStatements({stmt});
     currentInstructionIndex++;
 
     auto output = interpreter.flushBuffer();
