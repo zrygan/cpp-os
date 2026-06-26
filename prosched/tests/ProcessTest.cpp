@@ -486,6 +486,15 @@ namespace ProcessTotalInstructions {
     EXPECT_EQ(p.GetTotalInstructions(), 3);
   }
 
+  // For-loop additions are all counted — GetTotalInstructions matches loop count
+  TEST(ProcessTotalInstructions, ForLoopInstructionsAllCounted) {
+    prosched::Process p("tot_3", 3, 0);
+    const int count = 20;
+    for (int i = 0; i < count; i++)
+      AddRaw(p, "PRINT(\"x\")");
+    EXPECT_EQ(p.GetTotalInstructions(), count);
+  }
+
 } // namespace ProcessTotalInstructions
 
 // ─── ProcessGetSetState ───────────────────────────────────────────────────
