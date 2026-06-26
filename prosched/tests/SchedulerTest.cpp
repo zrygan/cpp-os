@@ -876,10 +876,10 @@ namespace SchedulerSleepLifecycle {
     EXPECT_TRUE(found_post_sleep);
   }
 
-  // With 1 CPU: process A (SLEEP then PRINT) is first in the ready queue;
-  // process B (PRINT only) is behind it.  A sleeps and releases the CPU — B
-  // must be dispatched and finish while A is in WAITING.  If the CPU blocked on
-  // A's sleep, B could never run and this test would time out.
+  // With 1 CPU: A (SLEEP(5) then PRINT) is first in queue, B (PRINT) is second.
+  // A dispatches, hits SLEEP, releases the CPU — B must finish while A is still
+  // WAITING.  We verify this by waiting only for B, then asserting A has NOT
+  // finished yet (it is still sleeping).  Only after that do we wait for A.
   TEST(SchedulerSleepLifecycle, ReadyQueueProcessRunsWhileOtherSleeps) {
     prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
 
@@ -896,16 +896,85 @@ namespace SchedulerSleepLifecycle {
     scheduler.AddProcess(b); // B is behind A
     scheduler.Start();
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
-    while ((!a->IsFinished() || !b->IsFinished()) &&
+    // Wait for B to finish
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+    while (!b->IsFinished() && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+
+    // B has finished — A must still be sleeping (not yet finished)
+    EXPECT_TRUE(b->IsFinished());
+    EXPECT_FALSE(a->IsFinished()); // proves B finished BEFORE A woke up
+
+    // Now wait for A to wake, re-enter the queue, and finish
+    deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+    while (!a->IsFinished() && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+
+    scheduler.Stop();
+    EXPECT_TRUE(a->IsFinished());
+  }
+
+  // Scenario: P1 sleeps, P2 runs and finishes, P3 starts running, and while P3
+  // is still executing P1's sleep expires and it re-enters the ready queue.
+  //
+  // Queue order: [P1, P2, P3]
+  // Tick sequence (1 CPU):
+  //   P1 dispatches → SLEEP(3) → WAITING, CPU free
+  //   P2 dispatches → PRINT → FINISHED, CPU free
+  //   P3 dispatches → runs many PRINTs (still executing)
+  //   After 3 sleep ticks → P1 becomes READY (back in queue behind P3)
+  //   P3 finishes → P1 dispatches, finishes
+  TEST(SchedulerSleepLifecycle, P1WakesIntoReadyQueueWhileP3StillRunning) {
+    prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
+
+    // P1: sleeps 3 ticks, then prints
+    prosched::Process *p1 = new prosched::Process("p1_sleeper", 1, 0);
+    AddRaw(*p1, "SLEEP(3)");
+    AddRaw(*p1, "PRINT(\"p1_after_sleep\")");
+    p1->SetOwnedByScheduler(true);
+
+    // P2: single instruction — finishes while P1 is sleeping
+    prosched::Process *p2 = new prosched::Process("p2_fast", 2, 0);
+    AddRaw(*p2, "PRINT(\"p2_done\")");
+    p2->SetOwnedByScheduler(true);
+
+    // P3: many instructions — still running when P1 wakes up
+    prosched::Process *p3 = new prosched::Process("p3_slow", 3, 0);
+    for (int i = 0; i < 20; i++)
+      AddRaw(*p3, "PRINT(\"p3\")");
+    p3->SetOwnedByScheduler(true);
+
+    scheduler.AddProcess(p1);
+    scheduler.AddProcess(p2);
+    scheduler.AddProcess(p3);
+    scheduler.Start();
+
+    // Step 1: wait for P2 to finish — P1 must still be sleeping at this point
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+    while (!p2->IsFinished() && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+    ASSERT_TRUE(p2->IsFinished());
+    EXPECT_EQ(p1->GetState(), prosched::WAITING); // P1 still in sleep
+
+    // Step 2: wait for P1's sleep to expire (state flips to READY)
+    // P3 is on the CPU with 20 instructions, so it won't finish before P1 wakes
+    deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+    while (p1->GetState() != prosched::READY && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+
+    // P1 is READY (back in queue) — P3 is still running and not yet finished
+    EXPECT_EQ(p1->GetState(), prosched::READY);
+    EXPECT_FALSE(p3->IsFinished()); // P3 still on CPU when P1 woke
+
+    // Step 3: let everything finish
+    deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+    while ((!p1->IsFinished() || !p3->IsFinished()) &&
            std::chrono::steady_clock::now() < deadline)
       std::this_thread::yield();
 
     scheduler.Stop();
-    // B ran and finished while A was sleeping — CPU was not blocked
-    EXPECT_TRUE(b->IsFinished());
-    // A also woke, re-entered the queue at the back, and finished
-    EXPECT_TRUE(a->IsFinished());
+    EXPECT_TRUE(p1->IsFinished());
+    EXPECT_TRUE(p3->IsFinished());
   }
 
 } // namespace SchedulerSleepLifecycle
