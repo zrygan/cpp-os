@@ -497,6 +497,78 @@ namespace ProcessTotalInstructions {
 
 } // namespace ProcessTotalInstructions
 
+// ─── ProcessForInstruction ────────────────────────────────────────────────
+// GetTotalInstructions counts recursively: FOR([body], n) = 1 (the FOR) +
+// count of body statements. A 2-body FOR therefore contributes 3, not 1.
+// currentInstructionIndex still tracks top-level statements only, so one
+// ExecuteInstructions call runs the whole loop and advances the index by 1.
+
+namespace ProcessForInstruction {
+
+  // FOR([PRINT("a"), PRINT("b")], 5) = 1 (FOR) + 2 (body PRINTs) = 3
+  TEST(ProcessForInstruction, ForCountsItselfAndBodyInstructions) {
+    prosched::Process p("for_tot", 1, 0);
+    AddRaw(p, R"(FOR([PRINT("a"), PRINT("b")], 5))");
+    EXPECT_EQ(p.GetTotalInstructions(), 3);
+  }
+
+  // One ExecuteInstructions call runs the whole FOR and advances the top-level
+  // index by exactly 1, finishing the process (the FOR was the only instruction).
+  TEST(ProcessForInstruction, ExecutingForAdvancesIndexByOneAndFinishes) {
+    prosched::Process p("for_exec", 2, 0);
+    AddRaw(p, R"(FOR([PRINT("x")], 3))");
+
+    p.ExecuteInstructions(0);
+
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
+    EXPECT_TRUE(p.IsFinished());
+  }
+
+  // The entire loop body executes within that single call: a 2-instruction body
+  // repeated 3 times emits all 6 log lines at once.
+  TEST(ProcessForInstruction, ForBodyAllIterationsLoggedInOneCall) {
+    prosched::Process p("for_logs", 3, 0);
+    AddRaw(p, R"(FOR([PRINT("a"), PRINT("b")], 3))");
+
+    p.ExecuteInstructions(0);
+
+    EXPECT_EQ(p.GetLogs().size(), 6u); // 2 prints × 3 iterations
+  }
+
+  // FOR([FOR([PRINT("x")], 2)], 3): outer FOR=1, inner FOR=1, PRINT=1 → total 3
+  TEST(ProcessForInstruction, NestedForCountsAllLevels) {
+    prosched::Process p("for_nested", 5, 0);
+    AddRaw(p, R"(FOR([FOR([PRINT("x")], 2)], 3))");
+    EXPECT_EQ(p.GetTotalInstructions(), 3);
+  }
+
+  // FOR([FOR([PRINT("a"),PRINT("b")], 2)], 3): outer=1, inner=1, 2 PRINTs → 4
+  TEST(ProcessForInstruction, NestedForWithMultipleBodyInstructions) {
+    prosched::Process p("for_nested2", 6, 0);
+    AddRaw(p, R"(FOR([FOR([PRINT("a"), PRINT("b")], 2)], 3))");
+    EXPECT_EQ(p.GetTotalInstructions(), 4);
+  }
+
+  // PRINT + FOR([PRINT], 4): total = 1 (PRINT) + 1 (FOR) + 1 (body PRINT) = 3.
+  // The top-level index walks 0 → 1 → 2 across two ExecuteInstructions calls.
+  TEST(ProcessForInstruction, ForMixedWithPlainInstructionsTotalIsRecursive) {
+    prosched::Process p("for_mixed", 4, 0);
+    AddRaw(p, R"(PRINT("before"))");
+    AddRaw(p, R"(FOR([PRINT("loop")], 4))");
+
+    EXPECT_EQ(p.GetTotalInstructions(), 3);
+
+    p.ExecuteInstructions(0); // PRINT("before")
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
+    EXPECT_FALSE(p.IsFinished());
+
+    p.ExecuteInstructions(0); // the whole FOR
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 2);
+    EXPECT_TRUE(p.IsFinished());
+  }
+
+} // namespace ProcessForInstruction
+
 // ─── ProcessGetSetState ───────────────────────────────────────────────────
 
 namespace ProcessGetSetState {
