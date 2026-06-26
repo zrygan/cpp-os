@@ -268,12 +268,16 @@ public:
       return; // Idle core
     }
 
-    if (p->GetState() == ProcessState::FINISHED) {
+    if (p->GetState() == ProcessState::FINISHED || p->GetState() == ProcessState::WAITING) {
       currentProcess = nullptr;
       return;
     }
 
     TickExecution(p);
+  }
+
+  Worker* ClearCore() {
+
   }
 
   /**

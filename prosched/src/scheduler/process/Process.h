@@ -77,6 +77,24 @@ public:
    */
   Statement *AddInstruction(Statement &stmt) {
     try {
+      if (stmt.keyword == Keyword::FOR) {
+        int repeats = 1;
+        if (stmt.args.size() >= 2) {
+            try { 
+              repeats = std::stoi(stmt.args[1]); 
+            } catch (...) { 
+              repeats = 1; 
+            }
+        }
+        Statement* lastAdded = nullptr;
+        for (int r = 0; r < repeats; r++) {
+            for (auto& nested : stmt.nested) {
+              lastAdded = AddInstruction(nested);
+            }
+        }
+        return lastAdded;
+      }
+
       statements.push_back(stmt);
       return &statements.back();
     } catch (const std::bad_alloc &e) {

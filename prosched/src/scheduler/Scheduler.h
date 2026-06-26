@@ -249,8 +249,6 @@ public:
     Process *p = new Process(name, pid, tick);
     p->SetOwnedByScheduler(true);
     Statement instruction;
-    // std::vector<std::string> instructions = {"PRINT", "DECLARE", "ADD",
-    //                                       "SUBTRACT", "SLEEP", "FOR"};
 
     // std::cout << p->GetName() << "\n";
 
