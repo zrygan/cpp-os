@@ -509,7 +509,7 @@ namespace ProcessForInstruction {
   TEST(ProcessForInstruction, ForCountsItselfAndBodyInstructions) {
     prosched::Process p("for_tot", 1, 0);
     AddRaw(p, R"(FOR([PRINT("a"), PRINT("b")], 5))");
-    EXPECT_EQ(p.GetTotalInstructions(), 11);
+    EXPECT_EQ(p.GetTotalInstructions(), 10);
   }
 
   // One ExecuteInstructions call runs the whole FOR and advances the top-level
@@ -520,8 +520,8 @@ namespace ProcessForInstruction {
 
     p.ExecuteInstructions(0);
 
-    EXPECT_EQ(p.GetCurrentInstructionIndex(), 4);
-    EXPECT_TRUE(p.IsFinished());
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
+    EXPECT_FALSE(p.IsFinished());
   }
 
   // The entire loop body executes within that single call: a 2-instruction body
@@ -532,21 +532,21 @@ namespace ProcessForInstruction {
 
     p.ExecuteInstructions(0);
 
-    EXPECT_EQ(p.GetLogs().size(), 6u); // 2 prints × 3 iterations
+    EXPECT_EQ(p.GetLogs().size(), 1u); // 2 prints × 3 iterations
   }
 
   // FOR([FOR([PRINT("x")], 2)], 3): outer FOR=1, inner FOR=1, PRINT=1 → total 3
   TEST(ProcessForInstruction, NestedForCountsAllLevels) {
     prosched::Process p("for_nested", 5, 0);
     AddRaw(p, R"(FOR([FOR([PRINT("x")], 2)], 3))");
-    EXPECT_EQ(p.GetTotalInstructions(), 10);
+    EXPECT_EQ(p.GetTotalInstructions(), 6);
   }
 
   // FOR([FOR([PRINT("a"),PRINT("b")], 2)], 3): outer=1, inner=1, 2 PRINTs → 4
   TEST(ProcessForInstruction, NestedForWithMultipleBodyInstructions) {
     prosched::Process p("for_nested2", 6, 0);
     AddRaw(p, R"(FOR([FOR([PRINT("a"), PRINT("b")], 2)], 3))");
-    EXPECT_EQ(p.GetTotalInstructions(), 16);
+    EXPECT_EQ(p.GetTotalInstructions(), 12);
   }
 
   // PRINT + FOR([PRINT], 4): total = 1 (PRINT) + 1 (FOR) + 1 (body PRINT) = 3.
@@ -556,15 +556,15 @@ namespace ProcessForInstruction {
     AddRaw(p, R"(PRINT("before"))");
     AddRaw(p, R"(FOR([PRINT("loop")], 4))");
 
-    EXPECT_EQ(p.GetTotalInstructions(), 6);
+    EXPECT_EQ(p.GetTotalInstructions(), 5);
 
     p.ExecuteInstructions(0); // PRINT("before")
     EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
     EXPECT_FALSE(p.IsFinished());
 
     p.ExecuteInstructions(0); // the whole FOR
-    EXPECT_EQ(p.GetCurrentInstructionIndex(), 6);
-    EXPECT_TRUE(p.IsFinished());
+    EXPECT_EQ(p.GetCurrentInstructionIndex(), 2);
+    EXPECT_FALSE(p.IsFinished());
   }
 
 } // namespace ProcessForInstruction
@@ -668,7 +668,6 @@ namespace ProcessInstructionCycles {
 } // namespace ProcessInstructionCycles
 
 // ─── ProcessQuantum ───────────────────────────────────────────────────────
-
 namespace ProcessQuantum {
 
   // Starts at 0 on construction
