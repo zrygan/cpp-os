@@ -158,6 +158,76 @@ public:
     }
   }
 
+  void ShowScreenProcesses() {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+
+    double utilization =0 ;
+    int coresUsed = 0;
+    int coresAvail = 0;
+
+    for (Worker* w : workers) {
+      if(w->IsBusy()) {
+        coresUsed++;
+      } else {
+        coresAvail++;
+      }
+    }
+
+    utilization = (static_cast<double>(coresUsed)/workers.size())*100.0;
+
+    std::cout << "\nCPU utilization: " << utilization << "%\n";
+    std::cout << "Cores used: " << coresUsed << "/" << workers.size() << "\n";
+    std::cout << "Cores available: " << coresAvail << "/" << workers.size() << "\n";
+
+    std::cout << "\n" << std::string(50, '-');
+    std::cout << "\nRunning Processes: \n";
+
+    for (Worker* w : workers) {
+        Process* p = w->GetCurrentProcess();
+        if(p != nullptr) {
+            std::cout << 
+                p->GetName() << 
+                std::string(5, ' ') <<
+                p->GetProcessTimeStart() <<
+                std::string(5, ' ') <<
+                "Core: " << w->GetCoreNum() <<
+                std::string(5, ' ') << 
+                p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
+                "\n";
+        } else {
+            std::cout << "Core "  << w->GetCoreNum() << std::string(5, ' ') << " (idle)\n";
+        }
+    }
+
+    std::vector<Process*> finished;
+    for (Process* p : processes) {
+        if (p != nullptr && p->IsFinished()) {
+            finished.push_back(p);
+        }
+    }
+
+    int startIdx = std::max(0, (int)finished.size() - 10);
+
+    std::cout << "\n\nFinished Processes: \n";
+    for (int i = startIdx; i < (int)finished.size(); i++) {
+      Process* p = finished[i];
+      if (p != nullptr && p->IsFinished()) {
+        std::cout << p->GetName() << 
+            std::string(5, ' ') <<
+            p->GetProcessTimeStart() <<
+            std::string(5, ' ') <<
+            "Finished" <<
+            std::string(5, ' ') <<
+            p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
+            "\n";
+      }
+    }
+
+    std::cout << std::string(50, '-') << "\n";
+    std::cout << std::endl;
+  
+  }
+
   /**
    * @brief prints the current processes when "screen -ls" is called
    *

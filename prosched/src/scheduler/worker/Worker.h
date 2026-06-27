@@ -276,10 +276,6 @@ public:
     TickExecution(p);
   }
 
-  Worker* ClearCore() {
-
-  }
-
   /**
    * @brief Worker thread's main execution loop representing a single CPU core.
    *

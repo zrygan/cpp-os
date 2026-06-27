@@ -144,7 +144,8 @@ void Controller::ExecuteCommand(const Command &command) {
       break;
 
     case CLI_COMMAND::CLI_SCREEN_LS:
-      this->scheduler->PrintProcesses();
+      this->scheduler->ShowScreenProcesses();
+      // this->scheduler->PrintProcesses();
       break;
 
     case CLI_COMMAND::CLI_SCREEN_S: {
