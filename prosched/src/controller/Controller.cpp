@@ -6,6 +6,9 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "Config.h"
 #include "Context.h"
@@ -210,40 +213,128 @@ void Controller::ExecuteCommand(const Command &command) {
 
 void Controller::EnterProcessScreen(prosched::Process *p) {
   std::cout << "\033[?1049h" << std::flush;
+
+  struct termios old_termios;
+  tcgetattr(STDIN_FILENO, &old_termios);
+  struct termios raw = old_termios;
+  raw.c_lflag &= ~(ICANON | ECHO);
+  raw.c_iflag &= ~(ICRNL);
+  raw.c_cc[VMIN] = 1;
+  raw.c_cc[VTIME] = 0;
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+
+  auto restore = [&]() {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_termios);
+    std::cout << "\033[?1049l" << std::flush;
+  };
+
+  struct winsize ws;
+  ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+  int rows = (ws.ws_row > 0) ? ws.ws_row : 24;
+
+  std::vector<std::string> output_lines;
+  int scroll_offset = 0;
   std::string cmd;
 
+  auto push_output = [&](const std::string &text) {
+    std::istringstream ss(text);
+    std::string line;
+    while (std::getline(ss, line))
+      output_lines.push_back(line);
+  };
+
+  auto render_full = [&]() {
+    std::cout << "\033[2J\033[H";
+    int content_rows = rows - 1;
+    int total = (int)output_lines.size();
+    int start = total - content_rows - scroll_offset;
+    if (start < 0) start = 0;
+    int end = std::min(start + content_rows, total);
+    for (int i = start; i < end; i++)
+      std::cout << output_lines[i] << "\r\n";
+    std::cout << "\033[" << rows << ";1H\033[2Kroot:\\> " << cmd << std::flush;
+  };
+
+  auto render_prompt = [&]() {
+    std::cout << "\033[" << rows << ";1H\033[2Kroot:\\> " << cmd << std::flush;
+  };
+
+  render_full();
+
   while (true) {
-    std::cout << "root:\\> ";
-    std::getline(std::cin, cmd);
-
-    size_t start = cmd.find_first_not_of(" \t\r\n");
-    size_t end = cmd.find_last_not_of(" \t\r\n");
-    cmd = (start == std::string::npos) ? "" : cmd.substr(start, end - start + 1);
-
-    if (cmd == "process-smi") {
-      std::cout << "\nProcess Name: " << p->GetName() << "\n";
-      std::cout << "ID: " << p->GetPID() << "\n";
-      int total = p->GetTotalInstructions();
-      int current = p->GetCurrentInstructionIndex();
-      std::cout << "Progress: " << (current < total ? current + 1 : total)
-                << " / " << total << "\n\n";
-
-      auto logs = p->GetLogs();
-      for (const auto &log : logs) {
-        std::cout << log << "\n";
-      }
-
-      if (p->IsFinished()) {
-        std::cout << "\nFinished!\n";
-      }
-      std::cout << "\n";
-    } else if (cmd == "exit") {
-      std::cout << "\033[?1049l" << std::flush;
+    char c;
+    if (read(STDIN_FILENO, &c, 1) <= 0)
       break;
-    } else if (!cmd.empty()) {
-      std::cout << "Unknown command. Use 'process-smi' or 'exit'.\n\n";
+
+    if (c == '\r' || c == '\n') {
+      std::string trimmed = cmd;
+      size_t s = trimmed.find_first_not_of(" \t");
+      size_t e = trimmed.find_last_not_of(" \t");
+      trimmed = (s == std::string::npos) ? "" : trimmed.substr(s, e - s + 1);
+      cmd.clear();
+      scroll_offset = 0;
+
+      if (trimmed == "process-smi") {
+        int total = p->GetTotalInstructions();
+        int current = p->GetCurrentInstructionIndex();
+        std::ostringstream oss;
+        oss << "Process name: " << p->GetName();
+        oss << "\nID: " << p->GetPID();
+        oss << "\nLogs:";
+        for (const auto &log : p->GetLogs())
+          oss << "\n" << log;
+        oss << "\n";
+        if (current >= total)
+          oss << "\nFinished!";
+        else {
+          oss << "\nCurrent instruction line: " << current + 1;
+          oss << "\nLines of code: " << total;
+        }
+        push_output(oss.str());
+      } else if (trimmed == "exit") {
+        restore();
+        return;
+      } else if (!trimmed.empty()) {
+        push_output("Unknown command. Use 'process-smi' or 'exit'.");
+      }
+
+      render_full();
+    } else if (c == 127 || c == '\b') {
+      if (!cmd.empty()) {
+        cmd.pop_back();
+        render_prompt();
+      }
+    } else if (c == '\033') {
+      char seq[2] = {0};
+      if (read(STDIN_FILENO, &seq[0], 1) <= 0 || seq[0] != '[')
+        continue;
+      if (read(STDIN_FILENO, &seq[1], 1) <= 0)
+        continue;
+
+      int max_scroll = std::max(0, (int)output_lines.size() - (rows - 1));
+      if (seq[1] == 'A') {
+        if (scroll_offset < max_scroll) { scroll_offset++; render_full(); }
+      } else if (seq[1] == 'B') {
+        if (scroll_offset > 0) { scroll_offset--; render_full(); }
+      } else if (seq[1] == '5') {
+        char tilde; read(STDIN_FILENO, &tilde, 1);
+        scroll_offset = std::min(scroll_offset + (rows - 1), max_scroll);
+        render_full();
+      } else if (seq[1] == '6') {
+        char tilde; read(STDIN_FILENO, &tilde, 1);
+        scroll_offset = std::max(0, scroll_offset - (rows - 1));
+        render_full();
+      }
+    } else if (c == 3 || c == 4) {  // Ctrl+C / Ctrl+D
+      restore();
+      return;
+    } else if (c >= 32) {
+      cmd += c;
+      render_prompt();
     }
   }
+
+  restore();
 }
 
 void Controller::PrintReportUtil() {
