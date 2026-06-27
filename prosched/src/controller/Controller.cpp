@@ -149,6 +149,10 @@ void Controller::ExecuteCommand(const Command &command) {
       break;
 
     case CLI_COMMAND::CLI_SCREEN_S: {
+      if (command.processName.empty()) {
+        std::cout << "screen -s: a process name is required.\n\n";
+        break;
+      }
       prosched::Process *p =
           this->scheduler->CreateNamedProcess(command.processName);
       this->scheduler->AddProcess(p);
@@ -157,6 +161,10 @@ void Controller::ExecuteCommand(const Command &command) {
     }
 
     case CLI_COMMAND::CLI_SCREEN_R: {
+      if (command.processName.empty()) {
+        std::cout << "screen -r: a process name is required.\n\n";
+        break;
+      }
       prosched::Process *p =
           this->scheduler->FindProcessByName(command.processName);
       if (p == nullptr) {
