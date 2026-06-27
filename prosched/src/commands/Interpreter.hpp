@@ -66,7 +66,8 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
     );
   }
 
-  std::uniform_int_distribution<size_t> dist(0, all_keywords.size() - 1);
+  // i think it's here?
+  std::uniform_int_distribution<size_t> dist(0, available.size() - 1);
   Keyword chosen = available[dist(gen)];
 
   Statement stmt;
