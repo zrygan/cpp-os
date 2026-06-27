@@ -201,14 +201,13 @@ void Controller::ExecuteCommand(const Command &command) {
 }
 
 void Controller::EnterProcessScreen(prosched::Process *p) {
-  system("clear");
+  std::cout << "\033[?1049h" << std::flush;
   std::string cmd;
 
   while (true) {
     std::cout << "root:\\> ";
     std::getline(std::cin, cmd);
 
-    // trim leading/trailing whitespace
     size_t start = cmd.find_first_not_of(" \t\r\n");
     size_t end = cmd.find_last_not_of(" \t\r\n");
     cmd = (start == std::string::npos) ? "" : cmd.substr(start, end - start + 1);
@@ -227,8 +226,7 @@ void Controller::EnterProcessScreen(prosched::Process *p) {
       }
       std::cout << "\n";
     } else if (cmd == "exit") {
-      system("clear");
-      this->view.DisplayCommands();
+      std::cout << "\033[?1049l" << std::flush;
       break;
     } else if (!cmd.empty()) {
       std::cout << "Unknown command. Use 'process-smi' or 'exit'.\n\n";
