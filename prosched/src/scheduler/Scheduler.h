@@ -69,7 +69,7 @@ public:
     printSchedulerSpecs();
 
     running = true;
-    generatingProcesses = true;
+    generatingProcesses = false;
 
     for (int i = 0; i < this->ctx.num_cpu; i++) {
       Worker *w = new Worker(i, ctx);
@@ -91,7 +91,7 @@ public:
   }
 
   /**
-   * @brief Resumes process generation
+   * @brief Starts process generation
    */
   void ResumeGenerating() { generatingProcesses = true; }
 

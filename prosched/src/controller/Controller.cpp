@@ -25,6 +25,10 @@ AlgoContext Controller::initialize() {
   this->scheduler = new prosched::Scheduler(this->ctx);
   this->isInitialized = true;
 
+  if (!this->scheduler->IsRunning()) {
+    this->scheduler->Start();
+  }
+
   this->view.DisplayCommands();
 
   return this->ctx;
@@ -178,10 +182,9 @@ void Controller::ExecuteCommand(const Command &command) {
     case CLI_COMMAND::CLI_SCHEDULER_START:
       if (!this->scheduler->IsRunning()) {
         this->scheduler->Start();
-      } else {
-        this->scheduler->ResumeGenerating();
-        std::cout << "Resumed process generation.\n\n";
       }
+      this->scheduler->ResumeGenerating();
+      std::cout << "Started generating dummy processes.\n\n";
       break;
 
     case CLI_COMMAND::CLI_SCHEDULER_STOP:
