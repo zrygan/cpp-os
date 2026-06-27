@@ -222,7 +222,11 @@ void Controller::EnterProcessScreen(prosched::Process *p) {
 
     if (cmd == "process-smi") {
       std::cout << "\nProcess Name: " << p->GetName() << "\n";
-      std::cout << "ID: " << p->GetPID() << "\n\n";
+      std::cout << "ID: " << p->GetPID() << "\n";
+      int total = p->GetTotalInstructions();
+      int current = p->GetCurrentInstructionIndex();
+      std::cout << "Progress: " << (current < total ? current + 1 : total)
+                << " / " << total << "\n\n";
 
       auto logs = p->GetLogs();
       for (const auto &log : logs) {
