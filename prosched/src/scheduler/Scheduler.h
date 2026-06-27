@@ -312,16 +312,8 @@ public:
    * @return Process generated
    */
   prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
-    std::random_device rd; 
-    std::mt19937 gen(rd()); 
-
-    std::uniform_int_distribution<std::size_t> dist(0, symbolTable.size() - 1);
-    std::size_t randomIndex = dist(gen);
-
-    std::string symbol = symbolTable[randomIndex];
-
     std::ostringstream oss;
-    oss << symbol << nextPID;
+    oss << "process" << nextPID;
     std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
     p->SetOwnedByScheduler(true);
@@ -552,7 +544,6 @@ private:
   std::mutex tickMutex;
   std::condition_variable tickCv;
   int workersCompleted = 0;
-  std::vector<std::string> symbolTable = {"process", "balls"};
 
   /**
    * @brief converts the scheduler type enum to a string for printing
