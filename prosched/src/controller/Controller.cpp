@@ -15,6 +15,11 @@
 #include "Controller.h"
 #include "src/scheduler/Scheduler.h"
 
+Controller::~Controller() {
+  delete scheduler;
+  delete memoryManager;
+}
+
 AlgoContext Controller::initialize() {
   ConfigStruct *cs = fromFile();
 
@@ -25,6 +30,7 @@ AlgoContext Controller::initialize() {
   }
 
   this->ctx = AlgoContext::buildConfig(cs);
+  this->memoryManager = new prosched::MemoryManager(this->ctx.max_overall_mem, this->ctx.max_mem_per_proc);
   this->scheduler = new prosched::Scheduler(this->ctx);
   this->isInitialized = true;
 

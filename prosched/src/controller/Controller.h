@@ -1,5 +1,6 @@
 #include "Context.h"
 #include "src/scheduler/Scheduler.h"
+#include "memory/MemoryManager.h"
 #include "view/View.h"
 
 #ifndef CONTROLLER_H
@@ -30,9 +31,11 @@ private:
   View view;
   AlgoContext ctx;
   prosched::Scheduler *scheduler;
+  prosched::MemoryManager *memoryManager = nullptr;
   bool isInitialized;
 
 public:
+  ~Controller();
   AlgoContext initialize();
   void run();
   void HandleView();

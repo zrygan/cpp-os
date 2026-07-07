@@ -29,6 +29,9 @@ add_executable(prosched
   src/scheduler/Scheduler.h
   src/scheduler/process/Process.h
   src/scheduler/worker/Worker.h
+
+  # memory
+  src/memory/MemoryManager.h
 )
 target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic -g -D_GLIBCXX_ASSERTIONS -fsanitize=address)
