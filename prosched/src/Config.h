@@ -19,6 +19,10 @@ struct ConfigStruct {
   int min_ins;
   int max_ins;
   int delay_per_exec;
+  int min_mem_per_proc;
+  int max_mem_per_proc;
+  int mem_per_frame;
+  int max_overall_mem;
 };
 
 /**
@@ -39,7 +43,12 @@ inline ConfigStruct *makeDefault() {
                                       .batch_process_freq = 1,
                                       .min_ins = 1000,
                                       .max_ins = 2000,
-                                      .delay_per_exec = 0};
+                                      .delay_per_exec = 0,
+                                      .min_mem_per_proc= 4096,
+                                      .max_mem_per_proc = 4096,
+                                      .mem_per_frame = 16,
+                                      .max_overall_mem = 16384
+                                    };
   return cs;
 }
 
@@ -82,6 +91,14 @@ inline ConfigStruct *fromFile() {
       iss >> cs->max_ins;
     else if (key == "delay-per-exec")
       iss >> cs->delay_per_exec;
+    else if (key == "min-mem-per-proc")
+      iss >> cs->min_mem_per_proc;
+    else if (key == "max-mem-per-proc")
+      iss >> cs->max_mem_per_proc;
+    else if (key == "mem-per-frame")
+      iss >> cs->mem_per_frame;
+    else if (key == "max-overall-mem")
+      iss >> cs->max_overall_mem;
   }
 
   configFile.close();
