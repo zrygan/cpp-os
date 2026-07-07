@@ -17,6 +17,10 @@ struct AlgoContext {
   int delay_per_execution;
   // for rr
   int rr_quantum_cycles;
+  int min_mem_per_proc;
+  int max_mem_per_proc;
+  int mem_per_frame;
+  int max_overall_mem;
 
   static AlgoContext buildConfig(ConfigStruct *config) {
     AlgoContext ctx;
@@ -36,6 +40,10 @@ struct AlgoContext {
     ctx.min_ins = config->min_ins;
     ctx.max_ins = config->max_ins;
     ctx.delay_per_execution = config->delay_per_exec;
+    ctx.min_mem_per_proc = config->min_mem_per_proc;
+    ctx.max_mem_per_proc = config->max_mem_per_proc;
+    ctx.mem_per_frame = config->mem_per_frame;
+    ctx.max_overall_mem = config->max_overall_mem;
     return ctx;
   }
 };
