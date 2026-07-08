@@ -5,6 +5,9 @@
 #include <vector>
 #include <sstream>
 #include <filesystem>
+#include <iostream>
+#include <cstdlib>
+#include <fstream>
 
 namespace prosched {
 
