@@ -77,6 +77,23 @@ public:
     }
 
     /**
+     * @brief Checks if memory is currently allocated for a process with the given PID.
+     * 
+     * @param pid The process ID to check.
+     * @return true if memory is allocated for the process, false otherwise.
+     * 
+     * @note this is a new function @Stephen <----
+     */
+    bool IsAllocated(int pid) const {
+        for (const auto& block : blocks) {
+            if (!block.isFree && block.pid == pid) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @brief Frees the memory allocated for a process with the given PID.
      * 
      * @param pid The process ID for which to free memory.

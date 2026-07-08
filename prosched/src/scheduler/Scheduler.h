@@ -16,6 +16,7 @@
 #include "src/Constants.hpp"
 #include "src/Context.h"
 #include "src/scheduler/worker/Worker.h"
+#include "memory/MemoryManager.h"
 
 namespace prosched {
 
@@ -28,7 +29,8 @@ public:
    *
    * @param ctx Scheduling configuration and algorithm settings
    */
-  Scheduler(AlgoContext ctx) : ctx(ctx) {}
+  Scheduler(AlgoContext ctx, MemoryManager *memoryManager = nullptr)
+      : ctx(ctx), memoryManager(memoryManager) {}
 
   /**
    * @brief Destroys the scheduler instance
@@ -51,13 +53,6 @@ public:
 
   /**
    * @brief starts the main scheduler loop
-   *
-   * disclaimer: function isnt implemented yet so this is how i think it would
-   * work atm Starting the scheduler starts a scheduler thread and calls on n
-   * number of Workers (where n is the number of defined CPU cores) and starts
-   * their individual thread tasks, once each thread is running the Start
-   * function will then start the main scheduler loop and return a boolean value
-   * turn running = true
    *
    * @return a boolean value, where true if all worker threads
    * have been joined, else false
@@ -158,6 +153,9 @@ public:
     }
   }
 
+  /**
+   * @brief prints the current processes when "screen -ls" is called
+   */
   void ShowScreenProcesses() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
@@ -238,6 +236,8 @@ public:
    * @brief prints the current processes when "screen -ls" is called
    *
    * Outputs the current process list and their states
+   * 
+   * @param out output stream
    */
   void PrintProcesses(std::ostream &out = std::cout) {
     std::lock_guard<std::mutex> lock(schedulerMutex);
@@ -309,12 +309,11 @@ public:
   }
 
   /**
-   * @brief
+   * @brief generates a process
    *
-   * @param ctx
-   * @param id
-   * @param tick
-   *
+   * @param ctx algorithm context
+   * @param id process id
+   * @param tick scheduler tick
    * @return Process generated
    */
   prosched::Process *generateProcess(AlgoContext *ctx, int pid, int tick) {
@@ -530,6 +529,8 @@ public:
         RoundRobin();
       }
 
+      FreeFinishedProcesses();
+
       CollectPreemptedCycle();
       UpdateSleepingProcessesCycle();
 
@@ -550,6 +551,25 @@ private:
   std::mutex tickMutex;
   std::condition_variable tickCv;
   int workersCompleted = 0;
+  MemoryManager *memoryManager = nullptr;
+
+  /**
+   * @brief Frees memory allocated to finished processes.
+   * 
+   * @note this is a new function @Stephen <----
+   */
+  void FreeFinishedProcesses() {
+    if (!memoryManager) return;
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (Process *p : processes) {
+      if (p != nullptr && p->IsFinished()) {
+        int pid = p->GetPID();
+        if (memoryManager->IsAllocated(pid)) {
+          memoryManager->Free(pid);
+        }
+      }
+    }
+  }
 
   /**
    * @brief converts the scheduler type enum to a string for printing
@@ -618,10 +638,34 @@ private:
     // 2. Dispatch ready processes
     std::lock_guard<std::mutex> lock(schedulerMutex);
     for (Worker *w : workers) {
-      if (!processQueue.empty() && !w->IsBusy()) {
+      if (w->IsBusy()) {
+        continue;
+      }
+
+      size_t triedCount = 0;
+      size_t queueSize = processQueue.size();
+      while (triedCount < queueSize && !processQueue.empty()) {
         Process *p = processQueue.front();
         processQueue.pop();
-        w->AssignProcess(p);
+
+        bool canRun = false;
+        if (memoryManager) {
+          if (memoryManager->IsAllocated(p->GetPID())) {
+            canRun = true;
+          } else if (memoryManager->Allocate(p->GetPID())) {
+            canRun = true;
+          }
+        } else {
+          canRun = true;
+        }
+
+        if (canRun) {
+          w->AssignProcess(p);
+          break;
+        } else {
+          processQueue.push(p);
+          triedCount++;
+        }
       }
     }
   }

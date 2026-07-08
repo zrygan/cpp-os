@@ -31,7 +31,7 @@ AlgoContext Controller::initialize() {
 
   this->ctx = AlgoContext::buildConfig(cs);
   this->memoryManager = new prosched::MemoryManager(this->ctx.max_overall_mem, this->ctx.max_mem_per_proc);
-  this->scheduler = new prosched::Scheduler(this->ctx);
+  this->scheduler = new prosched::Scheduler(this->ctx, this->memoryManager);
   this->isInitialized = true;
 
   if (!this->scheduler->IsRunning()) {
