@@ -140,11 +140,11 @@ TEST(ControllerHandlePreInit, InitializeInputReturnsTrue) {
 
 namespace ControllerInitialize {
 
-// "fcfs" in config.txt maps to SchedulerType::FCFS enum
+// "rr" in config.txt maps to SchedulerType::RR enum
 TEST(ControllerInitialize, ReturnsCorrectSchedulerType) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.schedulerType, SchedulerType::FCFS);
+  EXPECT_EQ(ctx.schedulerType, SchedulerType::RR);
 }
 
 // num-cpu 4 from config.txt is read into num_cpu
@@ -165,22 +165,32 @@ TEST(ControllerInitialize, ReturnsCorrectbatch_process_frequency) {
 TEST(ControllerInitialize, ReturnsCorrectInstructionBounds) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.min_ins, 1000);
-  EXPECT_EQ(ctx.max_ins, 2000);
+  EXPECT_EQ(ctx.min_ins, 5000);
+  EXPECT_EQ(ctx.max_ins, 5000);
 }
 
-// config.txt uses fcfs, so rr_quantum_cycles is -1 (not applicable)
+// config.txt uses rr, so quantum-cycles 5 is read into rr_quantum_cycles
 TEST(ControllerInitialize, ReturnsCorrectrr_quantum_cycles) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.rr_quantum_cycles, -1);
+  EXPECT_EQ(ctx.rr_quantum_cycles, 5);
 }
 
-// delay-per-exec 0 from config.txt is read into delay_per_execution
+// delay-per-exec 3 from config.txt is read into delay_per_execution
 TEST(ControllerInitialize, ReturnsCorrectdelay_per_execution) {
   Controller c;
   AlgoContext ctx = c.initialize();
-  EXPECT_EQ(ctx.delay_per_execution, 0);
+  EXPECT_EQ(ctx.delay_per_execution, 3);
+}
+
+// Memory settings from config.txt are read into the context
+TEST(ControllerInitialize, ReturnsCorrectMemorySettings) {
+  Controller c;
+  AlgoContext ctx = c.initialize();
+  EXPECT_EQ(ctx.min_mem_per_proc, 4096);
+  EXPECT_EQ(ctx.max_mem_per_proc, 4096);
+  EXPECT_EQ(ctx.mem_per_frame, 16);
+  EXPECT_EQ(ctx.max_overall_mem, 16384);
 }
 
 // UNKNOWN means fromFile() failed (config.txt not found) or unrecognized
