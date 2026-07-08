@@ -21,7 +21,7 @@ TEST(ConfigMakeDefault, num_cpuIsDefault) {
   delete cs;
 }
 
-// Default scheduler is "rr" — note: config.txt uses "fcfs" instead
+// Default scheduler is "rr"
 TEST(ConfigMakeDefault, SchedulerIsRr) {
   ConfigStruct *cs = makeDefault();
   EXPECT_EQ(cs->scheduler, "rr");
@@ -63,11 +63,41 @@ TEST(ConfigMakeDefault, delay_per_executionIsDefault) {
   delete cs;
 }
 
+// Default min_mem_per_proc is 4096
+TEST(ConfigMakeDefault, min_mem_per_procIsDefault) {
+  ConfigStruct *cs = makeDefault();
+  EXPECT_EQ(cs->min_mem_per_proc, 4096);
+  delete cs;
+}
+
+// Default max_mem_per_proc is 4096
+TEST(ConfigMakeDefault, max_mem_per_procIsDefault) {
+  ConfigStruct *cs = makeDefault();
+  EXPECT_EQ(cs->max_mem_per_proc, 4096);
+  delete cs;
+}
+
+// Default mem_per_frame is 16
+TEST(ConfigMakeDefault, mem_per_frameIsDefault) {
+  ConfigStruct *cs = makeDefault();
+  EXPECT_EQ(cs->mem_per_frame, 16);
+  delete cs;
+}
+
+// Default max_overall_mem is 16384
+TEST(ConfigMakeDefault, max_overall_memIsDefault) {
+  ConfigStruct *cs = makeDefault();
+  EXPECT_EQ(cs->max_overall_mem, 16384);
+  delete cs;
+}
+
 } // namespace ConfigMakeDefault
 
 // Expected values from prosched/config.txt:
-//   num-cpu 4  |  scheduler fcfs  |  quantum-cycles 5  |  batch-process-freq 1
-//   min-ins 1000  |  max-ins 2000  |  delay-per-exec 0
+//   num-cpu 4  |  scheduler rr  |  quantum-cycles 5  |  batch-process-freq 1
+//   min-ins 5000  |  max-ins 5000  |  delay-per-exec 3
+//   min-mem-per-proc 4096  |  max-mem-per-proc 4096
+//   mem-per-frame 16  |  max-overall-mem 16384
 
 namespace ConfigFromFile {
 
@@ -86,11 +116,11 @@ TEST(ConfigFromFile, Parsesnum_cpu) {
   delete cs;
 }
 
-// "scheduler fcfs" in config.txt is parsed to scheduler
+// "scheduler rr" in config.txt is parsed to scheduler
 TEST(ConfigFromFile, ParsesScheduler) {
   ConfigStruct *cs = fromFile();
   ASSERT_NE(cs, nullptr);
-  EXPECT_EQ(cs->scheduler, "fcfs");
+  EXPECT_EQ(cs->scheduler, "rr");
   delete cs;
 }
 
@@ -110,27 +140,59 @@ TEST(ConfigFromFile, Parsesbatch_process_frequency) {
   delete cs;
 }
 
-// "min-ins 1000" is parsed to min_ins
+// "min-ins 5000" is parsed to min_ins
 TEST(ConfigFromFile, Parsesmin_ins) {
   ConfigStruct *cs = fromFile();
   ASSERT_NE(cs, nullptr);
-  EXPECT_EQ(cs->min_ins, 1000);
+  EXPECT_EQ(cs->min_ins, 5000);
   delete cs;
 }
 
-// "max-ins 2000" is parsed to max_ins
+// "max-ins 5000" is parsed to max_ins
 TEST(ConfigFromFile, Parsesmax_ins) {
   ConfigStruct *cs = fromFile();
   ASSERT_NE(cs, nullptr);
-  EXPECT_EQ(cs->max_ins, 2000);
+  EXPECT_EQ(cs->max_ins, 5000);
   delete cs;
 }
 
-// "delay-per-exec 0" is parsed to delay_per_exec
+// "delay-per-exec 3" is parsed to delay_per_exec
 TEST(ConfigFromFile, Parsesdelay_per_execution) {
   ConfigStruct *cs = fromFile();
   ASSERT_NE(cs, nullptr);
-  EXPECT_EQ(cs->delay_per_exec, 0);
+  EXPECT_EQ(cs->delay_per_exec, 3);
+  delete cs;
+}
+
+// "min-mem-per-proc 4096" is parsed to min_mem_per_proc
+TEST(ConfigFromFile, Parsesmin_mem_per_proc) {
+  ConfigStruct *cs = fromFile();
+  ASSERT_NE(cs, nullptr);
+  EXPECT_EQ(cs->min_mem_per_proc, 4096);
+  delete cs;
+}
+
+// "max-mem-per-proc 4096" is parsed to max_mem_per_proc
+TEST(ConfigFromFile, Parsesmax_mem_per_proc) {
+  ConfigStruct *cs = fromFile();
+  ASSERT_NE(cs, nullptr);
+  EXPECT_EQ(cs->max_mem_per_proc, 4096);
+  delete cs;
+}
+
+// "mem-per-frame 16" is parsed to mem_per_frame
+TEST(ConfigFromFile, Parsesmem_per_frame) {
+  ConfigStruct *cs = fromFile();
+  ASSERT_NE(cs, nullptr);
+  EXPECT_EQ(cs->mem_per_frame, 16);
+  delete cs;
+}
+
+// "max-overall-mem 16384" is parsed to max_overall_mem
+TEST(ConfigFromFile, Parsesmax_overall_mem) {
+  ConfigStruct *cs = fromFile();
+  ASSERT_NE(cs, nullptr);
+  EXPECT_EQ(cs->max_overall_mem, 16384);
   delete cs;
 }
 
@@ -243,6 +305,59 @@ TEST(ConfigBuildConfig, Mapsdelay_per_execution) {
   EXPECT_EQ(ctx.delay_per_execution, 5);
 }
 
+// min_mem_per_proc and max_mem_per_proc transfer correctly; distinct values
+// catch a swapped mapping
+TEST(ConfigBuildConfig, MapsMinAndmax_mem_per_proc) {
+  ConfigStruct cs{.num_cpu = 4,
+                  .scheduler = "rr",
+                  .rr_quantum_cycles = 5,
+                  .batch_process_freq = 1,
+                  .min_ins = 1000,
+                  .max_ins = 2000,
+                  .delay_per_exec = 0,
+                  .min_mem_per_proc = 1024,
+                  .max_mem_per_proc = 8192,
+                  .mem_per_frame = 16,
+                  .max_overall_mem = 16384};
+  AlgoContext ctx = AlgoContext::buildConfig(&cs);
+  EXPECT_EQ(ctx.min_mem_per_proc, 1024);
+  EXPECT_EQ(ctx.max_mem_per_proc, 8192);
+}
+
+// mem_per_frame transfers to mem_per_frame
+TEST(ConfigBuildConfig, Mapsmem_per_frame) {
+  ConfigStruct cs{.num_cpu = 4,
+                  .scheduler = "rr",
+                  .rr_quantum_cycles = 5,
+                  .batch_process_freq = 1,
+                  .min_ins = 1000,
+                  .max_ins = 2000,
+                  .delay_per_exec = 0,
+                  .min_mem_per_proc = 4096,
+                  .max_mem_per_proc = 4096,
+                  .mem_per_frame = 32,
+                  .max_overall_mem = 16384};
+  AlgoContext ctx = AlgoContext::buildConfig(&cs);
+  EXPECT_EQ(ctx.mem_per_frame, 32);
+}
+
+// max_overall_mem transfers to max_overall_mem
+TEST(ConfigBuildConfig, Mapsmax_overall_mem) {
+  ConfigStruct cs{.num_cpu = 4,
+                  .scheduler = "rr",
+                  .rr_quantum_cycles = 5,
+                  .batch_process_freq = 1,
+                  .min_ins = 1000,
+                  .max_ins = 2000,
+                  .delay_per_exec = 0,
+                  .min_mem_per_proc = 4096,
+                  .max_mem_per_proc = 4096,
+                  .mem_per_frame = 16,
+                  .max_overall_mem = 32768};
+  AlgoContext ctx = AlgoContext::buildConfig(&cs);
+  EXPECT_EQ(ctx.max_overall_mem, 32768);
+}
+
 } // namespace ConfigBuildConfig
 
 // ── Helpers used only by ConfigValidation tests ──────────────────────────────
@@ -282,6 +397,14 @@ static ConfigStruct *fromFileAt(const std::string &path) {
       iss >> cs->max_ins;
     else if (key == "delay-per-exec")
       iss >> cs->delay_per_exec;
+    else if (key == "min-mem-per-proc")
+      iss >> cs->min_mem_per_proc;
+    else if (key == "max-mem-per-proc")
+      iss >> cs->max_mem_per_proc;
+    else if (key == "mem-per-frame")
+      iss >> cs->mem_per_frame;
+    else if (key == "max-overall-mem")
+      iss >> cs->max_overall_mem;
   }
   return cs;
 }
@@ -552,6 +675,40 @@ TEST(ConfigValidation, ValidConfigRrPassesValidation) {
   ConfigStruct *cs = fromFileAt(TEMP_CFG);
   ASSERT_NE(cs, nullptr);
   validateOrDie(cs);
+  delete cs;
+  remove(TEMP_CFG);
+}
+
+// ── Memory keys ─────────────────────────────────────────────────────────────
+
+// Memory keys present in the file are parsed into their fields
+TEST(ConfigValidation, ParsesMemoryKeysWhenPresent) {
+  writeTestConfig(
+      "num-cpu 4\nscheduler rr\nquantum-cycles 5\n"
+      "batch-process-freq 1\nmin-ins 100\nmax-ins 200\ndelay-per-exec 0\n"
+      "min-mem-per-proc 1024\nmax-mem-per-proc 8192\n"
+      "mem-per-frame 32\nmax-overall-mem 32768\n");
+  ConfigStruct *cs = fromFileAt(TEMP_CFG);
+  ASSERT_NE(cs, nullptr);
+  EXPECT_EQ(cs->min_mem_per_proc, 1024);
+  EXPECT_EQ(cs->max_mem_per_proc, 8192);
+  EXPECT_EQ(cs->mem_per_frame, 32);
+  EXPECT_EQ(cs->max_overall_mem, 32768);
+  delete cs;
+  remove(TEMP_CFG);
+}
+
+// Memory keys absent from the file stay value-initialized to 0
+TEST(ConfigValidation, MissingMemoryKeysStayZero) {
+  writeTestConfig(
+      "num-cpu 4\nscheduler rr\nquantum-cycles 5\n"
+      "batch-process-freq 1\nmin-ins 100\nmax-ins 200\ndelay-per-exec 0\n");
+  ConfigStruct *cs = fromFileAt(TEMP_CFG);
+  ASSERT_NE(cs, nullptr);
+  EXPECT_EQ(cs->min_mem_per_proc, 0);
+  EXPECT_EQ(cs->max_mem_per_proc, 0);
+  EXPECT_EQ(cs->mem_per_frame, 0);
+  EXPECT_EQ(cs->max_overall_mem, 0);
   delete cs;
   remove(TEMP_CFG);
 }
