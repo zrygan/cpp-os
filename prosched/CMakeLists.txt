@@ -44,6 +44,7 @@ add_executable(prosched_tests
   tests/InterpreterTest.cpp
   tests/ControllerTest.cpp
   tests/ConfigTest.cpp
+  tests/MemoryManagerTest.cpp
 
   # Controller and View are not header-only; their implementations must be linked
   src/controller/Controller.cpp
