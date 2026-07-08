@@ -136,7 +136,7 @@ public:
     size_t GetExternalFragmentation() const {
         size_t fragmentation = 0;
         for (const auto& block : blocks) {
-            if (block.isFree && (block.end - block.start) < procSize) {
+            if (block.isFree) {
                 fragmentation += (block.end - block.start);
             }
         }
