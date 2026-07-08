@@ -527,13 +527,18 @@ public:
         FCFS();
       } else if (ctx.schedulerType == SchedulerType::RR) {
         RoundRobin();
+
+        // remove after july 11 
+        if (cpuCycles % ctx.rr_quantum_cycles == 0) {
+            SaveMemoryStamp(cpuCycles);
+        }
       }
 
       FreeFinishedProcesses();
 
       CollectPreemptedCycle();
       UpdateSleepingProcessesCycle();
-
+  
       std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
     }
   }
@@ -599,6 +604,31 @@ private:
               << this->ctx.max_ins;
     std::cout << "\nDelay per execution: " << this->ctx.delay_per_execution;
     std::cout << "\nQuantum cycle: " << this->ctx.rr_quantum_cycles << "\n\n";
+  }
+
+  /**
+   * @brief gets the current timestamp
+   */
+  std::string GetTimestamp() {
+      auto now = std::chrono::system_clock::now();
+      std::time_t t = std::chrono::system_clock::to_time_t(now);
+      std::tm* tm = std::localtime(&t);
+      std::ostringstream oss;
+      oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
+      return oss.str();
+  }
+
+  /**
+   * @brief saves the memory of a certain time period upon quantum cycle completeion
+   * and calls on the generation of txt files
+   */
+  void SaveMemoryStamp(int cpuCycles) {
+      if (memoryManager == nullptr) return;
+
+      std::string timestamp = GetTimestamp();
+      int processCount = memoryManager->GetProcessCount();
+
+      memoryManager->SaveLogsToFileMem(cpuCycles, timestamp, processCount);
   }
 
   /**

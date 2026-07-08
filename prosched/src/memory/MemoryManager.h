@@ -170,6 +170,44 @@ public:
         return blocks;
     }
 
+    /**
+   * @brief saves the memory log into a txt file
+   *
+   * @param quantumNum
+   * @param timestamp
+   * @param processCount
+   * 
+   */
+    void SaveLogsToFileMem(int quantumNum, const std::string& timestamp, int processCount) {
+        std::filesystem::create_directory("memory_stamps");
+        std::string filename = "memory_stamps/memory_stamp_" + std::to_string(quantumNum) + ".txt";
+
+        std::ofstream outFile(filename);
+        if (outFile.is_open()) {
+            outFile << "Timestamp: " << timestamp << "\n";
+            outFile << "Number of processes in memory: " << processCount << "\n";
+            outFile << "Total external fragmentation in bytes: " << GetExternalFragmentation() << "\n";
+            outFile << "\n";
+
+            outFile << "----end---- = " << totalMemory << "\n\n";
+
+            std::vector<Block> reversed(blocks.rbegin(), blocks.rend());
+            for (const auto& block : reversed) {
+                if (!block.isFree) {
+                    outFile << block.end << "\n";
+                    outFile << "P" << block.pid << "\n";
+                    outFile << block.start << "\n";
+                    outFile << "\n";
+                }
+            }
+
+            outFile << "----start----- = 0\n";
+            outFile.close();
+        } else {
+            std::cerr << "Error: Could not make log file for memory_stamp_" << std::to_string(quantumNum) << "\n";
+        }
+    }
+
 private:
     size_t totalMemory;
     size_t procSize;
