@@ -30,7 +30,7 @@ class Controller {
 private:
   View view;
   AlgoContext ctx;
-  prosched::Scheduler *scheduler;
+  prosched::Scheduler *scheduler = nullptr;
   prosched::MemoryManager *memoryManager = nullptr;
   bool isInitialized;
 
