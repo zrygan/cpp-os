@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <vector>
 #include <sstream>
+#include <filesystem>
 
 namespace prosched {
 
@@ -197,7 +198,7 @@ public:
                     outFile << block.end << "\n";
                     outFile << "P" << block.pid << "\n";
                     outFile << block.start << "\n";
-                    outFile << "\n";
+                    outFile << "\n\n";
                 }
             }
 
