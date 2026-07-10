@@ -190,7 +190,7 @@ public:
         if (outFile.is_open()) {
             outFile << "Timestamp: " << timestamp << "\n";
             outFile << "Number of processes in memory: " << processCount << "\n";
-            outFile << "Total external fragmentation in bytes: " << GetExternalFragmentation() << "\n";
+            outFile << "Total external fragmentation in KB: " << GetExternalFragmentation() / static_cast<std::size_t>(1024) << "\n";
             outFile << "\n";
 
             outFile << "----end---- = " << totalMemory << "\n\n";
