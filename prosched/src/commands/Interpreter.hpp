@@ -26,6 +26,8 @@ enum class Keyword {
   SUBTRACT,  /*!< Subtract two operands and store result in a variable */
   SLEEP,     /*!< Pause execution for a number of ticks (each tick = 10ms) */
   FOR,       /*!< Loop: execute instructions multiple times */
+  READ,      /*!< Retrieve a uint16 value from a memory address and stores it in a variable*/
+  WRITE,     /*!< Writes a uint16 value to a memory address*/
   DBG,       /*!< Debug dump: print all declared variables 
                   Not required from the specs. This is my own helper
                   thingy. Used in after DECLARE, ADD, SUBTRACT */
@@ -46,13 +48,15 @@ struct Statement {
 };
 
 inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
-  static constexpr std::array<Keyword, 6> all_keywords {
+  static constexpr std::array<Keyword, 8> all_keywords {
     Keyword::PRINT,
     Keyword::ADD,
     Keyword::SUBTRACT,
     Keyword::DECLARE,
     Keyword::FOR,
     Keyword::SLEEP,
+    Keyword::READ,
+    Keyword::WRITE,
   };
 
   static std::random_device rd;
@@ -127,6 +131,14 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
       break;
     }
 
+    case Keyword::READ: {
+      break;
+    }
+
+    case Keyword::WRITE: {
+      break;
+    }
+
     default:
       break;
   }
@@ -148,11 +160,22 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
 class Interpreter {
 private:
   std::unordered_map<std::string, uint16_t> memory;    /*!< Variable storage (all 16-bit unsigned) */
+  std::unordered_map<uint32_t, uint16_t> addressSpace; /*!< Variable storage in memory addresses */
   std::vector<std::string> screen_buffer;              /*!< Output buffer (PRINT, DBG!, errors) */
+
+  uint32_t memStart = 0;
+  uint32_t memEnd = 0;
+  bool boundsSet = false;
+
+  void setMemoryBounds(uint32_t start, uint32_t end) {
+    memStart = start;
+    memEnd = end;
+    boundsSet = true;
+  }
 
   /** @brief All keyword strings (for reference, actual detection uses prefix matching) */
   static constexpr const char *KEYWORDS[] = {
-      "PRINT",  "DECLARE", "ADD", "SUBTRACT", "SLEEP", "FOR", "DBG"};
+      "PRINT",  "DECLARE", "ADD", "SUBTRACT", "SLEEP", "FOR", "READ", "WRITE", "DBG"};
 
   /** @brief Removes leading/trailing whitespace and newlines.
       @param s The string to trim
@@ -239,6 +262,10 @@ private:
       return Keyword::SLEEP;
     if (stmt.rfind("FOR([", 0) == 0)
       return Keyword::FOR;
+    if(stmt.rfind("READ(", 0) == 0)
+      return Keyword::READ;
+    if(stmt.rfind("WRITE(", 0) == 0)
+      return Keyword::WRITE;
     if (stmt == "DBG!")
       return Keyword::DBG;
     return Keyword::UNKNOWN;
@@ -308,6 +335,10 @@ private:
           args.push_back(trim(stmt.substr(comma + 1, end - comma - 1)));
         }
       }
+    } else if (kw == Keyword::READ) {
+
+    } else if (kw == Keyword::WRITE) {
+
     }
 
     return args;
@@ -389,6 +420,12 @@ private:
         break;
       case Keyword::FOR:
         executeFor(stmt);
+        break;
+      case Keyword::READ:
+        executeRead(stmt);
+        break;
+      case Keyword::WRITE:
+        executeWrite(stmt);
         break;
       case Keyword::DBG:
         executeDebug();
@@ -569,6 +606,33 @@ public:
         }
       }
     }
+  }
+
+  /** @brief Execute READ: 
+   * 
+   *  @param stmt The READ statement to execute
+   */
+  std::optional<uint16_t> executeRead(const Statement &stmt) {
+    if (stmt.args.size() < 2) 
+      return std::nullopt;
+    
+    long addr = std::stol(stmt.args[1]);
+    //from memory get the value from given address
+    
+  }
+
+  /** @brief Execute WRITE:
+   * 
+   *  @param stmt The WRITE statement to execute
+   */
+  std::optional<uint16_t> executeWrite(const Statement &stmt) {
+    if (stmt.args.size() < 2) 
+      return std::nullopt;
+
+    long addr = std::stol(stmt.args[0]);
+    long val = std::stol(stmt.args[1]);
+
+    // add the value to the memory address
   }
 
   /** @brief Execute DBG!: dump all variables and their values to the screen buffer.
