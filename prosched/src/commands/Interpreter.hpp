@@ -132,10 +132,18 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
     }
 
     case Keyword::READ: {
+      std::uniform_int_distribution<int> addrDist(0, 255);
+      std::ostringstream addr;
+      addr << "0x" << std::hex << (addrDist(gen) * 256);
+      stmt.args = { randomVarName(), addr.str() };
       break;
     }
 
     case Keyword::WRITE: {
+      std::uniform_int_distribution<int> addrDist(0, 255);
+      std::ostringstream addr;
+      addr << "0x" << std::hex << (addrDist(gen) * 256);
+      stmt.args = { addr.str(), std::to_string(uint16Dist(gen)) };
       break;
     }
 
@@ -167,10 +175,32 @@ private:
   uint32_t memEnd = 0;
   bool boundsSet = false;
 
+  /** @brief sets the limits of the memory on initialize
+   * 
+   */
   void setMemoryBounds(uint32_t start, uint32_t end) {
     memStart = start;
     memEnd = end;
     boundsSet = true;
+  }
+
+  /** @brief parses a hexadecimal address (0x1234) to an int (1234)
+   * 
+   */
+  uint32_t parseAddress(const std::string& addrString) {
+    std::string t = trim(addrString);
+    if (t.size() >= 2 && t[0] == '0' && (t[1] == 'x' || t[1] == 'X')) {
+        return static_cast<uint32_t>(std::stoul(t, nullptr, 16));
+    }
+    return static_cast<uint32_t>(std::stoul(t));
+  }
+
+  /** @brief checks if a memory address is within the stated bounds
+   * 
+   */
+  bool isValidAddress(uint32_t addr) {
+    if (!boundsSet) return true;
+    return addr >= memStart && addr < memEnd;
   }
 
   /** @brief All keyword strings (for reference, actual detection uses prefix matching) */
@@ -335,9 +365,24 @@ private:
           args.push_back(trim(stmt.substr(comma + 1, end - comma - 1)));
         }
       }
+
     } else if (kw == Keyword::READ) {
+      size_t comma = stmt.find(',');
+      size_t end = stmt.find(')');
+      
+      if (comma != std::string::npos && end != std::string::npos) {
+        args.push_back(trim(stmt.substr(6, end - 6)));
+        args.push_back(trim(stmt.substr(comma + 1, end - comma - 1)));
+      }
 
     } else if (kw == Keyword::WRITE) {
+      size_t comma = stmt.find(',');
+      size_t end = stmt.find(')');
+
+      if (comma != std::string::npos && end != std::string::npos) {
+        args.push_back(trim(stmt.substr(6, end - 6)));
+        args.push_back(trim(stmt.substr(comma + 1, end - comma - 1)));
+      }
 
     }
 
@@ -616,9 +661,21 @@ public:
     if (stmt.args.size() < 2) 
       return std::nullopt;
     
-    long addr = std::stol(stmt.args[1]);
-    //from memory get the value from given address
+    std::string varName = trim(stmt.args[0]);
+    uint32_t addr = parseAddress(stmt.args[1]);
     
+    if (!isValidAddress(addr)) {
+      return std::nullopt;
+    }
+    
+    uint16_t val = 0;
+    auto mem = addressSpace.find(addr);
+    if (mem != addressSpace.end()) {
+      val = mem->second;
+    }
+
+    memory[varName] = val;
+    return val;
   }
 
   /** @brief Execute WRITE:
@@ -629,10 +686,16 @@ public:
     if (stmt.args.size() < 2) 
       return std::nullopt;
 
-    long addr = std::stol(stmt.args[0]);
-    long val = std::stol(stmt.args[1]);
+    uint32_t addr = parseAddress(stmt.args[0]);
 
-    // add the value to the memory address
+    if (!isValidAddress(addr)) {
+      return std::nullopt;
+    }
+
+    uint16_t val = resolveOperand(stmt.args[1]);
+    addressSpace[addr] = val;
+    return val;
+
   }
 
   /** @brief Execute DBG!: dump all variables and their values to the screen buffer.
