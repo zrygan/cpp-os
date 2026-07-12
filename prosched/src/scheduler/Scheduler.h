@@ -527,11 +527,6 @@ public:
         FCFS();
       } else if (ctx.schedulerType == SchedulerType::RR) {
         RoundRobin();
-
-        // remove after july 11 
-        if (cpuCycles % ctx.rr_quantum_cycles == 0) {
-            SaveMemoryStamp(cpuCycles);
-        }
       }
 
       FreeFinishedProcesses();
