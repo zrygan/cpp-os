@@ -175,15 +175,6 @@ private:
   uint32_t memEnd = 0;
   bool boundsSet = false;
 
-  /** @brief sets the limits of the memory on initialize
-   * 
-   */
-  void setMemoryBounds(uint32_t start, uint32_t end) {
-    memStart = start;
-    memEnd = end;
-    boundsSet = true;
-  }
-
   /** @brief parses a hexadecimal address (0x1234) to an int (1234)
    * 
    */
@@ -489,6 +480,15 @@ public:
   */
   Interpreter() = default;
 
+  /** @brief sets the limits of the memory on initialize
+   * 
+   */
+  void SetMemoryBounds(uint32_t start, uint32_t end) {
+    memStart = start;
+    memEnd = end;
+    boundsSet = true;
+  }
+  
   /** @brief Retrieve and clear the output buffer.
 
       Gets all output written by PRINT, DBG!, or error messages

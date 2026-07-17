@@ -509,6 +509,32 @@ public:
   }
 
   /**
+   * @brief  allocates memory in the memory manager for a process
+   * checks if its within memory bounds
+   */
+  bool TryAllocateMemory(Process* p) {
+    if (memoryManager == nullptr) {
+      // std::cout << "[DEBUG] Memory manager is free\n";
+      return true;
+    }
+
+    bool success = memoryManager->Allocate(p->GetPID());
+    if(success) {
+      // std::cout << "[DEBUG] Memory manager is able to allocate PID " << p->GetPID() << "\n";
+      for (const auto& block : memoryManager->GetBlocks()) {
+        if (!block.isFree && block.pid == p->GetPID()) {
+          // std::cout << "[DEBUG] Setting process memory bounds from " << block.start << " to " << block.end << "\n";
+          p->SetMemoryBounds(block.start, block.end);
+          break;
+        }
+      }
+    }
+
+    //std::cout << success;
+    return success;
+  }
+
+  /**
    * @brief The main scheduler control loop running in a dedicated thread.
    *
    * Drives the master scheduler clock and invokes sub-cycle operations.
@@ -529,10 +555,9 @@ public:
         RoundRobin();
       }
 
-      FreeFinishedProcesses();
-
       CollectPreemptedCycle();
       UpdateSleepingProcessesCycle();
+      FreeFinishedProcesses();
   
       std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
     }
@@ -559,13 +584,22 @@ private:
    * @note this is a new function @Stephen <----
    */
   void FreeFinishedProcesses() {
-    if (!memoryManager) return;
+    if (!memoryManager) {
+      // std::cout << "[DEBUG] Memory manager empty.\n";
+      return;
+    }
     std::lock_guard<std::mutex> lock(schedulerMutex);
+
+    int finishedCount = 0;
+    int allocatedCount = 0;
+
     for (Process *p : processes) {
       if (p != nullptr && p->IsFinished()) {
+        finishedCount++;
         int pid = p->GetPID();
-        if (memoryManager->IsAllocated(pid)) {
-          memoryManager->Free(pid);
+        if (memoryManager != nullptr && memoryManager->IsAllocated(pid)) {
+          // std::cerr << "[DEBUG] " << p->GetName() << " finished, freeing memory\n";
+          allocatedCount++;
         }
       }
     }
@@ -641,6 +675,22 @@ private:
         Process *p = processQueue.front();
         processQueue.pop();
         w->AssignProcess(p);
+        
+        // if(TryAllocateMemory(p)) {
+        //   processQueue.pop();
+
+        //   if (memoryManager && memoryManager->IsInBackingStore(p->GetPID())) {
+        //     memoryManager->RemoveFromBackingStore(p->GetPID());
+        //   }
+        //   w->AssignProcess(p);
+        // } else {
+        //   if (memoryManager) {
+        //     memoryManager->WriteToBackingStore(p);
+        //   }
+        //   processQueue.pop();
+        //   processQueue.push(p);
+        //   break;
+        // }
       }
     }
   }
@@ -691,6 +741,15 @@ private:
           processQueue.push(p);
           triedCount++;
         }
+
+        // if (TryAllocateMemory(p)) {
+        //   processQueue.pop();
+        //   w->AssignProcess(p);
+        //   break;
+        // } else {
+        //   // processQueue.push(p);
+        //   break;
+        // }
       }
     }
   }

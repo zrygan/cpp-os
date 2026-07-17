@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 
 namespace prosched {
 
@@ -101,8 +102,10 @@ public:
      * @brief Frees the memory allocated for a process with the given PID.
      * 
      * @param pid The process ID for which to free memory.
+     * 
+     * changing to bool
      */
-    void Free(int pid) {
+    bool Free(int pid) {
         bool freedAny = false;
         for (auto& block : blocks) {
             if (!block.isFree && block.pid == pid) {
@@ -115,6 +118,8 @@ public:
         if (freedAny) {
             Coalesce();
         }
+
+        return freedAny;
     }
 
     /**
@@ -212,10 +217,41 @@ public:
         }
     }
 
+    /**
+     * @brief writing a process to the backing store
+     */
+    void WriteToBackingStore(Process* p) {
+        std::ofstream file(BACKING_STORE_FILE, std::ios::app);
+        if (file.is_open()) {
+            file << "PID:" << p->GetPID()
+                 << " Instructions:" << p->GetCurrentInstructionIndex()
+                 << "/" << p->GetTotalInstructions() << "\n";
+            file.close();
+        }
+        backingStore[p->GetPID()] = {};
+    }
+
+    /**
+     * @brief checks if a process is in the backing store
+     */
+    bool IsInBackingStore(int pid) const {
+        return backingStore.find(pid) != backingStore.end();
+    }
+
+    /**
+     * @brief removes a process from backing store
+     */
+    void RemoveFromBackingStore(int pid) {
+        backingStore.erase(pid);
+    }
+
 private:
     size_t totalMemory;
     size_t procSize;
     std::vector<Block> blocks;
+
+    std::map<int, std::vector<uint8_t>> backingStore;
+    const std::string BACKING_STORE_FILE = "csopesy-backing-store.txt";
 
     /**
      * @brief Coalesces adjacent free memory blocks.

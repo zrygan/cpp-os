@@ -41,6 +41,9 @@ private:
   prosched::Interpreter interpreter;
   std::vector<prosched::Statement> statements;
 
+  size_t memStart = 0;
+  size_t memEnd = 0;
+
   /**
    * @brief Generates a formatted time string representing the current system
    * clock.
@@ -63,9 +66,19 @@ private:
 public:
   Process(std::string processName, int pid, int arrivalTick)
       : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
+  
+  /**
+   * @brief sets the memory bounds for the interpreter
+   */
+  void SetMemoryBounds(size_t start, size_t end) {
+    memStart = start;
+    memEnd = end;
+    interpreter.SetMemoryBounds(
+        static_cast<uint32_t>(start),
+        static_cast<uint32_t>(end)
+    );
+  }
 
-  // @stephen @aaron this was prev std::shared_ptr<Command>
-  // AddCommand(std::shared_ptr<Command> command);
   /**
    * @brief adds a command to the process
    *
@@ -119,6 +132,8 @@ public:
 
     if (StartTime.empty())
       StartTime = GetTimestamp();
+
+    // std::cerr << "[DEBUG] " << processName << " idx=" << currentInstructionIndex << " size=" << statements.size() << "\n";
 
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;

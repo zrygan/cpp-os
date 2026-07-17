@@ -238,6 +238,9 @@ public:
    * @param p Pointer to the process running on the core.
    */
   void TickExecution(Process *p) {
+    // std::cerr << "[DEBUG] [Worker " << coreNum << "] " << p->GetName() << " cyclesLeft=" << p->GetCurrentInstructionCyclesLeft()
+    //           << " state=" << p->GetState() << "\n";
+
     if ((p->GetState() == ProcessState::RUNNING ||
          p->GetState() == ProcessState::READY) &&
         p->GetCurrentInstructionCyclesLeft() <= 0) {
