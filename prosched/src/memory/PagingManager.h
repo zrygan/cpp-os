@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <map>
+#include <queue>
 #include <vector>
 
 namespace prosched {
@@ -99,11 +100,47 @@ public:
 
         auto &processPages = pageTables[pid];
         processPages[pageNum] = PageTableEntry{true, frame.frameNumber};
+        loadOrderQueue.push({pid, pageNum});
         return true;
       }
     }
 
-    // TODO: eviction
+    while (!loadOrderQueue.empty()) {
+      auto [victimPid, victimPageNum] = loadOrderQueue.front();
+      loadOrderQueue.pop();
+
+      auto victimPidIt = pageTables.find(victimPid);
+      if (victimPidIt == pageTables.end()) {
+        continue;
+      }
+
+      auto victimPageIt = victimPidIt->second.find(victimPageNum);
+      if (victimPageIt == victimPidIt->second.end() || !victimPageIt->second.resident) {
+        continue;
+      }
+
+      WritePageToBackingStore(victimPid, victimPageNum);
+
+      int victimFrame = victimPageIt->second.frameNumber;
+      if (victimFrame >= 0 && victimFrame < static_cast<int>(frames.size())) {
+        frames[victimFrame].allocated = false;
+      }
+
+      victimPageIt->second.resident = false;
+      victimPageIt->second.frameNumber = -1;
+
+      for (auto &frame : frames) {
+        if (!frame.allocated) {
+          frame.allocated = true;
+
+          auto &processPages = pageTables[pid];
+          processPages[pageNum] = PageTableEntry{true, frame.frameNumber};
+          loadOrderQueue.push({pid, pageNum});
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
@@ -130,6 +167,17 @@ public:
   }
 
   /**
+   * @brief Writes a page to backing store during eviction.
+   *
+   * @param pid The process ID.
+   * @param pageNum The page number.
+   */
+  void WritePageToBackingStore(int pid, int pageNum) {
+    (void)pid;
+    (void)pageNum;
+  }
+
+  /**
    * @brief Gets the total number of frames.
    *
    * @return The total number of frames.
@@ -144,6 +192,7 @@ private:
   int totalFrames = 0;
   std::vector<Frame> frames;
   std::map<int, std::map<int, PageTableEntry>> pageTables;
+  std::queue<std::pair<int, int>> loadOrderQueue;
 };
 
 }  // namespace prosched
