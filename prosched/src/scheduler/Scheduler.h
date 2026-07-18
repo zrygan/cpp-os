@@ -599,6 +599,7 @@ private:
         int pid = p->GetPID();
         if (memoryManager != nullptr && memoryManager->IsAllocated(pid)) {
           // std::cerr << "[DEBUG] " << p->GetName() << " finished, freeing memory\n";
+          memoryManager->Free(pid);
           allocatedCount++;
         }
       }

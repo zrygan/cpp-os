@@ -1,4 +1,5 @@
 #pragma once
+#include "../scheduler/process/Process.h"
 
 #include <string>
 #include <cstddef>
