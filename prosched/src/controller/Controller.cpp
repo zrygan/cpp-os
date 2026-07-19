@@ -17,7 +17,7 @@
 
 Controller::~Controller() {
   delete scheduler;
-  delete memoryManager;
+  delete pagingManager;
 }
 
 AlgoContext Controller::initialize() {
@@ -30,8 +30,8 @@ AlgoContext Controller::initialize() {
   }
 
   this->ctx = AlgoContext::buildConfig(cs);
-  this->memoryManager = new prosched::MemoryManager(this->ctx.max_overall_mem, this->ctx.max_mem_per_proc);
-  this->scheduler = new prosched::Scheduler(this->ctx, this->memoryManager, this->pagingManager);
+  this->pagingManager = new prosched::PagingManager(this->ctx.mem_per_frame, this->ctx.max_overall_mem);
+  this->scheduler = new prosched::Scheduler(this->ctx, this->pagingManager);
   this->isInitialized = true;
 
   if (!this->scheduler->IsRunning()) {

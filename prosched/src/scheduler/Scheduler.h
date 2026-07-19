@@ -16,7 +16,6 @@
 #include "src/Constants.hpp"
 #include "src/Context.h"
 #include "src/scheduler/worker/Worker.h"
-#include "memory/MemoryManager.h"
 #include "memory/PagingManager.h"
 
 namespace prosched {
@@ -30,9 +29,8 @@ public:
    *
    * @param ctx Scheduling configuration and algorithm settings
    */
-  Scheduler(AlgoContext ctx, MemoryManager *memoryManager = nullptr,
-            PagingManager *pagingManager = nullptr)
-      : ctx(ctx), memoryManager(memoryManager), pagingManager(pagingManager) {}
+  Scheduler(AlgoContext ctx, PagingManager *pagingManager = nullptr)
+      : ctx(ctx), pagingManager(pagingManager) {}
 
   /**
    * @brief Destroys the scheduler instance
@@ -323,6 +321,9 @@ public:
     oss << "process" << nextPID;
     std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
+    int rolledSize =
+        ctx->min_mem_per_proc + rand() % (ctx->max_mem_per_proc - ctx->min_mem_per_proc + 1);
+    p->SetMemoryBounds(0, rolledSize);
     if (pagingManager != nullptr) {
       auto *pagingMgr = pagingManager;
       pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
@@ -541,32 +542,6 @@ public:
   }
 
   /**
-   * @brief  allocates memory in the memory manager for a process
-   * checks if its within memory bounds
-   */
-  bool TryAllocateMemory(Process* p) {
-    if (memoryManager == nullptr) {
-      // std::cout << "[DEBUG] Memory manager is free\n";
-      return true;
-    }
-
-    bool success = memoryManager->Allocate(p->GetPID());
-    if(success) {
-      // std::cout << "[DEBUG] Memory manager is able to allocate PID " << p->GetPID() << "\n";
-      for (const auto& block : memoryManager->GetBlocks()) {
-        if (!block.isFree && block.pid == p->GetPID()) {
-          // std::cout << "[DEBUG] Setting process memory bounds from " << block.start << " to " << block.end << "\n";
-          p->SetMemoryBounds(block.start, block.end);
-          break;
-        }
-      }
-    }
-
-    //std::cout << success;
-    return success;
-  }
-
-  /**
    * @brief The main scheduler control loop running in a dedicated thread.
    *
    * Drives the master scheduler clock and invokes sub-cycle operations.
@@ -608,7 +583,6 @@ private:
   std::mutex tickMutex;
   std::condition_variable tickCv;
   int workersCompleted = 0;
-  MemoryManager *memoryManager = nullptr;
   PagingManager *pagingManager = nullptr;
 
   /**
@@ -617,24 +591,14 @@ private:
    * @note this is a new function @Stephen <----
    */
   void FreeFinishedProcesses() {
-    if (!memoryManager) {
-      // std::cout << "[DEBUG] Memory manager empty.\n";
+    if (!pagingManager) {
       return;
     }
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
-    int finishedCount = 0;
-    int allocatedCount = 0;
-
     for (Process *p : processes) {
       if (p != nullptr && p->IsFinished()) {
-        finishedCount++;
-        int pid = p->GetPID();
-        if (memoryManager != nullptr && memoryManager->IsAllocated(pid)) {
-          // std::cerr << "[DEBUG] " << p->GetName() << " finished, freeing memory\n";
-          memoryManager->Free(pid);
-          allocatedCount++;
-        }
+        pagingManager->FreeAllPagesForProcess(p->GetPID());
       }
     }
   }
@@ -670,31 +634,6 @@ private:
   }
 
   /**
-   * @brief gets the current timestamp
-   */
-  std::string GetTimestamp() {
-      auto now = std::chrono::system_clock::now();
-      std::time_t t = std::chrono::system_clock::to_time_t(now);
-      std::tm* tm = std::localtime(&t);
-      std::ostringstream oss;
-      oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
-      return oss.str();
-  }
-
-  /**
-   * @brief saves the memory of a certain time period upon quantum cycle completeion
-   * and calls on the generation of txt files
-   */
-  void SaveMemoryStamp(int cpuCycles) {
-      if (memoryManager == nullptr) return;
-
-      std::string timestamp = GetTimestamp();
-      int processCount = memoryManager->GetProcessCount();
-
-      memoryManager->SaveLogsToFileMem(cpuCycles, timestamp, processCount);
-  }
-
-  /**
    * @brief First-Come First-Serve Scheduler Algorithm
    *
    * A non-preemptive algorithm in which processes are attended to in
@@ -709,22 +648,6 @@ private:
         Process *p = processQueue.front();
         processQueue.pop();
         w->AssignProcess(p);
-        
-        // if(TryAllocateMemory(p)) {
-        //   processQueue.pop();
-
-        //   if (memoryManager && memoryManager->IsInBackingStore(p->GetPID())) {
-        //     memoryManager->RemoveFromBackingStore(p->GetPID());
-        //   }
-        //   w->AssignProcess(p);
-        // } else {
-        //   if (memoryManager) {
-        //     memoryManager->WriteToBackingStore(p);
-        //   }
-        //   processQueue.pop();
-        //   processQueue.push(p);
-        //   break;
-        // }
       }
     }
   }
@@ -751,39 +674,10 @@ private:
         continue;
       }
 
-      size_t triedCount = 0;
-      size_t queueSize = processQueue.size();
-      while (triedCount < queueSize && !processQueue.empty()) {
+      if (!processQueue.empty()) {
         Process *p = processQueue.front();
         processQueue.pop();
-
-        bool canRun = false;
-        if (memoryManager) {
-          if (memoryManager->IsAllocated(p->GetPID())) {
-            canRun = true;
-          } else if (memoryManager->Allocate(p->GetPID())) {
-            canRun = true;
-          }
-        } else {
-          canRun = true;
-        }
-
-        if (canRun) {
-          w->AssignProcess(p);
-          break;
-        } else {
-          processQueue.push(p);
-          triedCount++;
-        }
-
-        // if (TryAllocateMemory(p)) {
-        //   processQueue.pop();
-        //   w->AssignProcess(p);
-        //   break;
-        // } else {
-        //   // processQueue.push(p);
-        //   break;
-        // }
+        w->AssignProcess(p);
       }
     }
   }

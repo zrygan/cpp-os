@@ -31,7 +31,7 @@ add_executable(prosched
   src/scheduler/worker/Worker.h
 
   # memory
-  src/memory/MemoryManager.h
+  src/memory/PagingManager.h
 )
 target_include_directories(prosched PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(prosched PRIVATE -Wall -Wextra -Wpedantic -g -D_GLIBCXX_ASSERTIONS -fsanitize=address)
@@ -44,8 +44,6 @@ add_executable(prosched_tests
   tests/InterpreterTest.cpp
   tests/ControllerTest.cpp
   tests/ConfigTest.cpp
-  tests/MemoryManagerTest.cpp
-
   # Controller and View are not header-only; their implementations must be linked
   src/controller/Controller.cpp
   src/view/View.cpp
