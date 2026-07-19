@@ -167,6 +167,10 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
 */
 class Interpreter {
 private:
+  /** @brief Hard cap on the symbol table: 32 variables (64 bytes of uint16_t).
+      Any declaration or write that would introduce a 33rd variable is ignored. */
+  static constexpr size_t MAX_SYMBOLS = 32;
+
   std::unordered_map<std::string, uint16_t> memory;    /*!< Variable storage (all 16-bit unsigned) */
   std::unordered_map<uint32_t, uint16_t> addressSpace; /*!< Variable storage in memory addresses */
   std::vector<std::string> screen_buffer;              /*!< Output buffer (PRINT, DBG!, errors) */
@@ -194,6 +198,32 @@ private:
     return addr >= memStart && addr < memEnd;
   }
 
+  /** @brief Writes a variable, respecting the MAX_SYMBOLS cap.
+
+      Existing variables are always updated. A new variable is only created
+      while the symbol table has room; otherwise the write is dropped and a
+      warning is pushed to the screen buffer.
+
+      @param name The variable name to write
+      @param value The value to store
+      @return true if the write happened, false if the table was full
+  */
+  bool setVariable(const std::string &name, uint16_t value) {
+    auto it = memory.find(name);
+    if (it != memory.end()) {
+      it->second = value;
+      return true;
+    }
+    if (memory.size() >= MAX_SYMBOLS) {
+      screen_buffer.push_back(
+          "[!] Interpreter Warning: Symbol table full (" +
+          std::to_string(MAX_SYMBOLS) + " variables), ignoring " + name);
+      return false;
+    }
+    memory[name] = value;
+    return true;
+  }
+
   /** @brief All keyword strings (for reference, actual detection uses prefix matching) */
   static constexpr const char *KEYWORDS[] = {
       "PRINT",  "DECLARE", "ADD", "SUBTRACT", "SLEEP", "FOR", "READ", "WRITE", "DBG"};
@@ -212,11 +242,13 @@ private:
 
       Handles three cases:
       - Numeric literal: "42" → 42
-      - Variable reference: "x" → memory[x] (auto-create with 0 if missing)
+      - Variable reference: "x" → memory[x] (auto-create with 0 if missing
+        and the symbol table is not yet full)
       - Empty string: "" → 0
 
       @param op The operand string to resolve (number, variable name, or empty)
-      @return The resolved 16-bit unsigned integer value
+      @return The resolved 16-bit unsigned integer value (0 if the variable
+              could not be created because the symbol table is full)
   */
   uint16_t resolveOperand(const std::string &op) {
     std::string t = trim(op);
@@ -225,9 +257,11 @@ private:
     if (isdigit(t[0])) {
       return static_cast<uint16_t>(std::stoul(t));
     }
-    if (memory.find(t) == memory.end())
-      memory[t] = 0;
-    return memory[t];
+    auto it = memory.find(t);
+    if (it != memory.end())
+      return it->second;
+    setVariable(t, 0);
+    return 0;
   }
 
   /** @brief Splits a single string of instructions to a list of
@@ -582,18 +616,20 @@ public:
   /** @brief Execute DECLARE: create and initialize a variable.
    * 
    * @param stmt The DECLARE statement to execute, or none at failure
-   * 
-   * @return the value of the declaration
-   * 
+   *
+   * @return the value of the declaration, or none if the symbol table is full
+   *
    * @warning side effect on memory attribute
   */
   std::optional<uint16_t> executeDeclare(const Statement &stmt) {
     if (stmt.args.size() < 2)
         return std::nullopt;
     long val = std::stol(stmt.args[1]);
-    memory[stmt.args[0]] = static_cast<uint16_t>(
+    uint16_t clamped = static_cast<uint16_t>(
         std::clamp(val, 0L, static_cast<long>(UINT16_MAX)));
-    return memory[stmt.args[0]];
+    if (!setVariable(stmt.args[0], clamped))
+        return std::nullopt;
+    return clamped;
 }
 
   /** @brief Execute ADD: compute first_operand + second_operand, store in variable.
@@ -601,14 +637,16 @@ public:
    * @param stmt The ADD statement to execute
    * 
    * @return the resulting value of the ADD, or none at failure
-   * 
+   *
    * @warning side effect on memory attribute
   */
   std::optional<uint16_t> executeAdd(const Statement &stmt) {
     if (stmt.args.size() < 3)
         return std::nullopt;
-    memory[stmt.args[0]] = resolveOperand(stmt.args[1]) + resolveOperand(stmt.args[2]);
-    return memory[stmt.args[0]];
+    uint16_t result = resolveOperand(stmt.args[1]) + resolveOperand(stmt.args[2]);
+    if (!setVariable(stmt.args[0], result))
+        return std::nullopt;
+    return result;
 }
 
   /** @brief Execute SUBTRACT: compute first_operand - second_operand, store in variable.
@@ -622,8 +660,10 @@ public:
   std::optional<uint16_t> executeSubtract(const Statement &stmt) {
     if (stmt.args.size() < 3)
         return std::nullopt;
-    memory[stmt.args[0]] = resolveOperand(stmt.args[1]) - resolveOperand(stmt.args[2]);
-    return memory[stmt.args[0]];
+    uint16_t result = resolveOperand(stmt.args[1]) - resolveOperand(stmt.args[2]);
+    if (!setVariable(stmt.args[0], result))
+        return std::nullopt;
+    return result;
 }
 
   /** @brief Execute SLEEP: pause for N ticks (1 tick = 10ms).
