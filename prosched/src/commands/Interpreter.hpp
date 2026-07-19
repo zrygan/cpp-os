@@ -581,6 +581,49 @@ public:
     }
   }
 
+  /** @brief Snapshot a page-sized range of the address space for paging.
+   *
+   * @param startAddress The first address in the page range.
+   * @param pageSize The size of the page range in bytes.
+   * @return A vector of address/value pairs in the requested range.
+   */
+  std::vector<std::pair<uint32_t, uint16_t>> GetPageSnapshot(uint32_t startAddress, uint32_t pageSize) const {
+    std::vector<std::pair<uint32_t, uint16_t>> snapshot;
+    for (const auto &entry : addressSpace) {
+      if (entry.first >= startAddress && entry.first < startAddress + pageSize) {
+        snapshot.emplace_back(entry.first, entry.second);
+      }
+    }
+    return snapshot;
+  }
+
+  /** @brief Clear any address-space entries within a page-sized range.
+   *
+   * @param startAddress The first address in the page range.
+   * @param pageSize The size of the page range in bytes.
+   */
+  void ClearPageRange(uint32_t startAddress, uint32_t pageSize) {
+    std::vector<uint32_t> toErase;
+    for (const auto &entry : addressSpace) {
+      if (entry.first >= startAddress && entry.first < startAddress + pageSize) {
+        toErase.push_back(entry.first);
+      }
+    }
+    for (uint32_t addr : toErase) {
+      addressSpace.erase(addr);
+    }
+  }
+
+  /** @brief Restore a page-sized range of the address space from a snapshot.
+   *
+   * @param pageEntries The address/value pairs to restore.
+   */
+  void RestorePageSnapshot(const std::vector<std::pair<uint32_t, uint16_t>> &pageEntries) {
+    for (const auto &entry : pageEntries) {
+      addressSpace[entry.first] = entry.second;
+    }
+  }
+
   /** @brief Execute PRINT: output text or numeric values.
 
       Handles string literals and variable substitution.

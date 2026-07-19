@@ -17,6 +17,7 @@
 #include "src/Context.h"
 #include "src/scheduler/worker/Worker.h"
 #include "memory/MemoryManager.h"
+#include "memory/PagingManager.h"
 
 namespace prosched {
 
@@ -29,8 +30,9 @@ public:
    *
    * @param ctx Scheduling configuration and algorithm settings
    */
-  Scheduler(AlgoContext ctx, MemoryManager *memoryManager = nullptr)
-      : ctx(ctx), memoryManager(memoryManager) {}
+  Scheduler(AlgoContext ctx, MemoryManager *memoryManager = nullptr,
+            PagingManager *pagingManager = nullptr)
+      : ctx(ctx), memoryManager(memoryManager), pagingManager(pagingManager) {}
 
   /**
    * @brief Destroys the scheduler instance
@@ -321,6 +323,9 @@ public:
     oss << "process" << nextPID;
     std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
+    if (pagingManager != nullptr) {
+      pagingManager->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+    }
     p->SetOwnedByScheduler(true);
     Statement instruction;
 
@@ -359,6 +364,9 @@ public:
       pid = nextPID++;
     }
     Process *p = new Process(name, pid, 0);
+    if (pagingManager != nullptr) {
+      pagingManager->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+    }
     p->SetOwnedByScheduler(true);
     int commandAmount =
         this->ctx.min_ins + rand() % (this->ctx.max_ins - this->ctx.min_ins + 1);
@@ -577,6 +585,7 @@ private:
   std::condition_variable tickCv;
   int workersCompleted = 0;
   MemoryManager *memoryManager = nullptr;
+  PagingManager *pagingManager = nullptr;
 
   /**
    * @brief Frees memory allocated to finished processes.

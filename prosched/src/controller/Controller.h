@@ -1,6 +1,7 @@
 #include "Context.h"
 #include "src/scheduler/Scheduler.h"
 #include "memory/MemoryManager.h"
+#include "memory/PagingManager.h"
 #include "view/View.h"
 
 #ifndef CONTROLLER_H
@@ -32,6 +33,7 @@ private:
   AlgoContext ctx;
   prosched::Scheduler *scheduler = nullptr;
   prosched::MemoryManager *memoryManager = nullptr;
+  prosched::PagingManager *pagingManager = nullptr;
   bool isInitialized;
 
 public:

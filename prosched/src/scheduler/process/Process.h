@@ -68,6 +68,11 @@ public:
       : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
   
   /**
+   * @brief Returns the process interpreter for paging and testing hooks.
+   */
+  Interpreter &GetInterpreter() { return interpreter; }
+
+  /**
    * @brief sets the memory bounds for the interpreter
    */
   void SetMemoryBounds(size_t start, size_t end) {
