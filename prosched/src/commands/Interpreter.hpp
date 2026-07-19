@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -178,6 +179,11 @@ private:
   uint32_t memStart = 0;
   uint32_t memEnd = 0;
   bool boundsSet = false;
+  uint32_t pageSizeBytes = 0;
+  bool lastInstructionPageFault = false;
+  bool lastInstructionAccessViolation = false;
+  uint32_t lastViolationAddress = 0;
+  std::function<bool(uint32_t)> pageFaultHandler;
 
   /** @brief parses a hexadecimal address (0x1234) to an int (1234)
    * 
@@ -522,6 +528,42 @@ public:
     memEnd = end;
     boundsSet = true;
   }
+
+  /** @brief Configure the page size used for paging-aware READ/WRITE access. */
+  void SetPageSize(uint32_t pageSize) {
+    pageSizeBytes = pageSize;
+  }
+
+  /** @brief Install a handler that is invoked when a READ/WRITE hits a missing page. */
+  void SetPageFaultHandler(std::function<bool(uint32_t)> handler) {
+    pageFaultHandler = std::move(handler);
+  }
+
+  /** @brief Returns whether the most recently executed instruction hit a page fault. */
+  bool GetLastInstructionPageFault() const {
+    return lastInstructionPageFault;
+  }
+
+  /** @brief Returns whether the most recently executed instruction caused an access violation. */
+  bool GetLastInstructionAccessViolation() const {
+    return lastInstructionAccessViolation;
+  }
+
+  /** @brief Returns the offending address from the most recent access violation. */
+  uint32_t GetLastViolationAddress() const {
+    return lastViolationAddress;
+  }
+
+  /** @brief Clears the page-fault flag before executing a new instruction. */
+  void ResetLastInstructionPageFault() {
+    lastInstructionPageFault = false;
+  }
+
+  /** @brief Clears the access-violation state before executing a new instruction. */
+  void ResetLastInstructionAccessViolation() {
+    lastInstructionAccessViolation = false;
+    lastViolationAddress = 0;
+  }
   
   /** @brief Retrieve and clear the output buffer.
 
@@ -555,6 +597,8 @@ public:
       @param stmts Vector of Statement nodes to execute
   */
   void executeStatements(const std::vector<Statement> &stmts) {
+    ResetLastInstructionPageFault();
+    ResetLastInstructionAccessViolation();
     for (const auto &stmt : stmts) {
       executeStatement(stmt);
     }
@@ -741,6 +785,10 @@ public:
    *  @param stmt The READ statement to execute
    */
   std::optional<uint16_t> executeRead(const Statement &stmt) {
+    lastInstructionPageFault = false;
+    lastInstructionAccessViolation = false;
+    lastViolationAddress = 0;
+
     if (stmt.args.size() < 2) 
       return std::nullopt;
     
@@ -748,7 +796,16 @@ public:
     uint32_t addr = parseAddress(stmt.args[1]);
     
     if (!isValidAddress(addr)) {
+      lastInstructionAccessViolation = true;
+      lastViolationAddress = addr;
       return std::nullopt;
+    }
+
+    if (pageFaultHandler) {
+      if (pageFaultHandler(addr)) {
+        lastInstructionPageFault = true;
+        return std::nullopt;
+      }
     }
     
     uint16_t val = 0;
@@ -766,13 +823,26 @@ public:
    *  @param stmt The WRITE statement to execute
    */
   std::optional<uint16_t> executeWrite(const Statement &stmt) {
+    lastInstructionPageFault = false;
+    lastInstructionAccessViolation = false;
+    lastViolationAddress = 0;
+
     if (stmt.args.size() < 2) 
       return std::nullopt;
 
     uint32_t addr = parseAddress(stmt.args[0]);
 
     if (!isValidAddress(addr)) {
+      lastInstructionAccessViolation = true;
+      lastViolationAddress = addr;
       return std::nullopt;
+    }
+
+    if (pageFaultHandler) {
+      if (pageFaultHandler(addr)) {
+        lastInstructionPageFault = true;
+        return std::nullopt;
+      }
     }
 
     uint16_t val = resolveOperand(stmt.args[1]);

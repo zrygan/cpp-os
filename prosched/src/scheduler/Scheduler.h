@@ -324,7 +324,19 @@ public:
     std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
     if (pagingManager != nullptr) {
-      pagingManager->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+      auto *pagingMgr = pagingManager;
+      pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+      p->GetInterpreter().SetPageSize(static_cast<uint32_t>(this->ctx.mem_per_frame));
+      p->GetInterpreter().SetPageFaultHandler([this, pagingMgr, pid = p->GetPID(), pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](uint32_t address) {
+        if (pageSize == 0) {
+          return false;
+        }
+        int pageNum = static_cast<int>(address / pageSize);
+        if (pagingMgr->IsPageResident(pid, pageNum)) {
+          return false;
+        }
+        return pagingMgr->PageIn(pid, pageNum);
+      });
     }
     p->SetOwnedByScheduler(true);
     Statement instruction;
@@ -365,7 +377,19 @@ public:
     }
     Process *p = new Process(name, pid, 0);
     if (pagingManager != nullptr) {
-      pagingManager->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+      auto *pagingMgr = pagingManager;
+      pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+      p->GetInterpreter().SetPageSize(static_cast<uint32_t>(this->ctx.mem_per_frame));
+      p->GetInterpreter().SetPageFaultHandler([this, pagingMgr, pid = p->GetPID(), pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](uint32_t address) {
+        if (pageSize == 0) {
+          return false;
+        }
+        int pageNum = static_cast<int>(address / pageSize);
+        if (pagingMgr->IsPageResident(pid, pageNum)) {
+          return false;
+        }
+        return pagingMgr->PageIn(pid, pageNum);
+      });
     }
     p->SetOwnedByScheduler(true);
     int commandAmount =

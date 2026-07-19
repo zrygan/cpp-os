@@ -249,7 +249,8 @@ public:
       // Detach immediately if process transitioned to WAITING (SLEEP) or
       // FINISHED
       if (p->GetState() == ProcessState::WAITING ||
-          p->GetState() == ProcessState::FINISHED) {
+          p->GetState() == ProcessState::FINISHED ||
+          p->GetState() == ProcessState::TERMINATED) {
         currentProcess = nullptr;
         return;
       }
@@ -271,7 +272,9 @@ public:
       return; // Idle core
     }
 
-    if (p->GetState() == ProcessState::FINISHED || p->GetState() == ProcessState::WAITING) {
+    if (p->GetState() == ProcessState::FINISHED ||
+        p->GetState() == ProcessState::WAITING ||
+        p->GetState() == ProcessState::TERMINATED) {
       currentProcess = nullptr;
       return;
     }

@@ -19,7 +19,7 @@
 
 namespace prosched {
 
-enum ProcessState { READY, RUNNING, WAITING, FINISHED };
+enum ProcessState { READY, RUNNING, WAITING, FINISHED, TERMINATED };
 
 class Process {
 private:
@@ -32,6 +32,8 @@ private:
   std::vector<std::string> logs;
   bool ownedByScheduler = false;
   std::string StartTime;
+  std::string lastViolationTime;
+  uint32_t lastViolationAddress = 0;
 
   int cyclesRemainingForSleep = 0;
   int currentInstructionCyclesLeft = 0;
@@ -181,8 +183,23 @@ public:
         return statements;
     }
 
+    interpreter.ResetLastInstructionPageFault();
+    interpreter.ResetLastInstructionAccessViolation();
     interpreter.executeStatements({stmt});
-    currentInstructionIndex++;
+
+    if (interpreter.GetLastInstructionAccessViolation()) {
+      lastViolationTime = GetTimestamp();
+      lastViolationAddress = interpreter.GetLastViolationAddress();
+      currentState = TERMINATED;
+      if (finishTime.empty()) {
+        finishTime = lastViolationTime;
+      }
+      return statements;
+    }
+
+    if (!interpreter.GetLastInstructionPageFault()) {
+      currentInstructionIndex++;
+    }
 
     auto output = interpreter.flushBuffer();
     for (const auto &line : output) {
@@ -249,7 +266,10 @@ public:
    *
    * @return true if the process is finished; otherwise false.
    */
-  bool IsFinished() { return currentState == FINISHED; }
+  bool IsFinished() { return currentState == FINISHED || currentState == TERMINATED; }
+
+  /** @brief Checks if the process terminated because of an access violation. */
+  bool IsTerminated() const { return currentState == TERMINATED; }
 
   /**
    * @brief Gets the Process ID
@@ -292,7 +312,11 @@ public:
    * @return the formatted time date string, or empty if not yet finished
    */
   std::string GetProcessTimeFinish() { return finishTime; }
+  /** @brief Gets the timestamp of the last access violation, if any. */
+  std::string GetLastViolationTime() const { return lastViolationTime; }
 
+  /** @brief Gets the offending address of the last access violation, if any. */
+  uint32_t GetLastViolationAddress() const { return lastViolationAddress; }
   /**
    * @brief gets the current index of an instruction being executed
    *
