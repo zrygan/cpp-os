@@ -1242,67 +1242,66 @@ TEST(SchedulerRoundRobinTimeSlice, PreemptedProcessResumesAndCompletesAllInstruc
 namespace SchedulerFreeFinishedProcesses {
 
 // FreeFinishedProcesses is private and runs once per scheduler tick, so it is
-// tested black-box: pass a MemoryManager* to the ctor and observe its public
-// state. Only RR dispatch allocates memory, so these tests use "rr".
+// tested black-box through PagingManager's public page-residency API.
 
-// A finished process's memory is released by the scheduler loop.
+// A finished process's pages are released by the scheduler loop.
 TEST(SchedulerFreeFinishedProcesses, FreedAfterProcessFinishes) {
-  prosched::MemoryManager mm(4096, 4096);
-  prosched::Scheduler scheduler(makeSmallCtx("rr"), &mm);
+  prosched::PagingManager pm(16, 16);
+  prosched::Scheduler scheduler(makeSmallCtx("rr"), &pm);
 
   prosched::Process *p = new prosched::Process("task", 1, 0);
   AddRaw(*p, R"(PRINT("a"))");
   AddRaw(*p, R"(PRINT("b"))");
   p->SetOwnedByScheduler(true);
+  ASSERT_TRUE(pm.PageIn(1, 0));
+  ASSERT_TRUE(pm.IsPageResident(1, 0));
   scheduler.AddProcess(p);
   scheduler.Start();
 
-  // Freeing lags up to one tick behind IsFinished(), so poll on IsAllocated
+  // Freeing lags up to one tick behind IsFinished(), so poll on residency
   // itself while the scheduler is still running.
   auto deadline =
       std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
-  while ((!p->IsFinished() || mm.IsAllocated(1)) &&
+  while ((!p->IsFinished() || pm.IsPageResident(1, 0)) &&
          std::chrono::steady_clock::now() < deadline)
     std::this_thread::yield();
 
   scheduler.Stop();
 
   EXPECT_TRUE(p->IsFinished());
-  EXPECT_FALSE(mm.IsAllocated(1));
-  EXPECT_EQ(mm.GetProcessCount(), 0);
+  EXPECT_FALSE(pm.IsPageResident(1, 0));
 }
 
-// A dispatched-but-unfinished process keeps its memory (also covers the
-// dispatch-path Allocate at RoundRobin()).
-TEST(SchedulerFreeFinishedProcesses, AllocatedWhileRunning) {
-  prosched::MemoryManager mm(4096, 4096);
-  prosched::Scheduler scheduler(makeSmallCtx("rr"), &mm);
+// A dispatched-but-unfinished process keeps its pages.
+TEST(SchedulerFreeFinishedProcesses, PagesRemainWhileRunning) {
+  prosched::PagingManager pm(16, 16);
+  prosched::Scheduler scheduler(makeSmallCtx("rr"), &pm);
 
   prosched::Process *p = new prosched::Process("sleeper", 1, 0);
   AddRaw(*p, R"(PRINT("start"))");
   AddRaw(*p, "SLEEP(200)");
   AddRaw(*p, R"(PRINT("end"))");
   p->SetOwnedByScheduler(true);
+  ASSERT_TRUE(pm.PageIn(1, 0));
   scheduler.AddProcess(p);
   scheduler.Start();
 
-  // Wait until the process has been dispatched (memory allocated).
+  // Wait until the process has been dispatched.
   auto deadline =
       std::chrono::steady_clock::now() + std::chrono::milliseconds(1000);
-  while (!mm.IsAllocated(1) && !p->IsFinished() &&
+  while (p->GetState() != prosched::WAITING && !p->IsFinished() &&
          std::chrono::steady_clock::now() < deadline)
     std::this_thread::yield();
 
-  // Mid-SLEEP: allocated but not finished — FreeFinishedProcesses must not
-  // have touched it.
-  EXPECT_TRUE(mm.IsAllocated(1));
+  // Mid-SLEEP: still running and its pages must not have been released.
+  EXPECT_TRUE(pm.IsPageResident(1, 0));
   EXPECT_FALSE(p->IsFinished());
 
   scheduler.Stop();
 }
 
-// Without a MemoryManager the early return keeps the scheduler fully working.
-TEST(SchedulerFreeFinishedProcesses, NullMemoryManagerRunsToCompletion) {
+// Without a PagingManager the scheduler still completes non-memory work.
+TEST(SchedulerFreeFinishedProcesses, NullPagingManagerRunsToCompletion) {
   prosched::Scheduler scheduler(makeSmallCtx("rr"));
 
   prosched::Process *p = new prosched::Process("task", 1, 0);
@@ -1320,12 +1319,10 @@ TEST(SchedulerFreeFinishedProcesses, NullMemoryManagerRunsToCompletion) {
   EXPECT_TRUE(p->IsFinished());
 }
 
-// Memory fits only one process at a time; all queued processes still finish
-// because FreeFinishedProcesses releases memory for the next in line. This
-// scenario stalls forever if finished processes are never freed.
-TEST(SchedulerFreeFinishedProcesses, ConstrainedMemoryAllProcessesFinish) {
-  prosched::MemoryManager mm(4096, 4096);
-  prosched::Scheduler scheduler(makeSmallCtx("rr"), &mm);
+// Round-robin dispatch is not gated by physical-memory availability.
+TEST(SchedulerFreeFinishedProcesses, AllQueuedProcessesFinishWithoutPreallocation) {
+  prosched::PagingManager pm(16, 16);
+  prosched::Scheduler scheduler(makeSmallCtx("rr"), &pm);
 
   std::vector<prosched::Process *> procs;
   for (int pid = 1; pid <= 3; ++pid) {
@@ -1351,18 +1348,10 @@ TEST(SchedulerFreeFinishedProcesses, ConstrainedMemoryAllProcessesFinish) {
   while (!allFinished() && std::chrono::steady_clock::now() < deadline)
     std::this_thread::yield();
 
-  // Let the final free happen before stopping.
-  auto freeDeadline =
-      std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
-  while (mm.GetProcessCount() > 0 &&
-         std::chrono::steady_clock::now() < freeDeadline)
-    std::this_thread::yield();
-
   scheduler.Stop();
 
   for (prosched::Process *p : procs)
     EXPECT_TRUE(p->IsFinished()) << p->GetName() << " did not finish";
-  EXPECT_EQ(mm.GetProcessCount(), 0);
 }
 
 } // namespace SchedulerFreeFinishedProcesses
