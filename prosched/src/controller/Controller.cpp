@@ -1,8 +1,11 @@
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -210,6 +213,10 @@ void Controller::ExecuteCommand(const Command &command) {
       PrintReportUtil();
       break;
 
+    case CLI_COMMAND::CLI_VMSTAT:
+      PrintVmStat();
+      break;
+
     case CLI_COMMAND::UNKNOWN:
       std::cout << "Command unknown. Try again. \n";
       break;
@@ -356,6 +363,40 @@ void Controller::EnterProcessScreen(prosched::Process *p) {
   restore();
 }
 
+namespace {
+
+constexpr int kVmStatValueWidth = 13;
+constexpr int kVmStatUnitWidth = 3;
+
+// Emits one vmstat row. Pass an empty unit for quantities that have none.
+void PrintVmStatRow(std::ostream &out, std::uint64_t value,
+                    const std::string &unit, const std::string &description) {
+  out << std::setw(kVmStatValueWidth) << std::right << value << " "
+      << std::setw(kVmStatUnitWidth) << std::left << unit << " " << description
+      << "\n";
+}
+
+} // namespace
+
+void Controller::PrintVmStat() {
+  const prosched::PagingManager::MemoryStats memory =
+      this->pagingManager->GetMemoryStats();
+  const prosched::Scheduler::CpuTickStats ticks =
+      this->scheduler->GetCpuTickStats();
+
+  PrintVmStatRow(std::cout, memory.totalMemoryBytes, "MiB", "total memory");
+  PrintVmStatRow(std::cout, memory.usedMemoryBytes, "MiB", "used memory");
+  PrintVmStatRow(std::cout, memory.freeMemoryBytes, "MiB", "free memory");
+  PrintVmStatRow(std::cout, ticks.idleCpuTicks, "", "idle CPU ticks");
+  PrintVmStatRow(std::cout, ticks.activeCpuTicks, "", "active CPU ticks");
+  PrintVmStatRow(std::cout, ticks.totalCpuTicks, "", "total CPU ticks");
+  PrintVmStatRow(std::cout, memory.pagesPagedIn, "",
+                 "accumulated number of pages paged in");
+  PrintVmStatRow(std::cout, memory.pagesPagedOut, "",
+                 "accumulated number of pages paged out");
+  std::cout << "\n";
+}
+
 void Controller::PrintReportUtil() {
   this->scheduler->PrintProcesses(std::cout);
 
@@ -393,6 +434,8 @@ Controller::IdentifyCommand(const std::vector<std::string> &command) {
     return CLI_COMMAND::CLI_SCHEDULER_STOP;
   } else if (command[0] == "report-util") {
     return CLI_COMMAND::CLI_REPORT_UTIL;
+  } else if (command[0] == "vmstat") {
+    return CLI_COMMAND::CLI_VMSTAT;
   } else {
     return CLI_COMMAND::UNKNOWN;
   }

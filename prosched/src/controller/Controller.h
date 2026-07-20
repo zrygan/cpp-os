@@ -15,6 +15,7 @@ enum class CLI_COMMAND {
   CLI_SCHEDULER_START,
   CLI_SCHEDULER_STOP,
   CLI_REPORT_UTIL,
+  CLI_VMSTAT,
   UNKNOWN,
 };
 
@@ -48,6 +49,7 @@ public:
   void ExitOS();
   void EnterProcessScreen(prosched::Process *p);
   void PrintReportUtil();
+  void PrintVmStat();
 };
 
 #endif

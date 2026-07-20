@@ -55,5 +55,6 @@ void CommandSet() {
             << "- screen -ls\n"
             << "- scheduler-start\n"
             << "- scheduler-stop\n"
-            << "- report-util\n\n";
+            << "- report-util\n"
+            << "- vmstat\n\n";
 }
