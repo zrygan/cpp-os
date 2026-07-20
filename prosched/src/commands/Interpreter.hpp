@@ -813,9 +813,16 @@ public:
     return val;
   }
 
-  /** @brief Execute WRITE:
+  /** @brief Execute WRITE
    * 
-   *  @param stmt The WRITE statement to execute
+   * @param stmt The WRITE statement to execute
+   * 
+   * @return The numeric value written to the symbol table of type
+   * uint16_t. On failure, this returns null. For any case, side effects
+   * occur at THIS class (see @warning).
+   * 
+   * @warning Side effect on *this* class. Specifically on the fields
+   * of the class relevant to IO.
    */
   std::optional<uint16_t> executeWrite(const Statement &stmt) {
     lastInstructionPageFault = false;
@@ -843,7 +850,6 @@ public:
     uint16_t val = resolveOperand(stmt.args[1]);
     addressSpace[addr] = val;
     return val;
-
   }
 
   /** @brief Execute DBG!: dump all variables and their values to the screen buffer.
