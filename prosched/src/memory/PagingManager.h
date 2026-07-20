@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <queue>
 #include <sstream>
 #include <utility>
@@ -23,6 +25,35 @@ public:
   struct PageTableEntry {
     bool resident = false;
     int frameNumber = -1;
+  };
+
+  /**
+   * @brief Represents the current state and ownership of a physical frame.
+   *
+   * A free frame uses -1 for both pid and pageNumber.
+   */
+  struct FrameSnapshot {
+    int frameNumber = -1;
+    std::size_t sizeBytes = 0;
+    bool allocated = false;
+    int pid = -1;
+    int pageNumber = -1;
+  };
+
+  /**
+   * @brief Contains aggregate physical-memory and paging statistics.
+   *
+   * The paging counters are cumulative for the lifetime of the manager.
+   */
+  struct MemoryStats {
+    std::size_t totalMemoryBytes = 0;
+    std::size_t usedMemoryBytes = 0;
+    std::size_t freeMemoryBytes = 0;
+    int totalFrames = 0;
+    int usedFrames = 0;
+    int freeFrames = 0;
+    std::uint64_t pagesPagedIn = 0;
+    std::uint64_t pagesPagedOut = 0;
   };
 
   /**
@@ -48,6 +79,7 @@ public:
    * @return True if the page is resident, false otherwise.
    */
   bool IsPageResident(int pid, int pageNum) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto pidIt = pageTables.find(pid);
     if (pidIt == pageTables.end()) {
       return false;
@@ -69,6 +101,7 @@ public:
    * @return The frame number if the page is resident, -1 otherwise.
    */
   int GetFrame(int pid, int pageNum) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto pidIt = pageTables.find(pid);
     if (pidIt == pageTables.end()) {
       return -1;
@@ -91,6 +124,7 @@ public:
    * @return True if the page was successfully paged in, false otherwise.
    */
   bool PageIn(int pid, int pageNum) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto pidIt = pageTables.find(pid);
     if (pidIt != pageTables.end()) {
       auto pageIt = pidIt->second.find(pageNum);
@@ -109,6 +143,7 @@ public:
           ReadPageFromBackingStore(pid, pageNum);
         }
         loadOrderQueue.push({pid, pageNum});
+        pagesPagedIn++;
         return true;
       }
     }
@@ -128,6 +163,7 @@ public:
       }
 
       WritePageToBackingStore(victimPid, victimPageNum);
+      pagesPagedOut++;
 
       int victimFrame = victimPageIt->second.frameNumber;
       if (victimFrame >= 0 && victimFrame < static_cast<int>(frames.size())) {
@@ -147,6 +183,7 @@ public:
             ReadPageFromBackingStore(pid, pageNum);
           }
           loadOrderQueue.push({pid, pageNum});
+          pagesPagedIn++;
           return true;
         }
       }
@@ -161,6 +198,7 @@ public:
    * @param pid The process ID.
    */
   void FreeAllPagesForProcess(int pid) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto pidIt = pageTables.find(pid);
     if (pidIt == pageTables.end()) {
       return;
@@ -186,6 +224,7 @@ public:
    * @param pageNum The page number.
    */
   void WritePageToBackingStore(int pid, int pageNum) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto interpreterIt = processInterpreters.find(pid);
     if (interpreterIt == processInterpreters.end() || interpreterIt->second == nullptr) {
       return;
@@ -215,6 +254,7 @@ public:
    * @return True if a page entry was found and restored, false otherwise.
    */
   bool ReadPageFromBackingStore(int pid, int pageNum) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto storeIt = backingStore.find({pid, pageNum});
     if (storeIt == backingStore.end()) {
       return false;
@@ -246,7 +286,86 @@ public:
    * @param interpreter The interpreter owning the process's address space.
    */
   void RegisterProcessInterpreter(int pid, Interpreter *interpreter) {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     processInterpreters[pid] = interpreter;
+  }
+
+  /**
+   * @brief Gets a point-in-time view of physical frames and their resident pages.
+   *
+   * @return A vector containing one entry for every physical frame.
+   */
+  std::vector<FrameSnapshot> GetFrameSnapshot() const {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
+    std::vector<FrameSnapshot> snapshot;
+    snapshot.reserve(frames.size());
+
+    for (const Frame &frame : frames) {
+      FrameSnapshot entry{frame.frameNumber, frame.sizeBytes, frame.allocated};
+      for (const auto &[pid, pages] : pageTables) {
+        for (const auto &[pageNumber, page] : pages) {
+          if (page.resident && page.frameNumber == frame.frameNumber) {
+            entry.pid = pid;
+            entry.pageNumber = pageNumber;
+            break;
+          }
+        }
+        if (entry.pid != -1) {
+          break;
+        }
+      }
+      snapshot.push_back(entry);
+    }
+
+    return snapshot;
+  }
+
+  /**
+   * @brief Gets aggregate physical-memory usage and cumulative paging activity.
+   *
+   * @return Current memory usage together with page-in and page-out totals.
+   */
+  MemoryStats GetMemoryStats() const {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
+    MemoryStats stats;
+    stats.totalMemoryBytes = static_cast<std::size_t>(totalFrames) *
+                             static_cast<std::size_t>(memPerFrame);
+    stats.totalFrames = totalFrames;
+    stats.pagesPagedIn = pagesPagedIn;
+    stats.pagesPagedOut = pagesPagedOut;
+
+    for (const Frame &frame : frames) {
+      if (frame.allocated) {
+        stats.usedFrames++;
+        stats.usedMemoryBytes += frame.sizeBytes;
+      }
+    }
+    stats.freeFrames = stats.totalFrames - stats.usedFrames;
+    stats.freeMemoryBytes = stats.totalMemoryBytes - stats.usedMemoryBytes;
+    return stats;
+  }
+
+  /**
+   * @brief Gets the number of pages currently resident for a process.
+   *
+   * @param pid The process ID.
+   * @return The number of resident pages owned by the process.
+   */
+  int GetResidentPageCount(int pid) const {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
+    auto pidIt = pageTables.find(pid);
+    if (pidIt == pageTables.end()) {
+      return 0;
+    }
+
+    int count = 0;
+    for (const auto &[pageNumber, page] : pidIt->second) {
+      (void)pageNumber;
+      if (page.resident) {
+        count++;
+      }
+    }
+    return count;
   }
 
   /**
@@ -255,6 +374,7 @@ public:
    * @return The total number of frames.
    */
   int GetTotalFrameCount() const {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     return totalFrames;
   }
 
@@ -267,6 +387,9 @@ private:
   std::queue<std::pair<int, int>> loadOrderQueue;
   std::map<int, Interpreter *> processInterpreters;
   std::map<std::pair<int, int>, std::string> backingStore;
+  std::uint64_t pagesPagedIn = 0;
+  std::uint64_t pagesPagedOut = 0;
+  mutable std::recursive_mutex pagingMutex;
   const std::string backingStoreFile = "csopesy-backing-store.txt";
 
   /**

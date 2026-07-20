@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 #include <condition_variable>
+#include <cstdint>
 
 #include "Config.h"
 #include "process/Process.h"
@@ -22,6 +23,17 @@ namespace prosched {
 
 class Scheduler {
 public:
+  /**
+   * @brief Contains cumulative CPU-core tick statistics.
+   *
+   * totalCpuTicks is always the sum of activeCpuTicks and idleCpuTicks.
+   */
+  struct CpuTickStats {
+    std::uint64_t totalCpuTicks = 0;
+    std::uint64_t activeCpuTicks = 0;
+    std::uint64_t idleCpuTicks = 0;
+  };
+
   /**
    * @brief Creates a scheduler instance
    *
@@ -363,6 +375,17 @@ public:
    */
   bool IsRunning() { return running == true; }
 
+
+  /**
+   * @brief Gets cumulative CPU-core ticks observed by the scheduler.
+   *
+   * @return Total, active, and idle worker-core tick counts.
+   */
+  CpuTickStats GetCpuTickStats() const {
+    std::lock_guard<std::mutex> lock(cpuStatsMutex);
+    return {totalCpuTicks, activeCpuTicks, idleCpuTicks};
+  }
+
   /**
    * @brief Creates a new named process with random instructions and assigns it
    * the next available PID.
@@ -532,6 +555,15 @@ public:
     }
 
     for (Worker *w : workers) {
+      {
+        std::lock_guard<std::mutex> statsLock(cpuStatsMutex);
+        totalCpuTicks++;
+        if (w->IsBusy()) {
+          activeCpuTicks++;
+        } else {
+          idleCpuTicks++;
+        }
+      }
       w->SignalNewTick(cpuCycles);
     }
 
@@ -584,6 +616,10 @@ private:
   std::condition_variable tickCv;
   int workersCompleted = 0;
   PagingManager *pagingManager = nullptr;
+  mutable std::mutex cpuStatsMutex;
+  std::uint64_t totalCpuTicks = 0;
+  std::uint64_t activeCpuTicks = 0;
+  std::uint64_t idleCpuTicks = 0;
 
   /**
    * @brief Frees memory allocated to finished processes.
