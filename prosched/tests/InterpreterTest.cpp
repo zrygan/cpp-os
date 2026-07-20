@@ -1,4 +1,4 @@
-#include "commands/Interpreter.hpp"
+#include "commands/Interpreter.h"
 #include <chrono>
 #include <gtest/gtest.h>
 
@@ -12,7 +12,7 @@ makeStmt(prosched::Keyword kw, std::vector<std::string> args = {},
   return s;
 }
 
-// ─── flushBuffer
+// ─── FlushBuffer
 // ──────────────────────────────────────────────────────────────
 
 namespace InterpreterFlushBuffer {
@@ -20,14 +20,14 @@ namespace InterpreterFlushBuffer {
 // No output produced yet — flush returns an empty vector
 TEST(InterpreterFlushBuffer, EmptyBufferReturnsEmptyVector) {
   prosched::Interpreter interp;
-  EXPECT_TRUE(interp.flushBuffer().empty());
+  EXPECT_TRUE(interp.FlushBuffer().empty());
 }
 
 // A PRINT call adds one entry; flush returns it
 TEST(InterpreterFlushBuffer, ReturnsAccumulatedOutput) {
   prosched::Interpreter interp;
-  interp.executeString(R"(PRINT("hello"))");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString(R"(PRINT("hello"))");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "hello");
 }
@@ -35,16 +35,16 @@ TEST(InterpreterFlushBuffer, ReturnsAccumulatedOutput) {
 // Second flush after the first returns empty — buffer was cleared
 TEST(InterpreterFlushBuffer, ClearedAfterFlush) {
   prosched::Interpreter interp;
-  interp.executeString(R"(PRINT("hello"))");
-  interp.flushBuffer();
-  EXPECT_TRUE(interp.flushBuffer().empty());
+  interp.ExecuteString(R"(PRINT("hello"))");
+  interp.FlushBuffer();
+  EXPECT_TRUE(interp.FlushBuffer().empty());
 }
 
 // All three PRINT outputs accumulate and are returned in order before flush
 TEST(InterpreterFlushBuffer, MultiplePrintsAllAppearBeforeFlush) {
   prosched::Interpreter interp;
-  interp.executeString(R"(PRINT("a"), PRINT("b"), PRINT("c"))");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString(R"(PRINT("a"), PRINT("b"), PRINT("c"))");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 3u);
   EXPECT_EQ(buf[0], "a");
   EXPECT_EQ(buf[1], "b");
@@ -53,7 +53,7 @@ TEST(InterpreterFlushBuffer, MultiplePrintsAllAppearBeforeFlush) {
 
 } // namespace InterpreterFlushBuffer
 
-// ─── executeString
+// ─── ExecuteString
 // ────────────────────────────────────────────────────────────
 
 namespace InterpreterExecuteString {
@@ -61,22 +61,22 @@ namespace InterpreterExecuteString {
 // Parsing empty input must not throw or produce output
 TEST(InterpreterExecuteString, EmptyStringNocrash) {
   prosched::Interpreter interp;
-  EXPECT_NO_THROW(interp.executeString(""));
-  EXPECT_TRUE(interp.flushBuffer().empty());
+  EXPECT_NO_THROW(interp.ExecuteString(""));
+  EXPECT_TRUE(interp.FlushBuffer().empty());
 }
 
 // Whitespace-only input is treated the same as empty
 TEST(InterpreterExecuteString, WhitespaceOnlyNocrash) {
   prosched::Interpreter interp;
-  EXPECT_NO_THROW(interp.executeString("   "));
-  EXPECT_TRUE(interp.flushBuffer().empty());
+  EXPECT_NO_THROW(interp.ExecuteString("   "));
+  EXPECT_TRUE(interp.FlushBuffer().empty());
 }
 
 // PRINT("hello world") buffers the literal string value
 TEST(InterpreterExecuteString, ValidPrintProducesOutput) {
   prosched::Interpreter interp;
-  interp.executeString(R"(PRINT("hello world"))");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString(R"(PRINT("hello world"))");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "hello world");
 }
@@ -84,8 +84,8 @@ TEST(InterpreterExecuteString, ValidPrintProducesOutput) {
 // Unrecognized keywords push a "[!]" warning entry to the buffer
 TEST(InterpreterExecuteString, UnknownKeywordPushesWarning) {
   prosched::Interpreter interp;
-  interp.executeString("UNKNOWNCMD(x)");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString("UNKNOWNCMD(x)");
+  auto buf = interp.FlushBuffer();
   ASSERT_FALSE(buf.empty());
   EXPECT_NE(buf[0].find("[!]"), std::string::npos);
 }
@@ -93,8 +93,8 @@ TEST(InterpreterExecuteString, UnknownKeywordPushesWarning) {
 // DECLARE stores a value; the subsequent PRINT reads it correctly
 TEST(InterpreterExecuteString, DeclareAndPrintWorkTogether) {
   prosched::Interpreter interp;
-  interp.executeString("DECLARE(x, 42), PRINT(x)");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString("DECLARE(x, 42), PRINT(x)");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "42");
 }
@@ -102,15 +102,15 @@ TEST(InterpreterExecuteString, DeclareAndPrintWorkTogether) {
 // DECLARE+ADD pipeline: PRINT shows the computed sum
 TEST(InterpreterExecuteString, AddAndPrintWorkTogether) {
   prosched::Interpreter interp;
-  interp.executeString("DECLARE(a, 3), DECLARE(b, 4), ADD(c, a, b), PRINT(c)");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString("DECLARE(a, 3), DECLARE(b, 4), ADD(c, a, b), PRINT(c)");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "7");
 }
 
 } // namespace InterpreterExecuteString
 
-// ─── executePrint
+// ─── ExecutePrint
 // ─────────────────────────────────────────────────────────────
 
 namespace InterpreterExecutePrint {
@@ -118,9 +118,9 @@ namespace InterpreterExecutePrint {
 // Quoted arg strips the quotes; inner text is returned and buffered
 TEST(InterpreterExecutePrint, StringLiteralReturnsCorrectly) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::PRINT, {R"("hello")"});
-  EXPECT_EQ(interp.executePrint(stmt), "hello");
-  auto buf = interp.flushBuffer();
+  auto stmt = makeStmt(prosched::Keyword::kPrint, {R"("hello")"});
+  EXPECT_EQ(interp.ExecutePrint(stmt), "hello");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "hello");
 }
@@ -128,9 +128,9 @@ TEST(InterpreterExecutePrint, StringLiteralReturnsCorrectly) {
 // Empty quoted string prints and buffers an empty-string entry
 TEST(InterpreterExecutePrint, EmptyStringLiteralReturnsEmpty) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::PRINT, {R"("")"});
-  EXPECT_EQ(interp.executePrint(stmt), "");
-  auto buf = interp.flushBuffer();
+  auto stmt = makeStmt(prosched::Keyword::kPrint, {R"("")"});
+  EXPECT_EQ(interp.ExecutePrint(stmt), "");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "");
 }
@@ -138,23 +138,23 @@ TEST(InterpreterExecutePrint, EmptyStringLiteralReturnsEmpty) {
 // Undeclared variable resolves to "0" — the default value
 TEST(InterpreterExecutePrint, UndeclaredVariablePrintsZero) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::PRINT, {"notdeclared"});
-  EXPECT_EQ(interp.executePrint(stmt), "0");
+  auto stmt = makeStmt(prosched::Keyword::kPrint, {"notdeclared"});
+  EXPECT_EQ(interp.ExecutePrint(stmt), "0");
 }
 
 // "str=" + var concatenates a string literal with a variable's value
 TEST(InterpreterExecutePrint, ConcatStringAndVariable) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"x", "5"}));
-  interp.flushBuffer();
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"x", "5"}));
+  interp.FlushBuffer();
 
-  auto stmt = makeStmt(prosched::Keyword::PRINT, {R"("val=" + x)"});
-  EXPECT_EQ(interp.executePrint(stmt), "val=5");
+  auto stmt = makeStmt(prosched::Keyword::kPrint, {R"("val=" + x)"});
+  EXPECT_EQ(interp.ExecutePrint(stmt), "val=5");
 }
 
 } // namespace InterpreterExecutePrint
 
-// ─── executeDeclare
+// ─── ExecuteDeclare
 // ───────────────────────────────────────────────────────────
 
 namespace InterpreterExecuteDeclare {
@@ -162,8 +162,8 @@ namespace InterpreterExecuteDeclare {
 // Returns the stored uint16 value on success
 TEST(InterpreterExecuteDeclare, BasicDeclarationReturnsValue) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::DECLARE, {"x", "10"});
-  auto result = interp.executeDeclare(stmt);
+  auto stmt = makeStmt(prosched::Keyword::kDeclare, {"x", "10"});
+  auto result = interp.ExecuteDeclare(stmt);
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 10);
 }
@@ -171,8 +171,8 @@ TEST(InterpreterExecuteDeclare, BasicDeclarationReturnsValue) {
 // Zero is a valid uint16 value
 TEST(InterpreterExecuteDeclare, ZeroValueReturnsZero) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::DECLARE, {"x", "0"});
-  auto result = interp.executeDeclare(stmt);
+  auto stmt = makeStmt(prosched::Keyword::kDeclare, {"x", "0"});
+  auto result = interp.ExecuteDeclare(stmt);
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 0);
 }
@@ -180,8 +180,8 @@ TEST(InterpreterExecuteDeclare, ZeroValueReturnsZero) {
 // 65535 is the uint16 max — must not overflow or truncate
 TEST(InterpreterExecuteDeclare, MaxUint16ReturnsCorrectly) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::DECLARE, {"x", "65535"});
-  auto result = interp.executeDeclare(stmt);
+  auto stmt = makeStmt(prosched::Keyword::kDeclare, {"x", "65535"});
+  auto result = interp.ExecuteDeclare(stmt);
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 65535);
 }
@@ -189,23 +189,23 @@ TEST(InterpreterExecuteDeclare, MaxUint16ReturnsCorrectly) {
 // Single-arg DECLARE is malformed — returns nullopt without crashing
 TEST(InterpreterExecuteDeclare, MissingSecondArgReturnsNullopt) {
   prosched::Interpreter interp;
-  auto stmt = makeStmt(prosched::Keyword::DECLARE, {"x"});
-  EXPECT_FALSE(interp.executeDeclare(stmt).has_value());
+  auto stmt = makeStmt(prosched::Keyword::kDeclare, {"x"});
+  EXPECT_FALSE(interp.ExecuteDeclare(stmt).has_value());
 }
 
 // Declared variable is accessible in subsequent PRINT calls
 TEST(InterpreterExecuteDeclare, VariableIsAvailableForSubsequentPrint) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"myvar", "42"}));
-  interp.executePrint(makeStmt(prosched::Keyword::PRINT, {"myvar"}));
-  auto buf = interp.flushBuffer();
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"myvar", "42"}));
+  interp.ExecutePrint(makeStmt(prosched::Keyword::kPrint, {"myvar"}));
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "42");
 }
 
 } // namespace InterpreterExecuteDeclare
 
-// ─── executeAdd
+// ─── ExecuteAdd
 // ───────────────────────────────────────────────────────────────
 
 namespace InterpreterExecuteAdd {
@@ -213,10 +213,10 @@ namespace InterpreterExecuteAdd {
 // Reads two declared vars, computes their sum, stores in a new var
 TEST(InterpreterExecuteAdd, TwoVariablesAdded) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"a", "3"}));
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"b", "7"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"a", "3"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"b", "7"}));
   auto result =
-      interp.executeAdd(makeStmt(prosched::Keyword::ADD, {"c", "a", "b"}));
+      interp.ExecuteAdd(makeStmt(prosched::Keyword::kAdd, {"c", "a", "b"}));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 10);
 }
@@ -225,7 +225,7 @@ TEST(InterpreterExecuteAdd, TwoVariablesAdded) {
 TEST(InterpreterExecuteAdd, LiteralNumericOperands) {
   prosched::Interpreter interp;
   auto result =
-      interp.executeAdd(makeStmt(prosched::Keyword::ADD, {"z", "5", "3"}));
+      interp.ExecuteAdd(makeStmt(prosched::Keyword::kAdd, {"z", "5", "3"}));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 8);
 }
@@ -233,9 +233,9 @@ TEST(InterpreterExecuteAdd, LiteralNumericOperands) {
 // dest can be one of the source operands — overwrites correctly
 TEST(InterpreterExecuteAdd, OverwritesExistingVariable) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"x", "5"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"x", "5"}));
   auto result =
-      interp.executeAdd(makeStmt(prosched::Keyword::ADD, {"x", "x", "3"}));
+      interp.ExecuteAdd(makeStmt(prosched::Keyword::kAdd, {"x", "x", "3"}));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 8);
 }
@@ -243,13 +243,13 @@ TEST(InterpreterExecuteAdd, OverwritesExistingVariable) {
 // Fewer than 3 args is malformed — returns nullopt
 TEST(InterpreterExecuteAdd, MissingArgsReturnsNullopt) {
   prosched::Interpreter interp;
-  auto result = interp.executeAdd(makeStmt(prosched::Keyword::ADD, {"x", "5"}));
+  auto result = interp.ExecuteAdd(makeStmt(prosched::Keyword::kAdd, {"x", "5"}));
   EXPECT_FALSE(result.has_value());
 }
 
 } // namespace InterpreterExecuteAdd
 
-// ─── executeSubtract
+// ─── ExecuteSubtract
 // ──────────────────────────────────────────────────────────
 
 namespace InterpreterExecuteSubtract {
@@ -257,10 +257,10 @@ namespace InterpreterExecuteSubtract {
 // Subtracts two declared variables and stores the result in a new var
 TEST(InterpreterExecuteSubtract, BasicSubtractionCorrect) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"a", "10"}));
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"b", "3"}));
-  auto result = interp.executeSubtract(
-      makeStmt(prosched::Keyword::SUBTRACT, {"c", "a", "b"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"a", "10"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"b", "3"}));
+  auto result = interp.ExecuteSubtract(
+      makeStmt(prosched::Keyword::kSubtract, {"c", "a", "b"}));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), 7);
 }
@@ -268,10 +268,10 @@ TEST(InterpreterExecuteSubtract, BasicSubtractionCorrect) {
 // uint16 underflow wraps around — no exception thrown
 TEST(InterpreterExecuteSubtract, Uint16UnderflowWrapsWithoutThrow) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"a", "3"}));
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"b", "10"}));
-  auto result = interp.executeSubtract(
-      makeStmt(prosched::Keyword::SUBTRACT, {"c", "a", "b"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"a", "3"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"b", "10"}));
+  auto result = interp.ExecuteSubtract(
+      makeStmt(prosched::Keyword::kSubtract, {"c", "a", "b"}));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result.value(), static_cast<uint16_t>(3 - 10));
 }
@@ -280,13 +280,13 @@ TEST(InterpreterExecuteSubtract, Uint16UnderflowWrapsWithoutThrow) {
 TEST(InterpreterExecuteSubtract, MissingArgsReturnsNullopt) {
   prosched::Interpreter interp;
   auto result =
-      interp.executeSubtract(makeStmt(prosched::Keyword::SUBTRACT, {"x", "5"}));
+      interp.ExecuteSubtract(makeStmt(prosched::Keyword::kSubtract, {"x", "5"}));
   EXPECT_FALSE(result.has_value());
 }
 
 } // namespace InterpreterExecuteSubtract
 
-// ─── executeSleep
+// ─── ExecuteSleep
 // ─────────────────────────────────────────────────────────────
 
 namespace InterpreterExecuteSleep {
@@ -295,14 +295,14 @@ namespace InterpreterExecuteSleep {
 TEST(InterpreterExecuteSleep, ZeroTicksCompletesWithoutHang) {
   prosched::Interpreter interp;
   EXPECT_NO_THROW(
-      interp.executeSleep(makeStmt(prosched::Keyword::SLEEP, {"0"})));
+      interp.ExecuteSleep(makeStmt(prosched::Keyword::kSleep, {"0"})));
 }
 
 // SLEEP(1) completes in finite time
 TEST(InterpreterExecuteSleep, OneTickCompletes) {
   prosched::Interpreter interp;
   EXPECT_NO_THROW(
-      interp.executeSleep(makeStmt(prosched::Keyword::SLEEP, {"1"})));
+      interp.ExecuteSleep(makeStmt(prosched::Keyword::kSleep, {"1"})));
 }
 
 } // namespace InterpreterExecuteSleep
@@ -315,8 +315,8 @@ namespace InterpreterExecuteFor {
 // FOR body runs exactly N times, one PRINT per iteration
 TEST(InterpreterExecuteFor, BasicThreeIterations) {
   prosched::Interpreter interp;
-  interp.executeString(R"(FOR([PRINT("x")], 3))");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString(R"(FOR([PRINT("x")], 3))");
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 3u);
   for (const auto &line : buf)
     EXPECT_EQ(line, "x");
@@ -325,21 +325,21 @@ TEST(InterpreterExecuteFor, BasicThreeIterations) {
 // FOR with count 0 skips the body entirely
 TEST(InterpreterExecuteFor, ZeroIterationsProducesNothing) {
   prosched::Interpreter interp;
-  interp.executeString(R"(FOR([PRINT("x")], 0))");
-  EXPECT_TRUE(interp.flushBuffer().empty());
+  interp.ExecuteString(R"(FOR([PRINT("x")], 0))");
+  EXPECT_TRUE(interp.FlushBuffer().empty());
 }
 
 // Inner loop (2) × outer loop (3) = 6 total PRINT calls
 TEST(InterpreterExecuteFor, NestedForMultipliesIterationCount) {
   prosched::Interpreter interp;
-  interp.executeString(R"(FOR([FOR([PRINT("n")], 2)], 3))");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString(R"(FOR([FOR([PRINT("n")], 2)], 3))");
+  auto buf = interp.FlushBuffer();
   EXPECT_EQ(buf.size(), 6u);
 }
 
 } // namespace InterpreterExecuteFor
 
-// ─── executeDebug
+// ─── ExecuteDebug
 // ─────────────────────────────────────────────────────────────
 
 namespace InterpreterExecuteDebug {
@@ -347,8 +347,8 @@ namespace InterpreterExecuteDebug {
 // No variables declared — buffer contains the "[No variables declared]" message
 TEST(InterpreterExecuteDebug, EmptyMemoryShowsNoVarsMessage) {
   prosched::Interpreter interp;
-  interp.executeDebug();
-  auto buf = interp.flushBuffer();
+  interp.ExecuteDebug();
+  auto buf = interp.FlushBuffer();
   bool found = false;
   for (const auto &line : buf)
     if (line.find("[No variables declared]") != std::string::npos)
@@ -359,10 +359,10 @@ TEST(InterpreterExecuteDebug, EmptyMemoryShowsNoVarsMessage) {
 // Declared variable name appears somewhere in the debug output lines
 TEST(InterpreterExecuteDebug, DeclaredVariableAppearsInDump) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"myvar", "99"}));
-  interp.flushBuffer();
-  interp.executeDebug();
-  auto buf = interp.flushBuffer();
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"myvar", "99"}));
+  interp.FlushBuffer();
+  interp.ExecuteDebug();
+  auto buf = interp.FlushBuffer();
   bool found = false;
   for (const auto &line : buf)
     if (line.find("myvar") != std::string::npos)
@@ -373,9 +373,9 @@ TEST(InterpreterExecuteDebug, DeclaredVariableAppearsInDump) {
 // Return value is the live memory map containing all declared variables
 TEST(InterpreterExecuteDebug, ReturnsMemoryMapWithAllDeclaredVars) {
   prosched::Interpreter interp;
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"a", "1"}));
-  interp.executeDeclare(makeStmt(prosched::Keyword::DECLARE, {"b", "2"}));
-  auto mem = interp.executeDebug();
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"a", "1"}));
+  interp.ExecuteDeclare(makeStmt(prosched::Keyword::kDeclare, {"b", "2"}));
+  auto mem = interp.ExecuteDebug();
   EXPECT_EQ(mem.at("a"), 1);
   EXPECT_EQ(mem.at("b"), 2);
 }
@@ -389,43 +389,43 @@ namespace InterpreterParse {
 // Empty string produces no AST nodes
 TEST(InterpreterParse, EmptyStringReturnsEmptyVector) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse("");
+  auto stmts = interp.Parse("");
   EXPECT_TRUE(stmts.empty());
 }
 
 // Single valid statement produces one node with the correct keyword
 TEST(InterpreterParse, SingleStatementReturnsOneNodeWithCorrectKeyword) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse(R"(PRINT("hi"))");
+  auto stmts = interp.Parse(R"(PRINT("hi"))");
   ASSERT_EQ(stmts.size(), 1u);
-  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::PRINT);
+  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::kPrint);
 }
 
 // Multiple comma-separated statements produce the correct node count
 TEST(InterpreterParse, MultipleStatementsReturnCorrectCount) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse(R"(PRINT("a"), DECLARE(x, 1), ADD(y, x, x))");
+  auto stmts = interp.Parse(R"(PRINT("a"), DECLARE(x, 1), ADD(y, x, x))");
   EXPECT_EQ(stmts.size(), 3u);
-  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::PRINT);
-  EXPECT_EQ(stmts[1].keyword, prosched::Keyword::DECLARE);
-  EXPECT_EQ(stmts[2].keyword, prosched::Keyword::ADD);
+  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::kPrint);
+  EXPECT_EQ(stmts[1].keyword, prosched::Keyword::kDeclare);
+  EXPECT_EQ(stmts[2].keyword, prosched::Keyword::kAdd);
 }
 
 // FOR node stores its body in the nested field, not flattened into args
 TEST(InterpreterParse, ForStatementPopulatesNestedField) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse(R"(FOR([PRINT("x")], 2))");
+  auto stmts = interp.Parse(R"(FOR([PRINT("x")], 2))");
   ASSERT_EQ(stmts.size(), 1u);
-  ASSERT_EQ(stmts[0].keyword, prosched::Keyword::FOR);
+  ASSERT_EQ(stmts[0].keyword, prosched::Keyword::kFor);
   EXPECT_FALSE(stmts[0].nested.empty());
 }
 
 // Unknown keyword is parsed without crashing and tagged UNKNOWN
 TEST(InterpreterParse, UnknownKeywordTaggedAsUnknown) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse("BADCMD(x)");
+  auto stmts = interp.Parse("BADCMD(x)");
   ASSERT_EQ(stmts.size(), 1u);
-  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::UNKNOWN);
+  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::kUnknown);
 }
 
 // The top-level splitter respects bracket depth: commas inside a FOR body are
@@ -434,10 +434,10 @@ TEST(InterpreterParse, UnknownKeywordTaggedAsUnknown) {
 TEST(InterpreterParse, CommasInsideForBodyDoNotSplitTopLevel) {
   prosched::Interpreter interp;
   auto stmts =
-      interp.parse(R"(FOR([PRINT("a"), PRINT("b")], 2), PRINT("after"))");
+      interp.Parse(R"(FOR([PRINT("a"), PRINT("b")], 2), PRINT("after"))");
   ASSERT_EQ(stmts.size(), 2u);
-  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::FOR);
-  EXPECT_EQ(stmts[1].keyword, prosched::Keyword::PRINT);
+  EXPECT_EQ(stmts[0].keyword, prosched::Keyword::kFor);
+  EXPECT_EQ(stmts[1].keyword, prosched::Keyword::kPrint);
   // The FOR's body keeps both of its inner statements
   EXPECT_EQ(stmts[0].nested.size(), 2u);
 }
@@ -446,45 +446,45 @@ TEST(InterpreterParse, CommasInsideForBodyDoNotSplitTopLevel) {
 // the inner FOR is preserved as a nested child, not flattened or mis-split.
 TEST(InterpreterParse, NestedForParsesIntoNestedTree) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse(R"(FOR([FOR([PRINT("x")], 2)], 3))");
+  auto stmts = interp.Parse(R"(FOR([FOR([PRINT("x")], 2)], 3))");
   ASSERT_EQ(stmts.size(), 1u);
-  ASSERT_EQ(stmts[0].keyword, prosched::Keyword::FOR);
+  ASSERT_EQ(stmts[0].keyword, prosched::Keyword::kFor);
   ASSERT_EQ(stmts[0].nested.size(), 1u);
-  ASSERT_EQ(stmts[0].nested[0].keyword, prosched::Keyword::FOR);
+  ASSERT_EQ(stmts[0].nested[0].keyword, prosched::Keyword::kFor);
   ASSERT_EQ(stmts[0].nested[0].nested.size(), 1u);
-  EXPECT_EQ(stmts[0].nested[0].nested[0].keyword, prosched::Keyword::PRINT);
+  EXPECT_EQ(stmts[0].nested[0].nested[0].keyword, prosched::Keyword::kPrint);
 }
 
 } // namespace InterpreterParse
 
-// ─── executeStatements ─────────────────────────────────────────────────────
+// ─── ExecuteStatements ─────────────────────────────────────────────────────
 
 namespace InterpreterExecuteStatements {
 
-// executeStatements on a pre-parsed AST produces the same output as
-// executeString
+// ExecuteStatements on a pre-parsed AST produces the same output as
+// ExecuteString
 TEST(InterpreterExecuteStatements, MatchesExecuteStringOutput) {
   prosched::Interpreter interp_a;
-  interp_a.executeString(R"(DECLARE(x, 5), PRINT(x))");
-  auto expected = interp_a.flushBuffer();
+  interp_a.ExecuteString(R"(DECLARE(x, 5), PRINT(x))");
+  auto expected = interp_a.FlushBuffer();
 
   prosched::Interpreter interp_b;
-  auto stmts = interp_b.parse(R"(DECLARE(x, 5), PRINT(x))");
-  interp_b.executeStatements(stmts);
-  auto actual = interp_b.flushBuffer();
+  auto stmts = interp_b.Parse(R"(DECLARE(x, 5), PRINT(x))");
+  interp_b.ExecuteStatements(stmts);
+  auto actual = interp_b.FlushBuffer();
 
   EXPECT_EQ(actual, expected);
 }
 
-// executeStatements works when called with a manually constructed statement
+// ExecuteStatements works when called with a manually constructed statement
 // list
 TEST(InterpreterExecuteStatements, WorksWithPreBuiltStatementList) {
   prosched::Interpreter interp;
   std::vector<prosched::Statement> stmts = {
-      makeStmt(prosched::Keyword::DECLARE, {"n", "7"}),
-      makeStmt(prosched::Keyword::PRINT, {"n"})};
-  interp.executeStatements(stmts);
-  auto buf = interp.flushBuffer();
+      makeStmt(prosched::Keyword::kDeclare, {"n", "7"}),
+      makeStmt(prosched::Keyword::kPrint, {"n"})};
+  interp.ExecuteStatements(stmts);
+  auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
   EXPECT_EQ(buf[0], "7");
 }
@@ -493,9 +493,9 @@ TEST(InterpreterExecuteStatements, WorksWithPreBuiltStatementList) {
 TEST(InterpreterExecuteStatements, UnknownStatementPushesWarning) {
   prosched::Interpreter interp;
   std::vector<prosched::Statement> stmts = {
-      makeStmt(prosched::Keyword::UNKNOWN)};
-  EXPECT_NO_THROW(interp.executeStatements(stmts));
-  auto buf = interp.flushBuffer();
+      makeStmt(prosched::Keyword::kUnknown)};
+  EXPECT_NO_THROW(interp.ExecuteStatements(stmts));
+  auto buf = interp.FlushBuffer();
   ASSERT_FALSE(buf.empty());
   EXPECT_NE(buf[0].find("[!]"), std::string::npos);
 }
@@ -510,14 +510,14 @@ namespace InterpreterExecuteFor {
 // depth
 TEST(InterpreterExecuteFor, TripleNestedForMultipliesIterationCount) {
   prosched::Interpreter interp;
-  interp.executeString(R"(FOR([FOR([FOR([PRINT("x")], 4)], 2)], 3))");
-  auto buf = interp.flushBuffer();
+  interp.ExecuteString(R"(FOR([FOR([FOR([PRINT("x")], 4)], 2)], 3))");
+  auto buf = interp.FlushBuffer();
   EXPECT_EQ(buf.size(), 24u);
 }
 
 } // namespace InterpreterExecuteFor
 
-// ─── executeSleep (additional) ─────────────────────────────────────────────
+// ─── ExecuteSleep (additional) ─────────────────────────────────────────────
 
 namespace InterpreterExecuteSleep {
 
@@ -525,7 +525,7 @@ namespace InterpreterExecuteSleep {
 TEST(InterpreterExecuteSleep, ZeroTicksTakesNegligibleTime) {
   prosched::Interpreter interp;
   auto start = std::chrono::steady_clock::now();
-  interp.executeSleep(makeStmt(prosched::Keyword::SLEEP, {"0"}));
+  interp.ExecuteSleep(makeStmt(prosched::Keyword::kSleep, {"0"}));
   auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now() - start)
                         .count();
@@ -537,7 +537,7 @@ TEST(InterpreterExecuteSleep, ZeroTicksTakesNegligibleTime) {
 TEST(InterpreterExecuteSleep, OneTickTakesAtLeastOneTick) {
   prosched::Interpreter interp;
   auto start = std::chrono::steady_clock::now();
-  interp.executeSleep(makeStmt(prosched::Keyword::SLEEP, {"1"}));
+  interp.ExecuteSleep(makeStmt(prosched::Keyword::kSleep, {"1"}));
   auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now() - start)
                         .count();
@@ -556,9 +556,9 @@ namespace InterpreterGetRandomStatement {
 TEST(InterpreterGetRandomStatement, AlwaysReturnsValidKeyword) {
   for (int i = 0; i < 100; i++) {
     auto stmt = prosched::GetRandomStatement("proc", 0);
-    EXPECT_NE(stmt.keyword, prosched::Keyword::UNKNOWN)
+    EXPECT_NE(stmt.keyword, prosched::Keyword::kUnknown)
         << "Got UNKNOWN on iteration " << i;
-    EXPECT_NE(stmt.keyword, prosched::Keyword::DBG)
+    EXPECT_NE(stmt.keyword, prosched::Keyword::kDebug)
         << "Got DBG on iteration " << i;
   }
 }
@@ -567,7 +567,7 @@ TEST(InterpreterGetRandomStatement, AlwaysReturnsValidKeyword) {
 TEST(InterpreterGetRandomStatement, NeverReturnsForAtMaxDepth) {
   for (int i = 0; i < 100; i++) {
     auto stmt = prosched::GetRandomStatement("proc", 3);
-    EXPECT_NE(stmt.keyword, prosched::Keyword::FOR)
+    EXPECT_NE(stmt.keyword, prosched::Keyword::kFor)
         << "Got FOR at maxDepth=3 on iteration " << i;
   }
 }
@@ -578,25 +578,25 @@ TEST(InterpreterGetRandomStatement, ArgShapeMatchesKeyword) {
   for (int i = 0; i < 200; i++) {
     auto stmt = prosched::GetRandomStatement("proc", 0);
     switch (stmt.keyword) {
-    case prosched::Keyword::PRINT:
+    case prosched::Keyword::kPrint:
       ASSERT_EQ(stmt.args.size(), 1u) << "PRINT must have 1 arg";
       EXPECT_EQ(stmt.args[0].front(), '"')
           << "PRINT arg must be a quoted string";
       EXPECT_EQ(stmt.args[0].back(), '"')
           << "PRINT arg must be a quoted string";
       break;
-    case prosched::Keyword::DECLARE:
+    case prosched::Keyword::kDeclare:
       EXPECT_EQ(stmt.args.size(), 2u) << "DECLARE must have 2 args";
       break;
-    case prosched::Keyword::ADD:
-    case prosched::Keyword::SUBTRACT:
+    case prosched::Keyword::kAdd:
+    case prosched::Keyword::kSubtract:
       EXPECT_EQ(stmt.args.size(), 3u) << "ADD/SUBTRACT must have 3 args";
       break;
-    case prosched::Keyword::SLEEP:
+    case prosched::Keyword::kSleep:
       ASSERT_EQ(stmt.args.size(), 1u) << "SLEEP must have 1 arg";
       EXPECT_NO_THROW(std::stoul(stmt.args[0])) << "SLEEP arg must be numeric";
       break;
-    case prosched::Keyword::FOR:
+    case prosched::Keyword::kFor:
       ASSERT_GE(stmt.args.size(), 2u) << "FOR must have at least 2 args";
       EXPECT_FALSE(stmt.nested.empty()) << "FOR must have nested statements";
       break;

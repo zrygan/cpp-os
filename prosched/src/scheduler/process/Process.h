@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "Config.h"
-#include "src/commands/Interpreter.hpp"
+#include "commands/Interpreter.h"
 
 namespace prosched {
 
@@ -95,7 +95,7 @@ public:
    */
   Statement *AddInstruction(Statement &stmt) {
     try {
-      if (stmt.keyword == Keyword::FOR) {
+      if (stmt.keyword == Keyword::kFor) {
         int repeats = 1;
         if (stmt.args.size() >= 2) {
           try {
@@ -149,7 +149,7 @@ public:
     }
 
     const Statement &stmt = statements[currentInstructionIndex];
-    if (stmt.keyword == Keyword::SLEEP) {
+    if (stmt.keyword == Keyword::kSleep) {
       currentState = WAITING;
       if (!stmt.args.empty()) {
         try {
@@ -177,14 +177,14 @@ public:
       return statements;
     }
 
-    if (stmt.keyword == Keyword::FOR) {
+    if (stmt.keyword == Keyword::kFor) {
       currentInstructionIndex++;
       return statements;
     }
 
     interpreter.ResetLastInstructionPageFault();
     interpreter.ResetLastInstructionAccessViolation();
-    interpreter.executeStatements({stmt});
+    interpreter.ExecuteStatements({stmt});
 
     if (interpreter.GetLastInstructionAccessViolation()) {
       lastViolationTime = GetTimestamp();
@@ -200,7 +200,7 @@ public:
       currentInstructionIndex++;
     }
 
-    auto output = interpreter.flushBuffer();
+    auto output = interpreter.FlushBuffer();
     for (const auto &line : output) {
       logs.push_back(GetTimestamp() + " Core:" + std::to_string(coreNum) +
                      " \"" + line + "\"");
@@ -236,7 +236,7 @@ public:
   /**
    * @brief saves the logs vector into a txt file
    *
-   * ngl idk if this should be here or insoide the executePrint() in
+   * ngl idk if this should be here or insoide the ExecutePrint() in
    * intepreter.hpp
    *
    * dw we dont need this function anymore lol
@@ -339,7 +339,7 @@ public:
 
     int total = 0;
     for (const auto &stmt : statements) {
-      if (stmt.keyword == Keyword::FOR) {
+      if (stmt.keyword == Keyword::kFor) {
         total += 1;
 
         int m = 1;

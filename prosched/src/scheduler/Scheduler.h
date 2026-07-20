@@ -337,6 +337,37 @@ public:
   }
 
   /**
+   * @brief wires a process's interpreter into the paging subsystem
+   *
+   * Registers the interpreter with the paging manager and installs the
+   * page-fault handler. The handler receives a page number and returns true
+   * when that page was not resident, which abandons the current instruction so
+   * the process can retry it once the page has been paged in.
+   *
+   * Does nothing when the scheduler is running without a paging manager, in
+   * which case the interpreter never faults.
+   *
+   * @param p process whose interpreter should become paging-aware
+   */
+  void attachPaging(Process *p) {
+    if (pagingManager == nullptr) {
+      return;
+    }
+
+    auto *pagingMgr = pagingManager;
+    pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
+    p->GetInterpreter().SetPageSize(
+        static_cast<uint32_t>(this->ctx.mem_per_frame));
+    p->GetInterpreter().SetPageFaultHandler(
+        [pagingMgr, pid = p->GetPID()](int pageNum) {
+          if (pagingMgr->IsPageResident(pid, pageNum)) {
+            return false;
+          }
+          return pagingMgr->PageIn(pid, pageNum);
+        });
+  }
+
+  /**
    * @brief generates a process
    *
    * @param ctx algorithm context
@@ -353,25 +384,7 @@ public:
         ctx->min_mem_per_proc +
         rand() % (ctx->max_mem_per_proc - ctx->min_mem_per_proc + 1);
     p->SetMemoryBounds(0, rolledSize);
-    if (pagingManager != nullptr) {
-      auto *pagingMgr = pagingManager;
-      pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
-      p->GetInterpreter().SetPageSize(
-          static_cast<uint32_t>(this->ctx.mem_per_frame));
-      p->GetInterpreter().SetPageFaultHandler(
-          [this, pagingMgr, pid = p->GetPID(),
-           pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](
-              uint32_t address) {
-            if (pageSize == 0) {
-              return false;
-            }
-            int pageNum = static_cast<int>(address / pageSize);
-            if (pagingMgr->IsPageResident(pid, pageNum)) {
-              return false;
-            }
-            return pagingMgr->PageIn(pid, pageNum);
-          });
-    }
+    attachPaging(p);
     p->SetOwnedByScheduler(true);
     Statement instruction;
 
@@ -420,25 +433,7 @@ public:
       pid = nextPID++;
     }
     Process *p = new Process(name, pid, 0);
-    if (pagingManager != nullptr) {
-      auto *pagingMgr = pagingManager;
-      pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
-      p->GetInterpreter().SetPageSize(
-          static_cast<uint32_t>(this->ctx.mem_per_frame));
-      p->GetInterpreter().SetPageFaultHandler(
-          [this, pagingMgr, pid = p->GetPID(),
-           pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](
-              uint32_t address) {
-            if (pageSize == 0) {
-              return false;
-            }
-            int pageNum = static_cast<int>(address / pageSize);
-            if (pagingMgr->IsPageResident(pid, pageNum)) {
-              return false;
-            }
-            return pagingMgr->PageIn(pid, pageNum);
-          });
-    }
+    attachPaging(p);
     p->SetOwnedByScheduler(true);
     int commandAmount = this->ctx.min_ins +
                         rand() % (this->ctx.max_ins - this->ctx.min_ins + 1);

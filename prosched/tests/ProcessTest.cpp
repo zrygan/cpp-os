@@ -4,7 +4,7 @@
 // Helper: parse a raw instruction string and add each resulting Statement.
 static void AddRaw(prosched::Process &p, const std::string &src) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse(src);
+  auto stmts = interp.Parse(src);
   for (auto &s : stmts)
     p.AddInstruction(s);
 }
@@ -17,13 +17,13 @@ TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
   prosched::Process p("add_1", 1, 0);
 
   std::vector<prosched::Statement> stmts =
-      interpreter.parse("PRINT(\"hello\")");
+      interpreter.Parse("PRINT(\"hello\")");
   ASSERT_FALSE(stmts.empty());
 
   prosched::Statement stmt = stmts[0];
   prosched::Statement *result = p.AddInstruction(stmt);
 
-  EXPECT_EQ(result->keyword, prosched::Keyword::PRINT);
+  EXPECT_EQ(result->keyword, prosched::Keyword::kPrint);
   ASSERT_FALSE(result->args.empty());
   EXPECT_EQ(result->args[0], "\"hello\"");
 }
@@ -32,13 +32,13 @@ TEST(ProcessAddInstruction, ValidPrintReturnsInstruction) {
 TEST(ProcessAddInstruction, ValidDeclareReturnsInstruction) {
   prosched::Process p("add_2", 2, 0);
 
-  std::vector<prosched::Statement> stmts = interpreter.parse("DECLARE(x, 10)");
+  std::vector<prosched::Statement> stmts = interpreter.Parse("DECLARE(x, 10)");
   ASSERT_FALSE(stmts.empty());
 
   prosched::Statement stmt = stmts[0];
   prosched::Statement *result = p.AddInstruction(stmt);
 
-  EXPECT_EQ(result->keyword, prosched::Keyword::DECLARE);
+  EXPECT_EQ(result->keyword, prosched::Keyword::kDeclare);
   ASSERT_FALSE(result->args.empty());
   ASSERT_EQ(result->args.size(), 2);
   EXPECT_EQ(result->args[0], "x");
@@ -50,7 +50,7 @@ TEST(ProcessAddInstruction, MultipleInstructionsAllSucceed) {
   prosched::Process p("add_3", 3, 0);
 
   for (int i = 0; i < 10; i++) {
-    auto stmts = interpreter.parse("PRINT(\"line\")");
+    auto stmts = interpreter.Parse("PRINT(\"line\")");
     ASSERT_FALSE(stmts.empty()) << "Parse failed at index " << i;
     prosched::Statement *result = p.AddInstruction(stmts[0]);
     EXPECT_NE(result, nullptr) << "AddInstruction failed at index " << i;
@@ -61,7 +61,7 @@ TEST(ProcessAddInstruction, MultipleInstructionsAllSucceed) {
 TEST(ProcessAddInstruction, UnknownKeywordDoesNotCrash) {
   prosched::Process p("add_4", 4, 0);
   EXPECT_NO_THROW({
-    auto stmts = interpreter.parse("UNKNOWNCMD(x)");
+    auto stmts = interpreter.Parse("UNKNOWNCMD(x)");
     for (auto &s : stmts)
       p.AddInstruction(s);
   });
@@ -71,7 +71,7 @@ TEST(ProcessAddInstruction, UnknownKeywordDoesNotCrash) {
 TEST(ProcessAddInstruction, EmptyStringDoesNotCrash) {
   prosched::Process p("add_5", 5, 0);
   EXPECT_NO_THROW({
-    auto stmts = interpreter.parse("");
+    auto stmts = interpreter.Parse("");
     for (auto &s : stmts)
       p.AddInstruction(s);
   });

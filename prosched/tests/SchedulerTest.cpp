@@ -10,7 +10,7 @@
 
 static void AddRaw(prosched::Process &p, const std::string &src) {
   prosched::Interpreter interp;
-  auto stmts = interp.parse(src);
+  auto stmts = interp.Parse(src);
   for (auto &s : stmts)
     p.AddInstruction(s);
 }

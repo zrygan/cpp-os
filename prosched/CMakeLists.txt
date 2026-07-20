@@ -19,11 +19,15 @@ configure_file(
 
 
 add_executable(prosched
-  # src/ 
+  # src/
   src/main.cpp
   src/controller/Controller.cpp
   src/view/View.cpp
   src/view/page/Menu.cpp
+
+  # commands
+  src/commands/Interpreter.cpp
+  src/commands/Statement.cpp
 
   # scheduler
   src/scheduler/Scheduler.h
@@ -44,10 +48,13 @@ add_executable(prosched_tests
   tests/InterpreterTest.cpp
   tests/ControllerTest.cpp
   tests/ConfigTest.cpp
-  # Controller and View are not header-only; their implementations must be linked
+  # Controller, View and the interpreter are not header-only; their
+  # implementations must be linked
   src/controller/Controller.cpp
   src/view/View.cpp
   src/view/page/Menu.cpp
+  src/commands/Interpreter.cpp
+  src/commands/Statement.cpp
 )
 target_include_directories(prosched_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(prosched_tests GTest::gtest_main)
