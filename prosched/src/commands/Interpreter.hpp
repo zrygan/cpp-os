@@ -48,7 +48,7 @@ struct Statement {
   std::vector<Statement> nested;   /*!< Child statements (only set for FOR loops) */
 };
 
-inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
+Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
   static constexpr std::array<Keyword, 8> all_keywords {
     Keyword::PRINT,
     Keyword::ADD,
@@ -775,11 +775,21 @@ public:
     }
   }
 
-  /** @brief Execute READ: 
+  /** @brief Execute READ
    * 
-   *  @param stmt The READ statement to execute
+   * @param stmt The READ statement to execute
+   * 
+   * @return An ordered pair of the variable name and the value 
+   * assigned to it. Both of which are of the type uint16_t. 
+   * 
+   * On failure, this returns null. 
+   * 
+   * For any case, side effects occur at THIS class (see @warning).
+   * 
+   * @warning Side effect on *this* class. Specifically on the fields
+   * of the class relevant to IO.
    */
-  std::optional<uint16_t> executeRead(const Statement &stmt) {
+  std::optional<std::pair<std::string, uint16_t>> executeRead(const Statement &stmt) {
     lastInstructionPageFault = false;
     lastInstructionAccessViolation = false;
     lastViolationAddress = 0;
@@ -810,21 +820,24 @@ public:
     }
 
     memory[varName] = val;
-    return val;
+    return {{varName, val}};
   }
 
   /** @brief Execute WRITE
    * 
    * @param stmt The WRITE statement to execute
    * 
-   * @return The numeric value written to the symbol table of type
-   * uint16_t. On failure, this returns null. For any case, side effects
-   * occur at THIS class (see @warning).
+   * @return An ordered pair of the address and the value written to
+   * that address. Both of which are of the type uint16_t. 
+   * 
+   * On failure, this returns null. 
+   * 
+   * For any case, side effects occur at THIS class (see @warning).
    * 
    * @warning Side effect on *this* class. Specifically on the fields
    * of the class relevant to IO.
    */
-  std::optional<uint16_t> executeWrite(const Statement &stmt) {
+  std::optional<std::pair<uint16_t, uint16_t>> executeWrite(const Statement &stmt) {
     lastInstructionPageFault = false;
     lastInstructionAccessViolation = false;
     lastViolationAddress = 0;
@@ -849,7 +862,7 @@ public:
 
     uint16_t val = resolveOperand(stmt.args[1]);
     addressSpace[addr] = val;
-    return val;
+    return {{addr, val}};
   }
 
   /** @brief Execute DBG!: dump all variables and their values to the screen buffer.
