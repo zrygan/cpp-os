@@ -1,10 +1,10 @@
 #pragma once
 
+#include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <stdio.h>
 #include <thread>
-#include <condition_variable>
-#include <functional>
 
 #include "Config.h"
 #include "Constants.hpp"
@@ -192,7 +192,8 @@ public:
   }
 
   /**
-   * @brief Registers a callback to invoke when this worker completes a tick cycle.
+   * @brief Registers a callback to invoke when this worker completes a tick
+   * cycle.
    *
    * Used by the scheduler to hook worker completion into the tick barrier sync.
    *
@@ -203,10 +204,11 @@ public:
   }
 
   /**
-   * @brief Signals the worker thread that a new master clock tick cycle has started.
+   * @brief Signals the worker thread that a new master clock tick cycle has
+   * started.
    *
-   * Updates the worker's master tick clock and notifies the wait condition variable
-   * to wake up the worker thread task. Thread-safe.
+   * Updates the worker's master tick clock and notifies the wait condition
+   * variable to wake up the worker thread task. Thread-safe.
    *
    * @param masterTick The current master clock cycle count.
    */
@@ -217,7 +219,8 @@ public:
   }
 
   /**
-   * @brief Increments quantum of the current running process and checks if it has expired.
+   * @brief Increments quantum of the current running process and checks if it
+   * has expired.
    *
    * Thread-safe.
    * @param limit The quantum cycles limit.
@@ -225,7 +228,8 @@ public:
    */
   bool CheckAndIncrementQuantum(int limit) {
     std::lock_guard<std::mutex> lock(workerMutex);
-    if (currentProcess != nullptr && currentProcess->GetState() == ProcessState::RUNNING) {
+    if (currentProcess != nullptr &&
+        currentProcess->GetState() == ProcessState::RUNNING) {
       currentProcess->IncrementQuantumUsed();
       return currentProcess->GetQuantumUsed() >= limit;
     }
@@ -238,7 +242,8 @@ public:
    * @param p Pointer to the process running on the core.
    */
   void TickExecution(Process *p) {
-    // std::cerr << "[DEBUG] [Worker " << coreNum << "] " << p->GetName() << " cyclesLeft=" << p->GetCurrentInstructionCyclesLeft()
+    // std::cerr << "[DEBUG] [Worker " << coreNum << "] " << p->GetName() << "
+    // cyclesLeft=" << p->GetCurrentInstructionCyclesLeft()
     //           << " state=" << p->GetState() << "\n";
 
     if ((p->GetState() == ProcessState::RUNNING ||

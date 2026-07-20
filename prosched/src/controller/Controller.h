@@ -1,6 +1,6 @@
 #include "Context.h"
-#include "src/scheduler/Scheduler.h"
 #include "memory/PagingManager.h"
+#include "src/scheduler/Scheduler.h"
 #include "view/View.h"
 
 #ifndef CONTROLLER_H

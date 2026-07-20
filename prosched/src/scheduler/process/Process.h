@@ -68,7 +68,7 @@ private:
 public:
   Process(std::string processName, int pid, int arrivalTick)
       : processName(processName), pid(pid), arrivalTick(arrivalTick) {}
-  
+
   /**
    * @brief Returns the process interpreter for paging and testing hooks.
    */
@@ -80,10 +80,8 @@ public:
   void SetMemoryBounds(size_t start, size_t end) {
     memStart = start;
     memEnd = end;
-    interpreter.SetMemoryBounds(
-        static_cast<uint32_t>(start),
-        static_cast<uint32_t>(end)
-    );
+    interpreter.SetMemoryBounds(static_cast<uint32_t>(start),
+                                static_cast<uint32_t>(end));
   }
 
   /**
@@ -100,18 +98,18 @@ public:
       if (stmt.keyword == Keyword::FOR) {
         int repeats = 1;
         if (stmt.args.size() >= 2) {
-            try { 
-              repeats = std::stoi(stmt.args[1]); 
-            } catch (...) { 
-              repeats = 1; 
-            }
+          try {
+            repeats = std::stoi(stmt.args[1]);
+          } catch (...) {
+            repeats = 1;
+          }
         }
 
-        Statement* lastAdded = nullptr;
+        Statement *lastAdded = nullptr;
         for (int r = 0; r < repeats; r++) {
-            for (auto& nested : stmt.nested) {
-              lastAdded = AddInstruction(nested);
-            }
+          for (auto &nested : stmt.nested) {
+            lastAdded = AddInstruction(nested);
+          }
         }
         return lastAdded;
       }
@@ -140,7 +138,8 @@ public:
     if (StartTime.empty())
       StartTime = GetTimestamp();
 
-    // std::cerr << "[DEBUG] " << processName << " idx=" << currentInstructionIndex << " size=" << statements.size() << "\n";
+    // std::cerr << "[DEBUG] " << processName << " idx=" <<
+    // currentInstructionIndex << " size=" << statements.size() << "\n";
 
     if (currentInstructionIndex >= (int)statements.size()) {
       currentState = FINISHED;
@@ -179,8 +178,8 @@ public:
     }
 
     if (stmt.keyword == Keyword::FOR) {
-        currentInstructionIndex++;
-        return statements;
+      currentInstructionIndex++;
+      return statements;
     }
 
     interpreter.ResetLastInstructionPageFault();
@@ -266,7 +265,9 @@ public:
    *
    * @return true if the process is finished; otherwise false.
    */
-  bool IsFinished() { return currentState == FINISHED || currentState == TERMINATED; }
+  bool IsFinished() {
+    return currentState == FINISHED || currentState == TERMINATED;
+  }
 
   /** @brief Checks if the process terminated because of an access violation. */
   bool IsTerminated() const { return currentState == TERMINATED; }
@@ -333,25 +334,29 @@ public:
    *
    * @return total number of instrcutions in a process
    */
-  int GetTotalInstructions() { 
-    // return (int)statements.size(); 
+  int GetTotalInstructions() {
+    // return (int)statements.size();
 
     int total = 0;
-    for (const auto& stmt : statements) {
-        if (stmt.keyword == Keyword::FOR) {
-            total += 1;
-            
-            int m = 1;
-            if (stmt.args.size() >= 2) {
-                try { m = std::stoi(stmt.args[1]); } catch (...) { m = 1; }
-            }
-            
-            int n = (int)stmt.nested.size();
-            
-            total += (m * n);
-        } else {
-            total += 1;
+    for (const auto &stmt : statements) {
+      if (stmt.keyword == Keyword::FOR) {
+        total += 1;
+
+        int m = 1;
+        if (stmt.args.size() >= 2) {
+          try {
+            m = std::stoi(stmt.args[1]);
+          } catch (...) {
+            m = 1;
+          }
         }
+
+        int n = (int)stmt.nested.size();
+
+        total += (m * n);
+      } else {
+        total += 1;
+      }
     }
     return total;
   }

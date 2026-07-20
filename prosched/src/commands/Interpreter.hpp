@@ -157,18 +157,13 @@ inline Statement GetRandomStatement(std::string processName, int maxDepth = 0) {
 }
 
 /** @class Interpreter
-    @brief A simple string-based language interpreter for the prosched runtime.
-
-    Marq is a mini-programming language that executes from a single string.
-    It supports variables, arithmetic operations, loops, and simple I/O.
-
     The interpreter operates in two distinct phases:
     - **Parsing**: converts the input string into an abstract syntax tree (AST)
     - **Execution**: walks the AST and executes instructions recursively
 */
 class Interpreter {
 private:
-  /** @brief Hard cap on the symbol table: 32 variables (64 bytes of uint16_t).
+  /** @brief Hard cap on the symbol table: 32 variables.
       Any declaration or write that would introduce a 33rd variable is ignored. */
   static constexpr size_t MAX_SYMBOLS = 32;
 

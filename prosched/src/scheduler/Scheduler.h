@@ -1,5 +1,7 @@
 #pragma once
 
+#include <condition_variable>
+#include <cstdint>
 #include <iomanip>
 #include <mutex>
 #include <ostream>
@@ -9,15 +11,13 @@
 #include <stdio.h>
 #include <thread>
 #include <vector>
-#include <condition_variable>
-#include <cstdint>
 
 #include "Config.h"
+#include "memory/PagingManager.h"
 #include "process/Process.h"
 #include "src/Constants.hpp"
 #include "src/Context.h"
 #include "src/scheduler/worker/Worker.h"
-#include "memory/PagingManager.h"
 
 namespace prosched {
 
@@ -171,7 +171,7 @@ public:
   void ShowScreenProcesses() {
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
-    double utilization =0 ;
+    double utilization = 0;
     int coresUsed = 0;
     int coresAvail = 0;
 
@@ -179,76 +179,74 @@ public:
     // and the per-core listing below come from the same read. Sampling
     // currentProcess twice races with the worker threads draining processes and
     // can report busy cores as "(idle)".
-    std::vector<std::pair<int, Process*>> rows;
+    std::vector<std::pair<int, Process *>> rows;
     rows.reserve(workers.size());
 
-    for (Worker* w : workers) {
-      Process* p = w->GetCurrentProcess();
-      if (p) coresUsed++; else coresAvail++;
+    for (Worker *w : workers) {
+      Process *p = w->GetCurrentProcess();
+      if (p)
+        coresUsed++;
+      else
+        coresAvail++;
       rows.push_back({w->GetCoreNum(), p});
     }
 
     // utilization = (static_cast<double>(coresUsed)/workers.size())*100.0;
-   utilization = workers.empty() ? 0.0 :
-        (static_cast<double>(coresUsed) / workers.size()) * 100.0;
+    utilization =
+        workers.empty()
+            ? 0.0
+            : (static_cast<double>(coresUsed) / workers.size()) * 100.0;
 
     std::cout << "\nCPU utilization: " << utilization << "%\n";
     std::cout << "Cores used: " << coresUsed << "/" << workers.size() << "\n";
-    std::cout << "Cores available: " << coresAvail << "/" << workers.size() << "\n";
+    std::cout << "Cores available: " << coresAvail << "/" << workers.size()
+              << "\n";
 
     std::cout << "\n" << std::string(50, '-');
     std::cout << "\nRunning Processes: \n";
 
-    for (const auto& [coreNum, p] : rows) {
-        if(p != nullptr) {
-            std::cout <<
-                p->GetName() <<
-                std::string(5, ' ') <<
-                p->GetProcessTimeStart() <<
-                std::string(5, ' ') <<
-                "Core: " << coreNum <<
-                std::string(5, ' ') <<
-                p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
-                "\n";
-        } else {
-            std::cout << "Core "  << coreNum << std::string(5, ' ') << " (idle)\n";
-        }
+    for (const auto &[coreNum, p] : rows) {
+      if (p != nullptr) {
+        std::cout << p->GetName() << std::string(5, ' ')
+                  << p->GetProcessTimeStart() << std::string(5, ' ')
+                  << "Core: " << coreNum << std::string(5, ' ')
+                  << p->GetCurrentInstructionIndex() << " / "
+                  << p->GetTotalInstructions() << "\n";
+      } else {
+        std::cout << "Core " << coreNum << std::string(5, ' ') << " (idle)\n";
+      }
     }
 
-    std::vector<Process*> finished;
-    for (Process* p : processes) {
-        if (p != nullptr && p->IsFinished()) {
-            finished.push_back(p);
-        }
+    std::vector<Process *> finished;
+    for (Process *p : processes) {
+      if (p != nullptr && p->IsFinished()) {
+        finished.push_back(p);
+      }
     }
 
     int startIdx = std::max(0, (int)finished.size() - 10);
 
     std::cout << "\n\nFinished Processes: \n";
     for (int i = startIdx; i < (int)finished.size(); i++) {
-      Process* p = finished[i];
+      Process *p = finished[i];
       if (p != nullptr && p->IsFinished()) {
-        std::cout << p->GetName() << 
-            std::string(5, ' ') <<
-            p->GetProcessTimeStart() <<
-            std::string(5, ' ') <<
-            "Finished" <<
-            std::string(5, ' ') <<
-            p->GetCurrentInstructionIndex() << " / " << p->GetTotalInstructions() <<
-            "\n";
+        std::cout << p->GetName() << std::string(5, ' ')
+                  << p->GetProcessTimeStart() << std::string(5, ' ')
+                  << "Finished" << std::string(5, ' ')
+                  << p->GetCurrentInstructionIndex() << " / "
+                  << p->GetTotalInstructions() << "\n";
       }
     }
 
     std::cout << std::string(50, '-') << "\n";
     std::cout << std::endl;
-  
   }
 
   /**
    * @brief prints the current processes when "screen -ls" is called
    *
    * Outputs the current process list and their states
-   * 
+   *
    * @param out output stream
    */
   void PrintProcesses(std::ostream &out = std::cout) {
@@ -256,11 +254,15 @@ public:
 
     int coresUsed = 0, coresAvail = 0;
     for (Worker *w : workers) {
-      if (w->IsBusy()) coresUsed++;
-      else coresAvail++;
+      if (w->IsBusy())
+        coresUsed++;
+      else
+        coresAvail++;
     }
-    double utilization = workers.empty() ? 0.0 :
-        (static_cast<double>(coresUsed) / workers.size()) * 100.0;
+    double utilization =
+        workers.empty()
+            ? 0.0
+            : (static_cast<double>(coresUsed) / workers.size()) * 100.0;
 
     out << "\nCPU utilization: " << utilization << "%\n";
     out << "Cores used: " << coresUsed << "\n";
@@ -268,9 +270,12 @@ public:
 
     std::vector<Process *> running, finished;
     for (Process *p : processes) {
-      if (p == nullptr) continue;
-      if (p->IsFinished()) finished.push_back(p);
-      else running.push_back(p);
+      if (p == nullptr)
+        continue;
+      if (p->IsFinished())
+        finished.push_back(p);
+      else
+        running.push_back(p);
     }
 
     // Fixed timestamp width: "(mm/dd/yyyy hh:mm:ssAM/PM)" = 23 chars
@@ -282,12 +287,16 @@ public:
       nameW = std::max(nameW, p->GetName().size());
       std::string c = "Core: " + std::to_string(p->GetAssignedCore());
       coreW = std::max(coreW, c.size());
-      int cur = fin ? p->GetTotalInstructions() : p->GetCurrentInstructionIndex();
-      std::string g = std::to_string(cur) + " / " + std::to_string(p->GetTotalInstructions());
+      int cur =
+          fin ? p->GetTotalInstructions() : p->GetCurrentInstructionIndex();
+      std::string g = std::to_string(cur) + " / " +
+                      std::to_string(p->GetTotalInstructions());
       progW = std::max(progW, g.size());
     };
-    for (Process *p : running) measure(p, false);
-    for (Process *p : finished) measure(p, true);
+    for (Process *p : running)
+      measure(p, false);
+    for (Process *p : finished)
+      measure(p, true);
 
     size_t rowLen = nameW + GAP + TIME_W + GAP + coreW + GAP + progW;
     std::string sep(rowLen, '-');
@@ -297,25 +306,32 @@ public:
     };
 
     auto printRow = [&](Process *p, bool fin) {
-      int cur = fin ? p->GetTotalInstructions() : p->GetCurrentInstructionIndex();
-      std::string prog = std::to_string(cur) + " / " + std::to_string(p->GetTotalInstructions());
+      int cur =
+          fin ? p->GetTotalInstructions() : p->GetCurrentInstructionIndex();
+      std::string prog = std::to_string(cur) + " / " +
+                         std::to_string(p->GetTotalInstructions());
       std::string coreStr = "Core: " + std::to_string(p->GetAssignedCore());
       std::string ts = p->GetProcessTimeStart();
-      if (ts.empty()) ts = "N/A";
-      out << padR(p->GetName(), nameW + GAP)
-          << padR(ts, TIME_W + GAP)
-          << padR(coreStr, coreW + GAP)
-          << prog << "\n";
+      if (ts.empty())
+        ts = "N/A";
+      out << padR(p->GetName(), nameW + GAP) << padR(ts, TIME_W + GAP)
+          << padR(coreStr, coreW + GAP) << prog << "\n";
     };
 
     out << "\n" << sep << "\n";
     out << "Running processes:\n";
-    if (running.empty()) out << "(none)\n";
-    else for (Process *p : running) printRow(p, false);
+    if (running.empty())
+      out << "(none)\n";
+    else
+      for (Process *p : running)
+        printRow(p, false);
 
     out << "\nFinished processes:\n";
-    if (finished.empty()) out << "(none)\n";
-    else for (Process *p : finished) printRow(p, true);
+    if (finished.empty())
+      out << "(none)\n";
+    else
+      for (Process *p : finished)
+        printRow(p, true);
 
     out << sep << "\n" << std::endl;
   }
@@ -334,22 +350,27 @@ public:
     std::string name = oss.str();
     Process *p = new Process(name, pid, tick);
     int rolledSize =
-        ctx->min_mem_per_proc + rand() % (ctx->max_mem_per_proc - ctx->min_mem_per_proc + 1);
+        ctx->min_mem_per_proc +
+        rand() % (ctx->max_mem_per_proc - ctx->min_mem_per_proc + 1);
     p->SetMemoryBounds(0, rolledSize);
     if (pagingManager != nullptr) {
       auto *pagingMgr = pagingManager;
       pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
-      p->GetInterpreter().SetPageSize(static_cast<uint32_t>(this->ctx.mem_per_frame));
-      p->GetInterpreter().SetPageFaultHandler([this, pagingMgr, pid = p->GetPID(), pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](uint32_t address) {
-        if (pageSize == 0) {
-          return false;
-        }
-        int pageNum = static_cast<int>(address / pageSize);
-        if (pagingMgr->IsPageResident(pid, pageNum)) {
-          return false;
-        }
-        return pagingMgr->PageIn(pid, pageNum);
-      });
+      p->GetInterpreter().SetPageSize(
+          static_cast<uint32_t>(this->ctx.mem_per_frame));
+      p->GetInterpreter().SetPageFaultHandler(
+          [this, pagingMgr, pid = p->GetPID(),
+           pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](
+              uint32_t address) {
+            if (pageSize == 0) {
+              return false;
+            }
+            int pageNum = static_cast<int>(address / pageSize);
+            if (pagingMgr->IsPageResident(pid, pageNum)) {
+              return false;
+            }
+            return pagingMgr->PageIn(pid, pageNum);
+          });
     }
     p->SetOwnedByScheduler(true);
     Statement instruction;
@@ -374,7 +395,6 @@ public:
    * @return boolean value if scheduler is running or not
    */
   bool IsRunning() { return running == true; }
-
 
   /**
    * @brief Gets cumulative CPU-core ticks observed by the scheduler.
@@ -403,21 +423,25 @@ public:
     if (pagingManager != nullptr) {
       auto *pagingMgr = pagingManager;
       pagingMgr->RegisterProcessInterpreter(p->GetPID(), &p->GetInterpreter());
-      p->GetInterpreter().SetPageSize(static_cast<uint32_t>(this->ctx.mem_per_frame));
-      p->GetInterpreter().SetPageFaultHandler([this, pagingMgr, pid = p->GetPID(), pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](uint32_t address) {
-        if (pageSize == 0) {
-          return false;
-        }
-        int pageNum = static_cast<int>(address / pageSize);
-        if (pagingMgr->IsPageResident(pid, pageNum)) {
-          return false;
-        }
-        return pagingMgr->PageIn(pid, pageNum);
-      });
+      p->GetInterpreter().SetPageSize(
+          static_cast<uint32_t>(this->ctx.mem_per_frame));
+      p->GetInterpreter().SetPageFaultHandler(
+          [this, pagingMgr, pid = p->GetPID(),
+           pageSize = static_cast<uint32_t>(this->ctx.mem_per_frame)](
+              uint32_t address) {
+            if (pageSize == 0) {
+              return false;
+            }
+            int pageNum = static_cast<int>(address / pageSize);
+            if (pagingMgr->IsPageResident(pid, pageNum)) {
+              return false;
+            }
+            return pagingMgr->PageIn(pid, pageNum);
+          });
     }
     p->SetOwnedByScheduler(true);
-    int commandAmount =
-        this->ctx.min_ins + rand() % (this->ctx.max_ins - this->ctx.min_ins + 1);
+    int commandAmount = this->ctx.min_ins +
+                        rand() % (this->ctx.max_ins - this->ctx.min_ins + 1);
     for (int i = 0; i < commandAmount; i++) {
       Statement instruction = prosched::GetRandomStatement(name, 3);
       p->AddInstruction(instruction);
@@ -429,7 +453,8 @@ public:
    * @brief Finds the first non-finished process matching the given name.
    *
    * @param name The process name to search for
-   * @return Pointer to the matching process, or nullptr if not found or finished
+   * @return Pointer to the matching process, or nullptr if not found or
+   * finished
    */
   prosched::Process *FindProcessByName(const std::string &name) {
     std::lock_guard<std::mutex> lock(schedulerMutex);
@@ -529,7 +554,8 @@ public:
   }
 
   /**
-   * @brief Callback invoked by each worker core thread when its cycle execution finishes.
+   * @brief Callback invoked by each worker core thread when its cycle execution
+   * finishes.
    *
    * Increments the count of completed workers for the current tick and notifies
    * the scheduler thread waiting inside TriggerWorkersTick. Thread-safe.
@@ -543,8 +569,8 @@ public:
   /**
    * @brief Triggers one clock cycle of execution for all active workers.
    *
-   * Signals all worker cores to start the cycle and blocks the scheduler thread until
-   * all worker threads have completed their cycle execution. Thread-safe.
+   * Signals all worker cores to start the cycle and blocks the scheduler thread
+   * until all worker threads have completed their cycle execution. Thread-safe.
    *
    * @param cpuCycles The current master clock cycle count.
    */
@@ -597,7 +623,7 @@ public:
       CollectPreemptedCycle();
       UpdateSleepingProcessesCycle();
       FreeFinishedProcesses();
-  
+
       std::this_thread::sleep_for(std::chrono::milliseconds(kTickDurationMs));
     }
   }
@@ -623,7 +649,7 @@ private:
 
   /**
    * @brief Frees memory allocated to finished processes.
-   * 
+   *
    * @note this is a new function @Stephen <----
    */
   void FreeFinishedProcesses() {
@@ -691,9 +717,10 @@ private:
   /**
    * @brief Round Robin Scheduler Algorithm
    *
-   * A preemptive algorithm in which processes are given a fixed time slice (quantum).
-   * Increments quantum used for running processes on cores and preempts them if
-   * the quantum limit is reached. Then dispatches ready processes to available cores.
+   * A preemptive algorithm in which processes are given a fixed time slice
+   * (quantum). Increments quantum used for running processes on cores and
+   * preempts them if the quantum limit is reached. Then dispatches ready
+   * processes to available cores.
    */
   void RoundRobin() {
     // 1. Quantum preemption check

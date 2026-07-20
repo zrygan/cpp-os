@@ -63,7 +63,8 @@ public:
    * @param maxOverallMem The maximum overall memory size.
    */
   PagingManager(int memPerFrame, int maxOverallMem)
-      : memPerFrame(memPerFrame), maxOverallMem(maxOverallMem), totalFrames(maxOverallMem / memPerFrame) {
+      : memPerFrame(memPerFrame), maxOverallMem(maxOverallMem),
+        totalFrames(maxOverallMem / memPerFrame) {
     frames.resize(totalFrames);
     for (int i = 0; i < totalFrames; ++i) {
       frames[i].frameNumber = i;
@@ -158,7 +159,8 @@ public:
       }
 
       auto victimPageIt = victimPidIt->second.find(victimPageNum);
-      if (victimPageIt == victimPidIt->second.end() || !victimPageIt->second.resident) {
+      if (victimPageIt == victimPidIt->second.end() ||
+          !victimPageIt->second.resident) {
         continue;
       }
 
@@ -193,7 +195,8 @@ public:
   }
 
   /**
-   * @brief Frees all frames used by a process and clears its page table entries.
+   * @brief Frees all frames used by a process and clears its page table
+   * entries.
    *
    * @param pid The process ID.
    */
@@ -226,13 +229,15 @@ public:
   void WritePageToBackingStore(int pid, int pageNum) {
     std::lock_guard<std::recursive_mutex> lock(pagingMutex);
     auto interpreterIt = processInterpreters.find(pid);
-    if (interpreterIt == processInterpreters.end() || interpreterIt->second == nullptr) {
+    if (interpreterIt == processInterpreters.end() ||
+        interpreterIt->second == nullptr) {
       return;
     }
 
     uint32_t pageBase = static_cast<uint32_t>(pageNum * memPerFrame);
     std::vector<std::pair<uint32_t, uint16_t>> pageEntries =
-        interpreterIt->second->GetPageSnapshot(pageBase, static_cast<uint32_t>(memPerFrame));
+        interpreterIt->second->GetPageSnapshot(
+            pageBase, static_cast<uint32_t>(memPerFrame));
 
     std::ostringstream serialized;
     for (size_t i = 0; i < pageEntries.size(); ++i) {
@@ -247,7 +252,8 @@ public:
   }
 
   /**
-   * @brief Reads a page from backing store and restores it to the owning process.
+   * @brief Reads a page from backing store and restores it to the owning
+   * process.
    *
    * @param pid The process ID.
    * @param pageNum The page number.
@@ -261,7 +267,8 @@ public:
     }
 
     auto interpreterIt = processInterpreters.find(pid);
-    if (interpreterIt == processInterpreters.end() || interpreterIt->second == nullptr) {
+    if (interpreterIt == processInterpreters.end() ||
+        interpreterIt->second == nullptr) {
       backingStore.erase(storeIt);
       PersistBackingStoreToFile();
       return false;
@@ -271,7 +278,8 @@ public:
     std::vector<std::pair<uint32_t, uint16_t>> restoredValues =
         ParseSerializedPage(storeIt->second);
 
-    interpreterIt->second->ClearPageRange(pageBase, static_cast<uint32_t>(memPerFrame));
+    interpreterIt->second->ClearPageRange(pageBase,
+                                          static_cast<uint32_t>(memPerFrame));
     interpreterIt->second->RestorePageSnapshot(restoredValues);
 
     backingStore.erase(storeIt);
@@ -291,7 +299,8 @@ public:
   }
 
   /**
-   * @brief Gets a point-in-time view of physical frames and their resident pages.
+   * @brief Gets a point-in-time view of physical frames and their resident
+   * pages.
    *
    * @return A vector containing one entry for every physical frame.
    */
@@ -393,8 +402,9 @@ private:
   const std::string backingStoreFile = "csopesy-backing-store.txt";
 
   /**
-   * @brief Checks if a page for a given process is present in the backing store.
-   * 
+   * @brief Checks if a page for a given process is present in the backing
+   * store.
+   *
    * @param pid The process ID.
    * @param pageNum The page number.
    * @return True if the page is in the backing store, false otherwise.
@@ -412,19 +422,21 @@ private:
     }
 
     for (const auto &entry : backingStore) {
-      out << entry.first.first << ',' << entry.first.second << ',' << entry.second << '\n';
+      out << entry.first.first << ',' << entry.first.second << ','
+          << entry.second << '\n';
     }
   }
 
   /**
    * @brief Parses a serialized page string into address/value pairs.
-   * 
+   *
    * @param payload The serialized page string.
    * @return A vector of address/value pairs.
    * @note The expected format is "address1=value1;address2=value2;..."
    *       where each address and value are unsigned integers.
    */
-  std::vector<std::pair<uint32_t, uint16_t>> ParseSerializedPage(const std::string &payload) const {
+  std::vector<std::pair<uint32_t, uint16_t>>
+  ParseSerializedPage(const std::string &payload) const {
     std::vector<std::pair<uint32_t, uint16_t>> entries;
     if (payload.empty()) {
       return entries;
@@ -469,4 +481,4 @@ private:
   }
 };
 
-}  // namespace prosched
+} // namespace prosched

@@ -30,7 +30,8 @@ AlgoContext Controller::initialize() {
   }
 
   this->ctx = AlgoContext::buildConfig(cs);
-  this->pagingManager = new prosched::PagingManager(this->ctx.mem_per_frame, this->ctx.max_overall_mem);
+  this->pagingManager = new prosched::PagingManager(this->ctx.mem_per_frame,
+                                                    this->ctx.max_overall_mem);
   this->scheduler = new prosched::Scheduler(this->ctx, this->pagingManager);
   this->isInitialized = true;
 
@@ -257,7 +258,8 @@ void Controller::EnterProcessScreen(prosched::Process *p) {
     int content_rows = rows - 1;
     int total = (int)output_lines.size();
     int start = total - content_rows - scroll_offset;
-    if (start < 0) start = 0;
+    if (start < 0)
+      start = 0;
     int end = std::min(start + content_rows, total);
     for (int i = start; i < end; i++)
       std::cout << output_lines[i] << "\r\n";
@@ -322,19 +324,27 @@ void Controller::EnterProcessScreen(prosched::Process *p) {
 
       int max_scroll = std::max(0, (int)output_lines.size() - (rows - 1));
       if (seq[1] == 'A') {
-        if (scroll_offset < max_scroll) { scroll_offset++; render_full(); }
+        if (scroll_offset < max_scroll) {
+          scroll_offset++;
+          render_full();
+        }
       } else if (seq[1] == 'B') {
-        if (scroll_offset > 0) { scroll_offset--; render_full(); }
+        if (scroll_offset > 0) {
+          scroll_offset--;
+          render_full();
+        }
       } else if (seq[1] == '5') {
-        char tilde; read(STDIN_FILENO, &tilde, 1);
+        char tilde;
+        read(STDIN_FILENO, &tilde, 1);
         scroll_offset = std::min(scroll_offset + (rows - 1), max_scroll);
         render_full();
       } else if (seq[1] == '6') {
-        char tilde; read(STDIN_FILENO, &tilde, 1);
+        char tilde;
+        read(STDIN_FILENO, &tilde, 1);
         scroll_offset = std::max(0, scroll_offset - (rows - 1));
         render_full();
       }
-    } else if (c == 3 || c == 4) {  // Ctrl+C / Ctrl+D
+    } else if (c == 3 || c == 4) { // Ctrl+C / Ctrl+D
       restore();
       return;
     } else if (c >= 32) {

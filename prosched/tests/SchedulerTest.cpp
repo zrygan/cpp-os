@@ -431,75 +431,75 @@ TEST(SchedulerSleepRelinquish, ProcessSleepsAndWakesUpCorrectly) {
 
 namespace SchedulerFCFS {
 
-  // A queued process gets dispatched and runs to completion under FCFS
-  TEST(SchedulerFCFS, DispatchesToIdleWorker) {
-    prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
-    prosched::Process *p = new prosched::Process("task", 1, 0);
-    AddRaw(*p, "PRINT(\"a\")");
-    AddRaw(*p, "PRINT(\"b\")");
-    p->SetOwnedByScheduler(true);
-    scheduler.AddProcess(p);
+// A queued process gets dispatched and runs to completion under FCFS
+TEST(SchedulerFCFS, DispatchesToIdleWorker) {
+  prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
+  prosched::Process *p = new prosched::Process("task", 1, 0);
+  AddRaw(*p, "PRINT(\"a\")");
+  AddRaw(*p, "PRINT(\"b\")");
+  p->SetOwnedByScheduler(true);
+  scheduler.AddProcess(p);
 
-    scheduler.Start();
+  scheduler.Start();
 
-    auto deadline =
-        std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-    while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+  while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    scheduler.Stop();
-    EXPECT_TRUE(p->IsFinished());
-  }
+  scheduler.Stop();
+  EXPECT_TRUE(p->IsFinished());
+}
 
-  // With one CPU and two queued processes both must finish (FCFS skips busy core)
-  TEST(SchedulerFCFS, BothProcessesFinishWithOneCPU) {
-    prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
-    prosched::Process *p1 = new prosched::Process("first", 1, 0);
-    prosched::Process *p2 = new prosched::Process("second", 2, 0);
-    AddRaw(*p1, "PRINT(\"a\")");
-    AddRaw(*p2, "PRINT(\"b\")");
-    p1->SetOwnedByScheduler(true);
-    p2->SetOwnedByScheduler(true);
-    scheduler.AddProcess(p1);
-    scheduler.AddProcess(p2);
+// With one CPU and two queued processes both must finish (FCFS skips busy core)
+TEST(SchedulerFCFS, BothProcessesFinishWithOneCPU) {
+  prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
+  prosched::Process *p1 = new prosched::Process("first", 1, 0);
+  prosched::Process *p2 = new prosched::Process("second", 2, 0);
+  AddRaw(*p1, "PRINT(\"a\")");
+  AddRaw(*p2, "PRINT(\"b\")");
+  p1->SetOwnedByScheduler(true);
+  p2->SetOwnedByScheduler(true);
+  scheduler.AddProcess(p1);
+  scheduler.AddProcess(p2);
 
-    scheduler.Start();
+  scheduler.Start();
 
-    auto deadline =
-        std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-    while ((!p1->IsFinished() || !p2->IsFinished()) &&
-          std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+  while ((!p1->IsFinished() || !p2->IsFinished()) &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    scheduler.Stop();
-    EXPECT_TRUE(p1->IsFinished());
-    EXPECT_TRUE(p2->IsFinished());
-  }
+  scheduler.Stop();
+  EXPECT_TRUE(p1->IsFinished());
+  EXPECT_TRUE(p2->IsFinished());
+}
 
 } // namespace SchedulerFCFS
 
 namespace SchedulerRoundRobin {
 
-  // A process with more instructions than the quantum finishes after preemptions
-  TEST(SchedulerRoundRobin, ProcessFinishesAfterPreemptions) {
-    prosched::Scheduler scheduler(makeSmallCtx("rr", 1, 2));
-    prosched::Process *p = new prosched::Process("rr_task", 1, 0);
-    for (int i = 0; i < 6; i++)
-      AddRaw(*p, "PRINT(\"tick\")");
-    p->SetOwnedByScheduler(true);
-    scheduler.AddProcess(p);
+// A process with more instructions than the quantum finishes after preemptions
+TEST(SchedulerRoundRobin, ProcessFinishesAfterPreemptions) {
+  prosched::Scheduler scheduler(makeSmallCtx("rr", 1, 2));
+  prosched::Process *p = new prosched::Process("rr_task", 1, 0);
+  for (int i = 0; i < 6; i++)
+    AddRaw(*p, "PRINT(\"tick\")");
+  p->SetOwnedByScheduler(true);
+  scheduler.AddProcess(p);
 
-    scheduler.Start();
+  scheduler.Start();
 
-    auto deadline =
-        std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-    while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+  while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    scheduler.Stop();
-    EXPECT_TRUE(p->IsFinished());
-    EXPECT_EQ(p->GetCurrentInstructionIndex(), 6);
-  }
+  scheduler.Stop();
+  EXPECT_TRUE(p->IsFinished());
+  EXPECT_EQ(p->GetCurrentInstructionIndex(), 6);
+}
 
 // Two processes share one CPU via time slices and both finish
 TEST(SchedulerRoundRobin, MultipleProcessesFinish) {
@@ -532,292 +532,296 @@ TEST(SchedulerRoundRobin, MultipleProcessesFinish) {
 
 namespace SchedulerCollectPreemptedCycle {
 
-  // CollectPreemptedCycle with no workers must not crash
-  TEST(SchedulerCollectPreemptedCycle, NoWorkersNoCrash) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    EXPECT_NO_THROW(scheduler.CollectPreemptedCycle());
-  }
+// CollectPreemptedCycle with no workers must not crash
+TEST(SchedulerCollectPreemptedCycle, NoWorkersNoCrash) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  EXPECT_NO_THROW(scheduler.CollectPreemptedCycle());
+}
 
 } // namespace SchedulerCollectPreemptedCycle
 
 namespace SchedulerUpdateSleepingProcessesCycle {
 
-  // cyclesRemainingForSleep decrements by 1 on each call while still > 0
-  TEST(SchedulerUpdateSleepingProcessesCycle, DecrementsEachCall) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("sleeper", 1, 0);
-    AddRaw(p, "SLEEP(3)");
-    AddRaw(p, "PRINT(\"x\")");
-    scheduler.AddProcess(&p);
-    p.ExecuteInstructions(0); // execute SLEEP → WAITING, cyclesRemaining=3
+// cyclesRemainingForSleep decrements by 1 on each call while still > 0
+TEST(SchedulerUpdateSleepingProcessesCycle, DecrementsEachCall) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("sleeper", 1, 0);
+  AddRaw(p, "SLEEP(3)");
+  AddRaw(p, "PRINT(\"x\")");
+  scheduler.AddProcess(&p);
+  p.ExecuteInstructions(0); // execute SLEEP → WAITING, cyclesRemaining=3
 
-    ASSERT_EQ(p.GetState(), prosched::WAITING);
-    ASSERT_EQ(p.GetCyclesRemainingForSleep(), 3);
+  ASSERT_EQ(p.GetState(), prosched::WAITING);
+  ASSERT_EQ(p.GetCyclesRemainingForSleep(), 3);
 
-    scheduler.UpdateSleepingProcessesCycle();
-    EXPECT_EQ(p.GetCyclesRemainingForSleep(), 2);
+  scheduler.UpdateSleepingProcessesCycle();
+  EXPECT_EQ(p.GetCyclesRemainingForSleep(), 2);
 
-    scheduler.UpdateSleepingProcessesCycle();
-    EXPECT_EQ(p.GetCyclesRemainingForSleep(), 1);
-  }
+  scheduler.UpdateSleepingProcessesCycle();
+  EXPECT_EQ(p.GetCyclesRemainingForSleep(), 1);
+}
 
-  // State transitions WAITING → READY when countdown reaches 0 and instructions remain
-  TEST(SchedulerUpdateSleepingProcessesCycle, BecomesReadyWhenSleepEnds) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("sleeper", 1, 0);
-    AddRaw(p, "SLEEP(2)");
-    AddRaw(p, "PRINT(\"after\")");
-    scheduler.AddProcess(&p);
-    p.ExecuteInstructions(0); // WAITING, cyclesRemaining=2
+// State transitions WAITING → READY when countdown reaches 0 and instructions
+// remain
+TEST(SchedulerUpdateSleepingProcessesCycle, BecomesReadyWhenSleepEnds) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("sleeper", 1, 0);
+  AddRaw(p, "SLEEP(2)");
+  AddRaw(p, "PRINT(\"after\")");
+  scheduler.AddProcess(&p);
+  p.ExecuteInstructions(0); // WAITING, cyclesRemaining=2
 
-    scheduler.UpdateSleepingProcessesCycle(); // 2 → 1, still WAITING
-    EXPECT_EQ(p.GetState(), prosched::WAITING);
+  scheduler.UpdateSleepingProcessesCycle(); // 2 → 1, still WAITING
+  EXPECT_EQ(p.GetState(), prosched::WAITING);
 
-    scheduler.UpdateSleepingProcessesCycle(); // 1 → 0, no more sleep → READY
-    EXPECT_EQ(p.GetState(), prosched::READY);
-  }
+  scheduler.UpdateSleepingProcessesCycle(); // 1 → 0, no more sleep → READY
+  EXPECT_EQ(p.GetState(), prosched::READY);
+}
 
-  // State transitions WAITING → FINISHED when countdown reaches 0 and no instructions remain
-  TEST(SchedulerUpdateSleepingProcessesCycle, BecomesFinishedWhenNoInstructions) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("sleeper", 1, 0);
-    AddRaw(p, "SLEEP(1)");
-    scheduler.AddProcess(&p);
-    p.ExecuteInstructions(0); // WAITING, cyclesRemaining=1, index=1==total
+// State transitions WAITING → FINISHED when countdown reaches 0 and no
+// instructions remain
+TEST(SchedulerUpdateSleepingProcessesCycle, BecomesFinishedWhenNoInstructions) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("sleeper", 1, 0);
+  AddRaw(p, "SLEEP(1)");
+  scheduler.AddProcess(&p);
+  p.ExecuteInstructions(0); // WAITING, cyclesRemaining=1, index=1==total
 
-    ASSERT_EQ(p.GetState(), prosched::WAITING);
+  ASSERT_EQ(p.GetState(), prosched::WAITING);
 
-    scheduler.UpdateSleepingProcessesCycle(); // 1 → 0, index >= total → FINISHED
-    EXPECT_EQ(p.GetState(), prosched::FINISHED);
-  }
+  scheduler.UpdateSleepingProcessesCycle(); // 1 → 0, index >= total → FINISHED
+  EXPECT_EQ(p.GetState(), prosched::FINISHED);
+}
 
 } // namespace SchedulerUpdateSleepingProcessesCycle
 
 namespace SchedulerGenerateProcessesCycle {
 
-  // A process is added when tick falls on the batch_process_frequency boundary
-  TEST(SchedulerGenerateProcessesCycle, AddsProcessOnMatchingTick) {
-    AlgoContext ctx = makeTestCtx();
-    ctx.batch_process_frequency = 5;
-    prosched::Scheduler scheduler(ctx);
-    scheduler.ResumeGenerating();
+// A process is added when tick falls on the batch_process_frequency boundary
+TEST(SchedulerGenerateProcessesCycle, AddsProcessOnMatchingTick) {
+  AlgoContext ctx = makeTestCtx();
+  ctx.batch_process_frequency = 5;
+  prosched::Scheduler scheduler(ctx);
+  scheduler.ResumeGenerating();
 
-    int before = (int)scheduler.GetAllProcesses().size();
-    scheduler.GenerateProcessesCycle(5); // 5 % 5 == 0
-    EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before + 1);
-  }
+  int before = (int)scheduler.GetAllProcesses().size();
+  scheduler.GenerateProcessesCycle(5); // 5 % 5 == 0
+  EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before + 1);
+}
 
-  // No process is added when tick does not fall on the frequency boundary
-  TEST(SchedulerGenerateProcessesCycle, SkipsNonMatchingTick) {
-    AlgoContext ctx = makeTestCtx();
-    ctx.batch_process_frequency = 5;
-    prosched::Scheduler scheduler(ctx);
-    scheduler.ResumeGenerating();
+// No process is added when tick does not fall on the frequency boundary
+TEST(SchedulerGenerateProcessesCycle, SkipsNonMatchingTick) {
+  AlgoContext ctx = makeTestCtx();
+  ctx.batch_process_frequency = 5;
+  prosched::Scheduler scheduler(ctx);
+  scheduler.ResumeGenerating();
 
-    int before = (int)scheduler.GetAllProcesses().size();
-    scheduler.GenerateProcessesCycle(3); // 3 % 5 != 0
-    EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before);
-  }
+  int before = (int)scheduler.GetAllProcesses().size();
+  scheduler.GenerateProcessesCycle(3); // 3 % 5 != 0
+  EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before);
+}
 
-  // generatingProcesses defaults to false — no process created without ResumeGenerating
-  TEST(SchedulerGenerateProcessesCycle, DefaultStatePreventsGeneration) {
-    AlgoContext ctx = makeTestCtx();
-    ctx.batch_process_frequency = 1;
-    prosched::Scheduler scheduler(ctx);
-    // generatingProcesses == false by default
+// generatingProcesses defaults to false — no process created without
+// ResumeGenerating
+TEST(SchedulerGenerateProcessesCycle, DefaultStatePreventsGeneration) {
+  AlgoContext ctx = makeTestCtx();
+  ctx.batch_process_frequency = 1;
+  prosched::Scheduler scheduler(ctx);
+  // generatingProcesses == false by default
 
-    int before = (int)scheduler.GetAllProcesses().size();
-    scheduler.GenerateProcessesCycle(1);
-    EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before);
-  }
+  int before = (int)scheduler.GetAllProcesses().size();
+  scheduler.GenerateProcessesCycle(1);
+  EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before);
+}
 
 } // namespace SchedulerGenerateProcessesCycle
 
 namespace SchedulerGeneratingToggle {
 
-  // StopGenerating prevents new processes even when tick would match
-  TEST(SchedulerGeneratingToggle, StopGeneratingPreventsNewProcesses) {
-    AlgoContext ctx = makeTestCtx();
-    ctx.batch_process_frequency = 1;
-    prosched::Scheduler scheduler(ctx);
-    scheduler.ResumeGenerating();
-    scheduler.StopGenerating();
+// StopGenerating prevents new processes even when tick would match
+TEST(SchedulerGeneratingToggle, StopGeneratingPreventsNewProcesses) {
+  AlgoContext ctx = makeTestCtx();
+  ctx.batch_process_frequency = 1;
+  prosched::Scheduler scheduler(ctx);
+  scheduler.ResumeGenerating();
+  scheduler.StopGenerating();
 
-    int before = (int)scheduler.GetAllProcesses().size();
-    scheduler.GenerateProcessesCycle(1);
-    EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before);
-  }
+  int before = (int)scheduler.GetAllProcesses().size();
+  scheduler.GenerateProcessesCycle(1);
+  EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before);
+}
 
-  // ResumeGenerating re-enables generation after StopGenerating
-  TEST(SchedulerGeneratingToggle, ResumeGeneratingAllowsNewProcesses) {
-    AlgoContext ctx = makeTestCtx();
-    ctx.batch_process_frequency = 1;
-    prosched::Scheduler scheduler(ctx);
-    scheduler.StopGenerating();
-    scheduler.ResumeGenerating();
+// ResumeGenerating re-enables generation after StopGenerating
+TEST(SchedulerGeneratingToggle, ResumeGeneratingAllowsNewProcesses) {
+  AlgoContext ctx = makeTestCtx();
+  ctx.batch_process_frequency = 1;
+  prosched::Scheduler scheduler(ctx);
+  scheduler.StopGenerating();
+  scheduler.ResumeGenerating();
 
-    int before = (int)scheduler.GetAllProcesses().size();
-    scheduler.GenerateProcessesCycle(1);
-    EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before + 1);
-  }
+  int before = (int)scheduler.GetAllProcesses().size();
+  scheduler.GenerateProcessesCycle(1);
+  EXPECT_EQ((int)scheduler.GetAllProcesses().size(), before + 1);
+}
 
 } // namespace SchedulerGeneratingToggle
 
 namespace SchedulerFindProcessByName {
 
-  TEST(SchedulerFindProcessByName, FindsExistingProcess) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("target_proc", 1, 0);
-    scheduler.AddProcess(&p);
+TEST(SchedulerFindProcessByName, FindsExistingProcess) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("target_proc", 1, 0);
+  scheduler.AddProcess(&p);
 
-    prosched::Process *found = scheduler.FindProcessByName("target_proc");
-    ASSERT_NE(found, nullptr);
-    EXPECT_EQ(found->GetName(), "target_proc");
-  }
+  prosched::Process *found = scheduler.FindProcessByName("target_proc");
+  ASSERT_NE(found, nullptr);
+  EXPECT_EQ(found->GetName(), "target_proc");
+}
 
-  TEST(SchedulerFindProcessByName, ReturnsNullForUnknownName) {
-    prosched::Scheduler scheduler(makeTestCtx());
+TEST(SchedulerFindProcessByName, ReturnsNullForUnknownName) {
+  prosched::Scheduler scheduler(makeTestCtx());
 
-    prosched::Process *found = scheduler.FindProcessByName("nonexistent");
-    EXPECT_EQ(found, nullptr);
-  }
+  prosched::Process *found = scheduler.FindProcessByName("nonexistent");
+  EXPECT_EQ(found, nullptr);
+}
 
-  // FindProcessByName returns nullptr for a process that has already finished
-  TEST(SchedulerFindProcessByName, ReturnsNullForFinishedProcess) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("done_proc", 1, 0);
-    AddRaw(p, "PRINT(\"x\")");
-    scheduler.AddProcess(&p);
-    p.ExecuteInstructions(0);
-    ASSERT_TRUE(p.IsFinished());
+// FindProcessByName returns nullptr for a process that has already finished
+TEST(SchedulerFindProcessByName, ReturnsNullForFinishedProcess) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("done_proc", 1, 0);
+  AddRaw(p, "PRINT(\"x\")");
+  scheduler.AddProcess(&p);
+  p.ExecuteInstructions(0);
+  ASSERT_TRUE(p.IsFinished());
 
-    prosched::Process *found = scheduler.FindProcessByName("done_proc");
-    EXPECT_EQ(found, nullptr);
-  }
+  prosched::Process *found = scheduler.FindProcessByName("done_proc");
+  EXPECT_EQ(found, nullptr);
+}
 
 } // namespace SchedulerFindProcessByName
 
 namespace SchedulerCreateNamedProcess {
 
-  TEST(SchedulerCreateNamedProcess, HasCorrectName) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process *p = scheduler.CreateNamedProcess("my_process");
-    ASSERT_NE(p, nullptr);
-    EXPECT_EQ(p->GetName(), "my_process");
-    delete p;
+TEST(SchedulerCreateNamedProcess, HasCorrectName) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process *p = scheduler.CreateNamedProcess("my_process");
+  ASSERT_NE(p, nullptr);
+  EXPECT_EQ(p->GetName(), "my_process");
+  delete p;
 }
 
-  TEST(SchedulerCreateNamedProcess, InstructionCountInRange) {
-    AlgoContext ctx = makeTestCtx();
-    prosched::Scheduler scheduler(ctx);
-    prosched::Process *p = scheduler.CreateNamedProcess("count_test");
-    ASSERT_NE(p, nullptr);
-    EXPECT_GE(p->GetTotalInstructions(), ctx.min_ins);
-    EXPECT_LE(p->GetTotalInstructions(), ctx.max_ins);
-    delete p;
-  }
+TEST(SchedulerCreateNamedProcess, InstructionCountInRange) {
+  AlgoContext ctx = makeTestCtx();
+  prosched::Scheduler scheduler(ctx);
+  prosched::Process *p = scheduler.CreateNamedProcess("count_test");
+  ASSERT_NE(p, nullptr);
+  EXPECT_GE(p->GetTotalInstructions(), ctx.min_ins);
+  EXPECT_LE(p->GetTotalInstructions(), ctx.max_ins);
+  delete p;
+}
 
-  TEST(SchedulerCreateNamedProcess, IsOwnedByScheduler) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process *p = scheduler.CreateNamedProcess("owned");
-    ASSERT_NE(p, nullptr);
-    EXPECT_TRUE(p->IsOwnedByScheduler());
-    delete p;
-  }
+TEST(SchedulerCreateNamedProcess, IsOwnedByScheduler) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process *p = scheduler.CreateNamedProcess("owned");
+  ASSERT_NE(p, nullptr);
+  EXPECT_TRUE(p->IsOwnedByScheduler());
+  delete p;
+}
 
-  // Consecutive calls must produce strictly increasing PIDs
-  TEST(SchedulerCreateNamedProcess, PIDIncrements) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process *p1 = scheduler.CreateNamedProcess("first");
-    prosched::Process *p2 = scheduler.CreateNamedProcess("second");
-    ASSERT_NE(p1, nullptr);
-    ASSERT_NE(p2, nullptr);
-    EXPECT_EQ(p2->GetPID(), p1->GetPID() + 1);
-    delete p1;
-    delete p2;
-  }
+// Consecutive calls must produce strictly increasing PIDs
+TEST(SchedulerCreateNamedProcess, PIDIncrements) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process *p1 = scheduler.CreateNamedProcess("first");
+  prosched::Process *p2 = scheduler.CreateNamedProcess("second");
+  ASSERT_NE(p1, nullptr);
+  ASSERT_NE(p2, nullptr);
+  EXPECT_EQ(p2->GetPID(), p1->GetPID() + 1);
+  delete p1;
+  delete p2;
+}
 
 } // namespace SchedulerCreateNamedProcess
 
 namespace SchedulerTriggerTick {
 
-  // TriggerWorkersTick with no workers (empty vector) returns immediately
-  TEST(SchedulerTriggerTick, NoWorkersNoCrash) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    // Scheduler not started → workers vector empty, running=false → exits immediately
-    EXPECT_NO_THROW(scheduler.TriggerWorkersTick(1));
-  }
+// TriggerWorkersTick with no workers (empty vector) returns immediately
+TEST(SchedulerTriggerTick, NoWorkersNoCrash) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  // Scheduler not started → workers vector empty, running=false → exits
+  // immediately
+  EXPECT_NO_THROW(scheduler.TriggerWorkersTick(1));
+}
 
-  // NotifyWorkerDone can be called on an idle scheduler without crashing
-  TEST(SchedulerTriggerTick, NotifyWorkerDoneNoCrash) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    EXPECT_NO_THROW(scheduler.NotifyWorkerDone());
-  }
+// NotifyWorkerDone can be called on an idle scheduler without crashing
+TEST(SchedulerTriggerTick, NotifyWorkerDoneNoCrash) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  EXPECT_NO_THROW(scheduler.NotifyWorkerDone());
+}
 
 } // namespace SchedulerTriggerTick
 
 namespace SchedulerPrintProcessesContent {
 
-  TEST(SchedulerPrintProcessesContent, ContainsRunningSection) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    std::ostringstream out;
-    scheduler.PrintProcesses(out);
-    EXPECT_NE(out.str().find("Running processes:"), std::string::npos);
-  }
+TEST(SchedulerPrintProcessesContent, ContainsRunningSection) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("Running processes:"), std::string::npos);
+}
 
-  TEST(SchedulerPrintProcessesContent, ContainsFinishedSection) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    std::ostringstream out;
-    scheduler.PrintProcesses(out);
-    EXPECT_NE(out.str().find("Finished processes:"), std::string::npos);
-  }
+TEST(SchedulerPrintProcessesContent, ContainsFinishedSection) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("Finished processes:"), std::string::npos);
+}
 
-  TEST(SchedulerPrintProcessesContent, ContainsCPUUtilizationFields) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    std::ostringstream out;
-    scheduler.PrintProcesses(out);
-    EXPECT_NE(out.str().find("CPU utilization:"), std::string::npos);
-    EXPECT_NE(out.str().find("Cores used:"), std::string::npos);
-    EXPECT_NE(out.str().find("Cores available:"), std::string::npos);
-  }
+TEST(SchedulerPrintProcessesContent, ContainsCPUUtilizationFields) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("CPU utilization:"), std::string::npos);
+  EXPECT_NE(out.str().find("Cores used:"), std::string::npos);
+  EXPECT_NE(out.str().find("Cores available:"), std::string::npos);
+}
 
-  // No workers started → utilization must be 0%
-  TEST(SchedulerPrintProcessesContent, ZeroUtilizationWhenIdle) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    std::ostringstream out;
-    scheduler.PrintProcesses(out);
-    EXPECT_NE(out.str().find("0%"), std::string::npos);
-  }
+// No workers started → utilization must be 0%
+TEST(SchedulerPrintProcessesContent, ZeroUtilizationWhenIdle) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("0%"), std::string::npos);
+}
 
-  TEST(SchedulerPrintProcessesContent, ShowsProcessNameInOutput) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("named_proc", 1, 0);
-    AddRaw(p, "PRINT(\"x\")");
-    scheduler.AddProcess(&p);
+TEST(SchedulerPrintProcessesContent, ShowsProcessNameInOutput) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("named_proc", 1, 0);
+  AddRaw(p, "PRINT(\"x\")");
+  scheduler.AddProcess(&p);
 
-    std::ostringstream out;
-    scheduler.PrintProcesses(out);
-    EXPECT_NE(out.str().find("named_proc"), std::string::npos);
-  }
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("named_proc"), std::string::npos);
+}
 
-  // A finished process must appear after the "Finished processes:" label
-  TEST(SchedulerPrintProcessesContent, FinishedProcessAppearsAfterFinishedLabel) {
-    prosched::Scheduler scheduler(makeTestCtx());
-    prosched::Process p("done", 1, 0);
-    AddRaw(p, "PRINT(\"x\")");
-    scheduler.AddProcess(&p);
-    p.ExecuteInstructions(0);
-    ASSERT_TRUE(p.IsFinished());
+// A finished process must appear after the "Finished processes:" label
+TEST(SchedulerPrintProcessesContent, FinishedProcessAppearsAfterFinishedLabel) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process p("done", 1, 0);
+  AddRaw(p, "PRINT(\"x\")");
+  scheduler.AddProcess(&p);
+  p.ExecuteInstructions(0);
+  ASSERT_TRUE(p.IsFinished());
 
-    std::ostringstream out;
-    scheduler.PrintProcesses(out);
-    std::string result = out.str();
-    size_t fin_pos = result.find("Finished processes:");
-    size_t name_pos = result.find("done");
-    EXPECT_NE(fin_pos, std::string::npos);
-    EXPECT_NE(name_pos, std::string::npos);
-    EXPECT_GT(name_pos, fin_pos);
-  }
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  std::string result = out.str();
+  size_t fin_pos = result.find("Finished processes:");
+  size_t name_pos = result.find("done");
+  EXPECT_NE(fin_pos, std::string::npos);
+  EXPECT_NE(name_pos, std::string::npos);
+  EXPECT_GT(name_pos, fin_pos);
+}
 
 } // namespace SchedulerPrintProcessesContent
 
@@ -831,152 +835,158 @@ namespace SchedulerPrintProcessesContent {
 
 namespace SchedulerSleepLifecycle {
 
-  // After a process executes a SLEEP instruction via the live scheduler, its
-  // state must become WAITING — it is held in the sleeping collection, not
-  // running or ready.
-  TEST(SchedulerSleepLifecycle, SleepingProcessTransitionsToWaiting) {
-    prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
-    prosched::Process *p = new prosched::Process("sleeper", 1, 0);
-    AddRaw(*p, "SLEEP(100)"); // long sleep — stays WAITING long enough to observe
-    AddRaw(*p, "PRINT(\"done\")");
-    p->SetOwnedByScheduler(true);
-    scheduler.AddProcess(p);
-    scheduler.Start();
+// After a process executes a SLEEP instruction via the live scheduler, its
+// state must become WAITING — it is held in the sleeping collection, not
+// running or ready.
+TEST(SchedulerSleepLifecycle, SleepingProcessTransitionsToWaiting) {
+  prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
+  prosched::Process *p = new prosched::Process("sleeper", 1, 0);
+  AddRaw(*p, "SLEEP(100)"); // long sleep — stays WAITING long enough to observe
+  AddRaw(*p, "PRINT(\"done\")");
+  p->SetOwnedByScheduler(true);
+  scheduler.AddProcess(p);
+  scheduler.Start();
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-    while (p->GetState() != prosched::WAITING && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+  while (p->GetState() != prosched::WAITING &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    EXPECT_EQ(p->GetState(), prosched::WAITING);
-    scheduler.Stop();
-  }
+  EXPECT_EQ(p->GetState(), prosched::WAITING);
+  scheduler.Stop();
+}
 
-  // After sleep cycles exhaust, the process goes back to READY, is dispatched,
-  // runs its remaining instruction, and finishes — proving it was re-queued
-  // rather than dropped.  The post-sleep log entry confirms the instruction
-  // after SLEEP actually executed (not just that the process reached FINISHED).
-  TEST(SchedulerSleepLifecycle, WokenProcessReturnsToReadyAndFinishes) {
-    prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
-    prosched::Process *p = new prosched::Process("sleeper", 1, 0);
-    AddRaw(*p, "SLEEP(3)");
-    AddRaw(*p, "PRINT(\"after_sleep\")");
-    p->SetOwnedByScheduler(true);
-    scheduler.AddProcess(p);
-    scheduler.Start();
+// After sleep cycles exhaust, the process goes back to READY, is dispatched,
+// runs its remaining instruction, and finishes — proving it was re-queued
+// rather than dropped.  The post-sleep log entry confirms the instruction
+// after SLEEP actually executed (not just that the process reached FINISHED).
+TEST(SchedulerSleepLifecycle, WokenProcessReturnsToReadyAndFinishes) {
+  prosched::Scheduler scheduler(makeSmallCtx("fcfs"));
+  prosched::Process *p = new prosched::Process("sleeper", 1, 0);
+  AddRaw(*p, "SLEEP(3)");
+  AddRaw(*p, "PRINT(\"after_sleep\")");
+  p->SetOwnedByScheduler(true);
+  scheduler.AddProcess(p);
+  scheduler.Start();
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-    while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+  while (!p->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    scheduler.Stop();
-    EXPECT_TRUE(p->IsFinished());
-    bool found_post_sleep = false;
-    for (const auto &log : p->GetLogs())
-      if (log.find("after_sleep") != std::string::npos)
-        found_post_sleep = true;
-    EXPECT_TRUE(found_post_sleep);
-  }
+  scheduler.Stop();
+  EXPECT_TRUE(p->IsFinished());
+  bool found_post_sleep = false;
+  for (const auto &log : p->GetLogs())
+    if (log.find("after_sleep") != std::string::npos)
+      found_post_sleep = true;
+  EXPECT_TRUE(found_post_sleep);
+}
 
-  // With 1 CPU: A (SLEEP(5) then PRINT) is first in queue, B (PRINT) is second.
-  // A dispatches, hits SLEEP, releases the CPU — B must finish while A is still
-  // WAITING.  We verify this by waiting only for B, then asserting A has NOT
-  // finished yet (it is still sleeping).  Only after that do we wait for A.
-  TEST(SchedulerSleepLifecycle, ReadyQueueProcessRunsWhileOtherSleeps) {
-    prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
+// With 1 CPU: A (SLEEP(5) then PRINT) is first in queue, B (PRINT) is second.
+// A dispatches, hits SLEEP, releases the CPU — B must finish while A is still
+// WAITING.  We verify this by waiting only for B, then asserting A has NOT
+// finished yet (it is still sleeping).  Only after that do we wait for A.
+TEST(SchedulerSleepLifecycle, ReadyQueueProcessRunsWhileOtherSleeps) {
+  prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
 
-    prosched::Process *a = new prosched::Process("sleeper", 1, 0);
-    AddRaw(*a, "SLEEP(5)");
-    AddRaw(*a, "PRINT(\"a_done\")");
-    a->SetOwnedByScheduler(true);
+  prosched::Process *a = new prosched::Process("sleeper", 1, 0);
+  AddRaw(*a, "SLEEP(5)");
+  AddRaw(*a, "PRINT(\"a_done\")");
+  a->SetOwnedByScheduler(true);
 
-    prosched::Process *b = new prosched::Process("runner", 2, 0);
-    AddRaw(*b, "PRINT(\"b_done\")");
-    b->SetOwnedByScheduler(true);
+  prosched::Process *b = new prosched::Process("runner", 2, 0);
+  AddRaw(*b, "PRINT(\"b_done\")");
+  b->SetOwnedByScheduler(true);
 
-    scheduler.AddProcess(a); // A is first in queue
-    scheduler.AddProcess(b); // B is behind A
-    scheduler.Start();
+  scheduler.AddProcess(a); // A is first in queue
+  scheduler.AddProcess(b); // B is behind A
+  scheduler.Start();
 
-    // Wait for B to finish
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-    while (!b->IsFinished() && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  // Wait for B to finish
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+  while (!b->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    // B has finished — A must still be sleeping (not yet finished)
-    EXPECT_TRUE(b->IsFinished());
-    EXPECT_FALSE(a->IsFinished()); // proves B finished BEFORE A woke up
+  // B has finished — A must still be sleeping (not yet finished)
+  EXPECT_TRUE(b->IsFinished());
+  EXPECT_FALSE(a->IsFinished()); // proves B finished BEFORE A woke up
 
-    // Now wait for A to wake, re-enter the queue, and finish
-    deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-    while (!a->IsFinished() && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  // Now wait for A to wake, re-enter the queue, and finish
+  deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+  while (!a->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    scheduler.Stop();
-    EXPECT_TRUE(a->IsFinished());
-  }
+  scheduler.Stop();
+  EXPECT_TRUE(a->IsFinished());
+}
 
-  // Scenario: P1 sleeps, P2 runs and finishes, P3 starts running, and while P3
-  // is still executing P1's sleep expires and it re-enters the ready queue.
-  //
-  // Queue order: [P1, P2, P3]
-  // Tick sequence (1 CPU):
-  //   P1 dispatches → SLEEP(3) → WAITING, CPU free
-  //   P2 dispatches → PRINT → FINISHED, CPU free
-  //   P3 dispatches → runs many PRINTs (still executing)
-  //   After 3 sleep ticks → P1 becomes READY (back in queue behind P3)
-  //   P3 finishes → P1 dispatches, finishes
-  TEST(SchedulerSleepLifecycle, P1WakesIntoReadyQueueWhileP3StillRunning) {
-    prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
+// Scenario: P1 sleeps, P2 runs and finishes, P3 starts running, and while P3
+// is still executing P1's sleep expires and it re-enters the ready queue.
+//
+// Queue order: [P1, P2, P3]
+// Tick sequence (1 CPU):
+//   P1 dispatches → SLEEP(3) → WAITING, CPU free
+//   P2 dispatches → PRINT → FINISHED, CPU free
+//   P3 dispatches → runs many PRINTs (still executing)
+//   After 3 sleep ticks → P1 becomes READY (back in queue behind P3)
+//   P3 finishes → P1 dispatches, finishes
+TEST(SchedulerSleepLifecycle, P1WakesIntoReadyQueueWhileP3StillRunning) {
+  prosched::Scheduler scheduler(makeSmallCtx("fcfs", 1));
 
-    // P1: sleeps 3 ticks, then prints
-    prosched::Process *p1 = new prosched::Process("p1_sleeper", 1, 0);
-    AddRaw(*p1, "SLEEP(3)");
-    AddRaw(*p1, "PRINT(\"p1_after_sleep\")");
-    p1->SetOwnedByScheduler(true);
+  // P1: sleeps 3 ticks, then prints
+  prosched::Process *p1 = new prosched::Process("p1_sleeper", 1, 0);
+  AddRaw(*p1, "SLEEP(3)");
+  AddRaw(*p1, "PRINT(\"p1_after_sleep\")");
+  p1->SetOwnedByScheduler(true);
 
-    // P2: single instruction — finishes while P1 is sleeping
-    prosched::Process *p2 = new prosched::Process("p2_fast", 2, 0);
-    AddRaw(*p2, "PRINT(\"p2_done\")");
-    p2->SetOwnedByScheduler(true);
+  // P2: single instruction — finishes while P1 is sleeping
+  prosched::Process *p2 = new prosched::Process("p2_fast", 2, 0);
+  AddRaw(*p2, "PRINT(\"p2_done\")");
+  p2->SetOwnedByScheduler(true);
 
-    // P3: many instructions — still running when P1 wakes up
-    prosched::Process *p3 = new prosched::Process("p3_slow", 3, 0);
-    for (int i = 0; i < 20; i++)
-      AddRaw(*p3, "PRINT(\"p3\")");
-    p3->SetOwnedByScheduler(true);
+  // P3: many instructions — still running when P1 wakes up
+  prosched::Process *p3 = new prosched::Process("p3_slow", 3, 0);
+  for (int i = 0; i < 20; i++)
+    AddRaw(*p3, "PRINT(\"p3\")");
+  p3->SetOwnedByScheduler(true);
 
-    scheduler.AddProcess(p1);
-    scheduler.AddProcess(p2);
-    scheduler.AddProcess(p3);
-    scheduler.Start();
+  scheduler.AddProcess(p1);
+  scheduler.AddProcess(p2);
+  scheduler.AddProcess(p3);
+  scheduler.Start();
 
-    // Step 1: wait for P2 to finish — P1 must still be sleeping at this point
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-    while (!p2->IsFinished() && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
-    ASSERT_TRUE(p2->IsFinished());
-    EXPECT_EQ(p1->GetState(), prosched::WAITING); // P1 still in sleep
+  // Step 1: wait for P2 to finish — P1 must still be sleeping at this point
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+  while (!p2->IsFinished() && std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
+  ASSERT_TRUE(p2->IsFinished());
+  EXPECT_EQ(p1->GetState(), prosched::WAITING); // P1 still in sleep
 
-    // Step 2: wait for P1's sleep to expire (state flips to READY)
-    // P3 is on the CPU with 20 instructions, so it won't finish before P1 wakes
-    deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
-    while (p1->GetState() != prosched::READY && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  // Step 2: wait for P1's sleep to expire (state flips to READY)
+  // P3 is on the CPU with 20 instructions, so it won't finish before P1 wakes
+  deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+  while (p1->GetState() != prosched::READY &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    // P1 is READY (back in queue) — P3 is still running and not yet finished
-    EXPECT_EQ(p1->GetState(), prosched::READY);
-    EXPECT_FALSE(p3->IsFinished()); // P3 still on CPU when P1 woke
+  // P1 is READY (back in queue) — P3 is still running and not yet finished
+  EXPECT_EQ(p1->GetState(), prosched::READY);
+  EXPECT_FALSE(p3->IsFinished()); // P3 still on CPU when P1 woke
 
-    // Step 3: let everything finish
-    deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
-    while ((!p1->IsFinished() || !p3->IsFinished()) &&
-           std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  // Step 3: let everything finish
+  deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+  while ((!p1->IsFinished() || !p3->IsFinished()) &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    scheduler.Stop();
-    EXPECT_TRUE(p1->IsFinished());
-    EXPECT_TRUE(p3->IsFinished());
-  }
+  scheduler.Stop();
+  EXPECT_TRUE(p1->IsFinished());
+  EXPECT_TRUE(p3->IsFinished());
+}
 
 } // namespace SchedulerSleepLifecycle
 
@@ -1058,8 +1068,8 @@ TEST(SchedulerReadyQueueTieBreak, GeneratedProcessAppendsToBack) {
 
   auto q = scheduler.GetReadyQueueSnapshot();
   ASSERT_EQ(q.size(), 2u);
-  EXPECT_EQ(q[0], &a);   // pre-existing ready process stays at the front
-  EXPECT_NE(q[1], &a);   // generated process is behind it
+  EXPECT_EQ(q[0], &a); // pre-existing ready process stays at the front
+  EXPECT_NE(q[1], &a); // generated process is behind it
 }
 
 // THE tie-break (generate vs wake on the same tick): a process generated in
@@ -1067,8 +1077,9 @@ TEST(SchedulerReadyQueueTieBreak, GeneratedProcessAppendsToBack) {
 // UpdateSleepingProcessesCycle (tick step 5).
 //
 // Note: because no worker dispatches in this synchronous test, the sleeper's
-// original AddProcess entry is still parked at the front of the queue. We assert
-// on the woken (re-queued) entry, which is the LAST element after waking.
+// original AddProcess entry is still parked at the front of the queue. We
+// assert on the woken (re-queued) entry, which is the LAST element after
+// waking.
 TEST(SchedulerReadyQueueTieBreak, GeneratedEnqueuedBeforeWokenSleeper) {
   prosched::Scheduler scheduler(makeGenCtx());
   scheduler.ResumeGenerating();
@@ -1084,14 +1095,17 @@ TEST(SchedulerReadyQueueTieBreak, GeneratedEnqueuedBeforeWokenSleeper) {
   ASSERT_EQ(s->GetState(), prosched::WAITING);
 
   // Reproduce one SchedulerLoop tick's enqueue order (the relevant steps):
-  scheduler.GenerateProcessesCycle(1);       // step 1: push generated G
-  scheduler.UpdateSleepingProcessesCycle();  // step 5: wake s, push to back
+  scheduler.GenerateProcessesCycle(1);      // step 1: push generated G
+  scheduler.UpdateSleepingProcessesCycle(); // step 5: wake s, push to back
 
   auto q = scheduler.GetReadyQueueSnapshot();
   // Find the generated process: the only pointer in the queue that isn't s.
   prosched::Process *g = nullptr;
   for (auto *p : q)
-    if (p != s) { g = p; break; }
+    if (p != s) {
+      g = p;
+      break;
+    }
   ASSERT_NE(g, nullptr) << "no generated process found in queue";
 
   long gPos = std::find(q.begin(), q.end(), g) - q.begin();
@@ -1168,13 +1182,13 @@ namespace SchedulerRoundRobinTimeSlice {
 // NOT happen, FCFS-style, p1 would run all of its instructions first and p2
 // would finish last.  p1 is given a long loop so it cannot possibly complete in
 // the tiny window between p2 finishing and our observation of p1.
-TEST(SchedulerRoundRobinTimeSlice, PreemptedProcessYieldsSoNextProcessFinishesFirst) {
+TEST(SchedulerRoundRobinTimeSlice,
+     PreemptedProcessYieldsSoNextProcessFinishesFirst) {
   prosched::Scheduler scheduler(makeSmallCtx("rr", 1, 3));
 
   // p1: loop 100 { print 1; print 2; print 3; print 4 } → 400 instructions
   prosched::Process *p1 = new prosched::Process("p1", 1, 0);
-  AddRaw(*p1,
-         R"(FOR([PRINT("1"), PRINT("2"), PRINT("3"), PRINT("4")], 100))");
+  AddRaw(*p1, R"(FOR([PRINT("1"), PRINT("2"), PRINT("3"), PRINT("4")], 100))");
   p1->SetOwnedByScheduler(true);
 
   // p2: a single instruction — finishes in one quantum once it gets the core
@@ -1205,7 +1219,8 @@ TEST(SchedulerRoundRobinTimeSlice, PreemptedProcessYieldsSoNextProcessFinishesFi
 // its 20 instructions (5 iterations * 4 prints).  p2 also finishes.  This
 // proves the preempted process is re-queued (never dropped) and that the FOR
 // body is correctly counted as individual statements.
-TEST(SchedulerRoundRobinTimeSlice, PreemptedProcessResumesAndCompletesAllInstructions) {
+TEST(SchedulerRoundRobinTimeSlice,
+     PreemptedProcessResumesAndCompletesAllInstructions) {
   prosched::Scheduler scheduler(makeSmallCtx("rr", 1, 3));
 
   // p1: loop 5 { print 1; print 2; print 3; print 4 } → 20 instructions
@@ -1320,7 +1335,8 @@ TEST(SchedulerFreeFinishedProcesses, NullPagingManagerRunsToCompletion) {
 }
 
 // Round-robin dispatch is not gated by physical-memory availability.
-TEST(SchedulerFreeFinishedProcesses, AllQueuedProcessesFinishWithoutPreallocation) {
+TEST(SchedulerFreeFinishedProcesses,
+     AllQueuedProcessesFinishWithoutPreallocation) {
   prosched::PagingManager pm(16, 16);
   prosched::Scheduler scheduler(makeSmallCtx("rr"), &pm);
 

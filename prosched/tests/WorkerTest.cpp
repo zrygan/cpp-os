@@ -252,8 +252,8 @@ TEST(WorkerIsRunning, StopWhileProcessingDoesNotDeadlock) {
   prosched::Worker w(1, makeTestCtx());
   prosched::Process p("stop_mid", 1, 0);
 
-  // 500 instructions — enough that the worker won't finish before we call Stop()
-  // (with kTickDurationMs=0, 50 could complete before Stop() is invoked)
+  // 500 instructions — enough that the worker won't finish before we call
+  // Stop() (with kTickDurationMs=0, 50 could complete before Stop() is invoked)
   for (int i = 0; i < 500; i++)
     AddRaw(p, "PRINT(\"tick\")");
 
@@ -324,25 +324,25 @@ TEST(WorkerGetCurrentProcess, NullAfterProcessFinishes) {
 
 namespace WorkerAssignProcess {
 
-  // Assigned process state becomes RUNNING
-  TEST(WorkerAssignProcess, AssignedProcessStateIsRunning) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("state_check", 1, 0);
+// Assigned process state becomes RUNNING
+TEST(WorkerAssignProcess, AssignedProcessStateIsRunning) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("state_check", 1, 0);
 
-    w.AssignProcess(&p);
+  w.AssignProcess(&p);
 
-    EXPECT_EQ(p.GetState(), prosched::ProcessState::RUNNING);
-  }
+  EXPECT_EQ(p.GetState(), prosched::ProcessState::RUNNING);
+}
 
-  // Assigned process gets the worker's core number stamped onto it
-  TEST(WorkerAssignProcess, AssignedProcessCoreIsStamped) {
-    prosched::Worker w(3, makeTestCtx());
-    prosched::Process p("core_stamp", 1, 0);
+// Assigned process gets the worker's core number stamped onto it
+TEST(WorkerAssignProcess, AssignedProcessCoreIsStamped) {
+  prosched::Worker w(3, makeTestCtx());
+  prosched::Process p("core_stamp", 1, 0);
 
-    w.AssignProcess(&p);
+  w.AssignProcess(&p);
 
-    EXPECT_EQ(p.GetAssignedCore(), 3);
-  }
+  EXPECT_EQ(p.GetAssignedCore(), 3);
+}
 
 } // namespace WorkerAssignProcess
 
@@ -350,47 +350,47 @@ namespace WorkerAssignProcess {
 
 namespace WorkerPreemptProcess {
 
-  // Returns the previously assigned process
-  TEST(WorkerPreemptProcess, ReturnsPreviousProcess) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("preempt_1", 1, 0);
+// Returns the previously assigned process
+TEST(WorkerPreemptProcess, ReturnsPreviousProcess) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("preempt_1", 1, 0);
 
-    w.AssignProcess(&p);
-    prosched::Process *result = w.PreemptProcess();
+  w.AssignProcess(&p);
+  prosched::Process *result = w.PreemptProcess();
 
-    EXPECT_EQ(result, &p);
-  }
+  EXPECT_EQ(result, &p);
+}
 
-  // Worker becomes idle after preemption
-  TEST(WorkerPreemptProcess, WorkerBecomesIdleAfterPreempt) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("preempt_2", 2, 0);
+// Worker becomes idle after preemption
+TEST(WorkerPreemptProcess, WorkerBecomesIdleAfterPreempt) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("preempt_2", 2, 0);
 
-    w.AssignProcess(&p);
-    w.PreemptProcess();
+  w.AssignProcess(&p);
+  w.PreemptProcess();
 
-    EXPECT_FALSE(w.IsBusy());
-  }
+  EXPECT_FALSE(w.IsBusy());
+}
 
-  // Process state is set back to READY after preemption
-  TEST(WorkerPreemptProcess, ProcessStateIsReadyAfterPreempt) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("preempt_3", 3, 0);
+// Process state is set back to READY after preemption
+TEST(WorkerPreemptProcess, ProcessStateIsReadyAfterPreempt) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("preempt_3", 3, 0);
 
-    w.AssignProcess(&p);  // sets state to RUNNING
-    w.PreemptProcess();
+  w.AssignProcess(&p); // sets state to RUNNING
+  w.PreemptProcess();
 
-    EXPECT_EQ(p.GetState(), prosched::ProcessState::READY);
-  }
+  EXPECT_EQ(p.GetState(), prosched::ProcessState::READY);
+}
 
-  // Returns nullptr when no process is assigned
-  TEST(WorkerPreemptProcess, ReturnsNullWhenNothingAssigned) {
-    prosched::Worker w(1, makeTestCtx());
+// Returns nullptr when no process is assigned
+TEST(WorkerPreemptProcess, ReturnsNullWhenNothingAssigned) {
+  prosched::Worker w(1, makeTestCtx());
 
-    prosched::Process *result = w.PreemptProcess();
+  prosched::Process *result = w.PreemptProcess();
 
-    EXPECT_EQ(result, nullptr);
-  }
+  EXPECT_EQ(result, nullptr);
+}
 
 } // namespace WorkerPreemptProcess
 
@@ -398,35 +398,35 @@ namespace WorkerPreemptProcess {
 
 namespace WorkerGetAndClearPreemptedProcess {
 
-  // Returns nullptr when no preemption has occurred
-  TEST(WorkerGetAndClearPreemptedProcess, ReturnsNullWhenNothingPreempted) {
-    prosched::Worker w(1, makeTestCtx());
+// Returns nullptr when no preemption has occurred
+TEST(WorkerGetAndClearPreemptedProcess, ReturnsNullWhenNothingPreempted) {
+  prosched::Worker w(1, makeTestCtx());
 
-    EXPECT_EQ(w.GetAndClearPreemptedProcess(), nullptr);
-  }
+  EXPECT_EQ(w.GetAndClearPreemptedProcess(), nullptr);
+}
 
-  // Returns the process that was preempted
-  TEST(WorkerGetAndClearPreemptedProcess, ReturnsProcessAfterPreemptProcess) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("clear_1", 1, 0);
+// Returns the process that was preempted
+TEST(WorkerGetAndClearPreemptedProcess, ReturnsProcessAfterPreemptProcess) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("clear_1", 1, 0);
 
-    w.AssignProcess(&p);
-    w.PreemptProcess();
+  w.AssignProcess(&p);
+  w.PreemptProcess();
 
-    EXPECT_EQ(w.GetAndClearPreemptedProcess(), &p);
-  }
+  EXPECT_EQ(w.GetAndClearPreemptedProcess(), &p);
+}
 
-  // Second call returns nullptr — the slot is cleared on the first call
-  TEST(WorkerGetAndClearPreemptedProcess, ClearedOnSecondCall) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("clear_2", 2, 0);
+// Second call returns nullptr — the slot is cleared on the first call
+TEST(WorkerGetAndClearPreemptedProcess, ClearedOnSecondCall) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("clear_2", 2, 0);
 
-    w.AssignProcess(&p);
-    w.PreemptProcess();
-    w.GetAndClearPreemptedProcess(); // first call consumes it
+  w.AssignProcess(&p);
+  w.PreemptProcess();
+  w.GetAndClearPreemptedProcess(); // first call consumes it
 
-    EXPECT_EQ(w.GetAndClearPreemptedProcess(), nullptr);
-  }
+  EXPECT_EQ(w.GetAndClearPreemptedProcess(), nullptr);
+}
 
 } // namespace WorkerGetAndClearPreemptedProcess
 
@@ -434,36 +434,37 @@ namespace WorkerGetAndClearPreemptedProcess {
 
 namespace WorkerCheckAndIncrementQuantum {
 
-  // Returns false on an idle worker (no process assigned)
-  TEST(WorkerCheckAndIncrementQuantum, ReturnsFalseOnIdleWorker) {
-    prosched::Worker w(1, makeTestCtx());
+// Returns false on an idle worker (no process assigned)
+TEST(WorkerCheckAndIncrementQuantum, ReturnsFalseOnIdleWorker) {
+  prosched::Worker w(1, makeTestCtx());
 
-    EXPECT_FALSE(w.CheckAndIncrementQuantum(3));
-  }
+  EXPECT_FALSE(w.CheckAndIncrementQuantum(3));
+}
 
-  // Returns false while the quantum counter is below the limit
-  TEST(WorkerCheckAndIncrementQuantum, ReturnsFalseWhileUnderLimit) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("quantum_1", 1, 0);
+// Returns false while the quantum counter is below the limit
+TEST(WorkerCheckAndIncrementQuantum, ReturnsFalseWhileUnderLimit) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("quantum_1", 1, 0);
 
-    w.AssignProcess(&p);                         // state = RUNNING, quantumUsed = 0
-    bool result = w.CheckAndIncrementQuantum(3); // quantum becomes 1, 1 >= 3 false
+  w.AssignProcess(&p); // state = RUNNING, quantumUsed = 0
+  bool result =
+      w.CheckAndIncrementQuantum(3); // quantum becomes 1, 1 >= 3 false
 
-    EXPECT_FALSE(result);
-  }
+  EXPECT_FALSE(result);
+}
 
-  // Returns true at exactly the limit
-  TEST(WorkerCheckAndIncrementQuantum, ReturnsTrueAtExactlyLimit) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("quantum_2", 2, 0);
+// Returns true at exactly the limit
+TEST(WorkerCheckAndIncrementQuantum, ReturnsTrueAtExactlyLimit) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("quantum_2", 2, 0);
 
-    w.AssignProcess(&p);
-    w.CheckAndIncrementQuantum(3); // quantum = 1
-    w.CheckAndIncrementQuantum(3); // quantum = 2
-    bool result = w.CheckAndIncrementQuantum(3); // quantum = 3, 3 >= 3 true
+  w.AssignProcess(&p);
+  w.CheckAndIncrementQuantum(3);               // quantum = 1
+  w.CheckAndIncrementQuantum(3);               // quantum = 2
+  bool result = w.CheckAndIncrementQuantum(3); // quantum = 3, 3 >= 3 true
 
-    EXPECT_TRUE(result);
-  }
+  EXPECT_TRUE(result);
+}
 
 } // namespace WorkerCheckAndIncrementQuantum
 
@@ -471,94 +472,99 @@ namespace WorkerCheckAndIncrementQuantum {
 
 namespace WorkerCallbackSync {
 
-  // Callback fires after SignalNewTick triggers a cycle
-  TEST(WorkerCallbackSync, CallbackFiresAfterSignalNewTick) {
-    prosched::Worker w(1, makeTestCtx());
-    std::atomic<int> callback_count{0};
-    w.SetCycleCompleteCallback([&callback_count] { callback_count++; });
-    w.Start();
+// Callback fires after SignalNewTick triggers a cycle
+TEST(WorkerCallbackSync, CallbackFiresAfterSignalNewTick) {
+  prosched::Worker w(1, makeTestCtx());
+  std::atomic<int> callback_count{0};
+  w.SetCycleCompleteCallback([&callback_count] { callback_count++; });
+  w.Start();
 
-    w.SignalNewTick(1);
+  w.SignalNewTick(1);
 
-    // Spin-wait up to 50 ms for the callback to fire
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
-    while (callback_count.load() == 0 &&
-          std::chrono::steady_clock::now() < deadline) {
-      std::this_thread::yield();
-    }
-
-    EXPECT_EQ(callback_count.load(), 1);
-    w.Stop();
+  // Spin-wait up to 50 ms for the callback to fire
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
+  while (callback_count.load() == 0 &&
+         std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
   }
 
-  // Callback does not fire without a tick signal
-  TEST(WorkerCallbackSync, CallbackDoesNotFireBeforeTickSignaled) {
-    prosched::Worker w(1, makeTestCtx());
-    std::atomic<int> callback_count{0};
-    w.SetCycleCompleteCallback([&callback_count] { callback_count++; });
-    w.Start();
+  EXPECT_EQ(callback_count.load(), 1);
+  w.Stop();
+}
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+// Callback does not fire without a tick signal
+TEST(WorkerCallbackSync, CallbackDoesNotFireBeforeTickSignaled) {
+  prosched::Worker w(1, makeTestCtx());
+  std::atomic<int> callback_count{0};
+  w.SetCycleCompleteCallback([&callback_count] { callback_count++; });
+  w.Start();
 
-    EXPECT_EQ(callback_count.load(), 0);
-    w.Stop();
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+  EXPECT_EQ(callback_count.load(), 0);
+  w.Stop();
+}
+
+// Worker runs exactly once per tick — the process advances by exactly one
+// instruction per signal, not more, even though the worker loop is continuous
+TEST(WorkerCallbackSync, WorkerRunsExactlyOncePerTick) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("sync_once", 1, 0);
+  for (int i = 0; i < 10; i++)
+    AddRaw(p, "PRINT(\"x\")");
+
+  std::atomic<int> callback_count{0};
+  w.SetCycleCompleteCallback([&callback_count] { callback_count++; });
+  w.AssignProcess(&p);
+  w.Start();
+
+  // Send one tick and wait for the callback
+  w.SignalNewTick(1);
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
+  while (callback_count.load() < 1 &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
+
+  // Exactly one instruction should have run — worker did not run ahead
+  EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
+  EXPECT_EQ(callback_count.load(), 1);
+
+  w.Stop();
+}
+
+// All N workers call back before the simulated scheduler proceeds —
+// models the TriggerWorkersTick barrier that the real Scheduler relies on
+TEST(WorkerCallbackSync, AllWorkersCallBackBeforeBarrierCompletes) {
+  const int num_workers = 4;
+  std::atomic<int> completed{0};
+  std::vector<prosched::Worker *> workers;
+
+  for (int i = 0; i < num_workers; i++) {
+    auto *w = new prosched::Worker(i, makeTestCtx());
+    w->SetCycleCompleteCallback([&completed] { completed++; });
+    w->Start();
+    workers.push_back(w);
   }
 
-  // Worker runs exactly once per tick — the process advances by exactly one
-  // instruction per signal, not more, even though the worker loop is continuous
-  TEST(WorkerCallbackSync, WorkerRunsExactlyOncePerTick) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("sync_once", 1, 0);
-    for (int i = 0; i < 10; i++)
-      AddRaw(p, "PRINT(\"x\")");
+  // Signal all workers — equivalent to one TriggerWorkersTick call
+  for (int i = 0; i < num_workers; i++)
+    workers[i]->SignalNewTick(1);
 
-    std::atomic<int> callback_count{0};
-    w.SetCycleCompleteCallback([&callback_count] { callback_count++; });
-    w.AssignProcess(&p);
-    w.Start();
+  // Spin-wait until all N workers have called back (the barrier condition)
+  auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+  while (completed.load() < num_workers &&
+         std::chrono::steady_clock::now() < deadline)
+    std::this_thread::yield();
 
-    // Send one tick and wait for the callback
-    w.SignalNewTick(1);
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
-    while (callback_count.load() < 1 && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
+  EXPECT_EQ(completed.load(), num_workers);
 
-    // Exactly one instruction should have run — worker did not run ahead
-    EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
-    EXPECT_EQ(callback_count.load(), 1);
-
-    w.Stop();
+  for (auto *w : workers) {
+    w->Stop();
+    delete w;
   }
-
-  // All N workers call back before the simulated scheduler proceeds —
-  // models the TriggerWorkersTick barrier that the real Scheduler relies on
-  TEST(WorkerCallbackSync, AllWorkersCallBackBeforeBarrierCompletes) {
-    const int num_workers = 4;
-    std::atomic<int> completed{0};
-    std::vector<prosched::Worker *> workers;
-
-    for (int i = 0; i < num_workers; i++) {
-      auto *w = new prosched::Worker(i, makeTestCtx());
-      w->SetCycleCompleteCallback([&completed] { completed++; });
-      w->Start();
-      workers.push_back(w);
-    }
-
-    // Signal all workers — equivalent to one TriggerWorkersTick call
-    for (int i = 0; i < num_workers; i++)
-      workers[i]->SignalNewTick(1);
-
-    // Spin-wait until all N workers have called back (the barrier condition)
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-    while (completed.load() < num_workers && std::chrono::steady_clock::now() < deadline)
-      std::this_thread::yield();
-
-    EXPECT_EQ(completed.load(), num_workers);
-
-    for (auto *w : workers) {
-      w->Stop();
-      delete w;
-    }
 }
 
 } // namespace WorkerCallbackSync
@@ -567,55 +573,56 @@ namespace WorkerCallbackSync {
 
 namespace WorkerTickExecution {
 
-  // When cycles left is 0 and state is RUNNING, the instruction executes
-  TEST(WorkerTickExecution, ExecutesInstructionWhenCyclesLeftIsZero) {
-    prosched::Worker w(1, makeTestCtx()); // delay_per_execution = 0
-    prosched::Process p("te_1", 1, 0);
-    AddRaw(p, "PRINT(\"hi\")");
+// When cycles left is 0 and state is RUNNING, the instruction executes
+TEST(WorkerTickExecution, ExecutesInstructionWhenCyclesLeftIsZero) {
+  prosched::Worker w(1, makeTestCtx()); // delay_per_execution = 0
+  prosched::Process p("te_1", 1, 0);
+  AddRaw(p, "PRINT(\"hi\")");
 
-    w.AssignProcess(&p); // state = RUNNING, cycles_left = 0
-    w.TickExecution(&p);
+  w.AssignProcess(&p); // state = RUNNING, cycles_left = 0
+  w.TickExecution(&p);
 
-    EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
-  }
+  EXPECT_EQ(p.GetCurrentInstructionIndex(), 1);
+}
 
-  // When cycles left is positive, the instruction does not execute and cycles decrements
-  TEST(WorkerTickExecution, DecrementsInstructionCyclesLeftWhenPositive) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("te_2", 2, 0);
-    AddRaw(p, "PRINT(\"hi\")");
+// When cycles left is positive, the instruction does not execute and cycles
+// decrements
+TEST(WorkerTickExecution, DecrementsInstructionCyclesLeftWhenPositive) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("te_2", 2, 0);
+  AddRaw(p, "PRINT(\"hi\")");
 
-    p.SetState(prosched::ProcessState::RUNNING);
-    p.SetCurrentInstructionCyclesLeft(3);
-    w.TickExecution(&p);
+  p.SetState(prosched::ProcessState::RUNNING);
+  p.SetCurrentInstructionCyclesLeft(3);
+  w.TickExecution(&p);
 
-    EXPECT_EQ(p.GetCurrentInstructionIndex(), 0); // not executed
-    EXPECT_EQ(p.GetCurrentInstructionCyclesLeft(), 2);
-  }
+  EXPECT_EQ(p.GetCurrentInstructionIndex(), 0); // not executed
+  EXPECT_EQ(p.GetCurrentInstructionCyclesLeft(), 2);
+}
 
-  // Worker detaches when the instruction transitions the process to WAITING
-  TEST(WorkerTickExecution, DetachesOnWaitingState) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("te_3", 3, 0);
-    AddRaw(p, "SLEEP(5)");
+// Worker detaches when the instruction transitions the process to WAITING
+TEST(WorkerTickExecution, DetachesOnWaitingState) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("te_3", 3, 0);
+  AddRaw(p, "SLEEP(5)");
 
-    w.AssignProcess(&p); // state = RUNNING, cycles_left = 0
-    w.TickExecution(&p); // SLEEP executes → WAITING → currentProcess = nullptr
+  w.AssignProcess(&p); // state = RUNNING, cycles_left = 0
+  w.TickExecution(&p); // SLEEP executes → WAITING → currentProcess = nullptr
 
-    EXPECT_FALSE(w.IsBusy());
-  }
+  EXPECT_FALSE(w.IsBusy());
+}
 
-  // Worker detaches when the instruction transitions the process to FINISHED
-  TEST(WorkerTickExecution, DetachesOnFinishedState) {
-    prosched::Worker w(1, makeTestCtx());
-    prosched::Process p("te_4", 4, 0);
-    AddRaw(p, "PRINT(\"bye\")");
+// Worker detaches when the instruction transitions the process to FINISHED
+TEST(WorkerTickExecution, DetachesOnFinishedState) {
+  prosched::Worker w(1, makeTestCtx());
+  prosched::Process p("te_4", 4, 0);
+  AddRaw(p, "PRINT(\"bye\")");
 
-    w.AssignProcess(&p); // state = RUNNING, cycles_left = 0
-    w.TickExecution(&p); // PRINT executes → FINISHED → currentProcess = nullptr
+  w.AssignProcess(&p); // state = RUNNING, cycles_left = 0
+  w.TickExecution(&p); // PRINT executes → FINISHED → currentProcess = nullptr
 
-    EXPECT_FALSE(w.IsBusy());
-  }
+  EXPECT_FALSE(w.IsBusy());
+}
 
 } // namespace WorkerTickExecution
 
@@ -636,7 +643,8 @@ TEST(WorkerRunCycle, FinishedProcessClearsCurrentProcess) {
   prosched::Process p("rc_2", 2, 0);
 
   w.AssignProcess(&p);
-  p.SetState(prosched::ProcessState::FINISHED); // mark finished without executing
+  p.SetState(
+      prosched::ProcessState::FINISHED); // mark finished without executing
   w.RunCycle();
 
   EXPECT_FALSE(w.IsBusy());

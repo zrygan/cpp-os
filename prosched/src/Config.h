@@ -44,11 +44,10 @@ inline ConfigStruct *makeDefault() {
                                       .min_ins = 1000,
                                       .max_ins = 2000,
                                       .delay_per_exec = 0,
-                                      .min_mem_per_proc= 4096,
+                                      .min_mem_per_proc = 4096,
                                       .max_mem_per_proc = 4096,
                                       .mem_per_frame = 16,
-                                      .max_overall_mem = 16384
-                                    };
+                                      .max_overall_mem = 16384};
   return cs;
 }
 
