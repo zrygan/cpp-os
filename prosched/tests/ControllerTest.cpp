@@ -29,6 +29,18 @@ TEST(ControllerIdentifyCommand, ReportUtil) {
   EXPECT_EQ(c.IdentifyCommand({"report-util"}), CLI_COMMAND::CLI_REPORT_UTIL);
 }
 
+// "vmstat" token maps to CLI_VMSTAT
+TEST(ControllerIdentifyCommand, VmStat) {
+  Controller c;
+  EXPECT_EQ(c.IdentifyCommand({"vmstat"}), CLI_COMMAND::CLI_VMSTAT);
+}
+
+// "process-smi" token maps to CLI_PROCESS_SMI
+TEST(ControllerIdentifyCommand, ProcessSmi) {
+  Controller c;
+  EXPECT_EQ(c.IdentifyCommand({"process-smi"}), CLI_COMMAND::CLI_PROCESS_SMI);
+}
+
 // {"screen", "-ls"} pair maps to CLI_SCREEN_LS
 TEST(ControllerIdentifyCommand, ScreenLs) {
   Controller c;
@@ -102,6 +114,13 @@ TEST(ControllerGetParsedInput, ScreenSExtractsProcessName) {
   Command cmd = c.GetParsedInput("screen -s myproc");
   EXPECT_EQ(cmd.cliCommand, CLI_COMMAND::CLI_SCREEN_S);
   EXPECT_EQ(cmd.processName, "myproc");
+}
+
+// "process-smi" string tokenizes to CLI_PROCESS_SMI
+TEST(ControllerGetParsedInput, ProcessSmi) {
+  Controller c;
+  EXPECT_EQ(c.GetParsedInput("process-smi").cliCommand,
+            CLI_COMMAND::CLI_PROCESS_SMI);
 }
 
 // Unrecognized string tokenizes to UNKNOWN
