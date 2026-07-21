@@ -216,6 +216,10 @@ void Controller::ExecuteCommand(const Command &command) {
       PrintVmStat();
       break;
 
+    case CLI_COMMAND::CLI_PROCESS_SMI:
+      PrintProcessSmi();
+      break;
+
     case CLI_COMMAND::UNKNOWN:
       std::cout << "Command unknown. Try again. \n";
       break;
@@ -367,6 +371,8 @@ namespace {
 constexpr int kVmStatValueWidth = 13;
 constexpr int kVmStatUnitWidth = 3;
 
+const std::string kProcessSmiRule(44, '-');
+
 // Emits one vmstat row. Pass an empty unit for quantities that have none.
 void PrintVmStatRow(std::ostream &out, std::uint64_t value,
                     const std::string &unit, const std::string &description) {
@@ -394,6 +400,47 @@ void Controller::PrintVmStat() {
   PrintVmStatRow(std::cout, memory.pagesPagedOut, "",
                  "accumulated number of pages paged out");
   std::cout << "\n";
+}
+
+void Controller::PrintProcessSmi() {
+  const prosched::PagingManager::MemoryStats memory =
+      this->pagingManager->GetMemoryStats();
+
+  double memoryUtil =
+      memory.totalMemoryBytes == 0
+          ? 0.0
+          : (static_cast<double>(memory.usedMemoryBytes) /
+             static_cast<double>(memory.totalMemoryBytes)) * 100.0;
+
+  std::cout << kProcessSmiRule << "\n"
+            << "| PROCESS-SMI V01.00 Driver Version: 01.00 |\n"
+            << kProcessSmiRule << "\n\n";
+
+  std::cout << "CPU-Util: " << static_cast<int>(this->scheduler->GetCpuUtilization())
+            << "%\n";
+  std::cout << "Memory Usage: " << memory.usedMemoryBytes << "MiB / "
+            << memory.totalMemoryBytes << "MiB\n";
+  std::cout << "Memory Util: " << static_cast<int>(memoryUtil) << "%\n\n";
+
+  std::cout << std::string(kProcessSmiRule.size(), '=') << "\n";
+  std::cout << "Running processes and memory usage:\n";
+  std::cout << kProcessSmiRule << "\n";
+
+  bool anyRunning = false;
+  for (prosched::Process *p : this->scheduler->GetAllProcesses()) {
+    if (p == nullptr || p->IsFinished()) {
+      continue;
+    }
+    anyRunning = true;
+    std::cout << p->GetName() << " "
+              << this->pagingManager->GetProcessMemoryBytes(p->GetPID())
+              << "MiB\n";
+  }
+  if (!anyRunning) {
+    std::cout << "(none)\n";
+  }
+
+  std::cout << kProcessSmiRule << "\n\n";
 }
 
 void Controller::PrintReportUtil() {
@@ -435,6 +482,8 @@ Controller::IdentifyCommand(const std::vector<std::string> &command) {
     return CLI_COMMAND::CLI_REPORT_UTIL;
   } else if (command[0] == "vmstat") {
     return CLI_COMMAND::CLI_VMSTAT;
+  } else if (command[0] == "process-smi") {
+    return CLI_COMMAND::CLI_PROCESS_SMI;
   } else {
     return CLI_COMMAND::UNKNOWN;
   }

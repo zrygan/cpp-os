@@ -56,5 +56,6 @@ void CommandSet() {
             << "- scheduler-start\n"
             << "- scheduler-stop\n"
             << "- report-util\n"
-            << "- vmstat\n\n";
+            << "- vmstat\n"
+            << "- process-smi\n\n";
 }
