@@ -378,6 +378,21 @@ public:
   }
 
   /**
+   * @brief Gets the physical memory currently occupied by a process.
+   *
+   * Only resident pages count; pages that have been evicted to the backing
+   * store hold no frame and so contribute nothing.
+   *
+   * @param pid The process ID.
+   * @return The number of bytes of physical memory held by the process.
+   */
+  std::size_t GetProcessMemoryBytes(int pid) const {
+    std::lock_guard<std::recursive_mutex> lock(pagingMutex);
+    return static_cast<std::size_t>(GetResidentPageCount(pid)) *
+           static_cast<std::size_t>(memPerFrame);
+  }
+
+  /**
    * @brief Gets the total number of frames.
    *
    * @return The total number of frames.

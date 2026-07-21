@@ -345,6 +345,25 @@ public:
   }
 
   /**
+   * @brief Gets the share of CPU cores that are currently executing a process.
+   *
+   * @return Utilization as a percentage in [0, 100]; 0 when no cores exist.
+   */
+  double GetCpuUtilization() const {
+    if (workers.empty()) {
+      return 0.0;
+    }
+
+    int coresUsed = 0;
+    for (Worker *w : workers) {
+      if (w->IsBusy()) {
+        coresUsed++;
+      }
+    }
+    return (static_cast<double>(coresUsed) / workers.size()) * 100.0;
+  }
+
+  /**
    * @brief Creates a new named process with random instructions and assigns it
    * the next available PID.
    *
