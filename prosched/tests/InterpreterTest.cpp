@@ -406,10 +406,7 @@ TEST(InterpreterReadWriteAddressValidation, OutOfBoundsReadSetsViolationAndFails
   EXPECT_EQ(interp.GetLastViolationAddress(), 500u);
 }
 
-// Case 2, EXPECTED behavior (currently FAILS): a malformed address is just as invalid
-// as an out-of-bounds one (case 1), so ExecuteWrite should fail gracefully — return
-// nullopt, same as every other malformed-args case in this file — instead of throwing
-// an uncaught exception out of ParseAddress's raw std::stoul call.
+// A malformed address should fail gracefully (nullopt), not throw uncaught
 TEST(InterpreterReadWriteAddressValidation,
      MalformedAddressShouldFailGracefullyNotThrow) {
   prosched::Interpreter interp;
@@ -420,12 +417,7 @@ TEST(InterpreterReadWriteAddressValidation,
   EXPECT_FALSE(result.has_value());
 }
 
-// Case 2, EXPECTED behavior (currently FAILS): routed through ExecuteString, a
-// malformed address should be at least as fatal as an out-of-bounds one — it should
-// set the access-violation flag so Process::ExecuteInstructions terminates the
-// process. Instead the exception is swallowed by ExecuteStatement's try/catch into a
-// generic log line, the flag stays false, and Process treats it as a completed
-// instruction and moves on.
+// A malformed address via ExecuteString should violate like an out-of-bounds one
 TEST(InterpreterReadWriteAddressValidation,
      MalformedAddressShouldSetViolationLikeOutOfBounds) {
   prosched::Interpreter interp;
@@ -433,13 +425,7 @@ TEST(InterpreterReadWriteAddressValidation,
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
 }
 
-// Case 3, EXPECTED behavior (currently FAILS): an address too large for uint32_t
-// (2^32 + 50) is not a valid address at all and must not be treated as one — it
-// should be rejected (fail / violate), not silently truncated via static_cast into
-// the in-bounds address 50. This test proves the corruption directly: it writes 123
-// to the oversized address, then reads back address 50 and expects it to be
-// untouched (0). Currently the write silently lands at 50, so this read comes back
-// 123 instead — a real address landed a value nobody asked to put there.
+// An oversized address (2^32 + 50) should violate, not silently truncate to 50
 TEST(InterpreterReadWriteAddressValidation,
      OversizedAddressShouldNotSilentlyWrapIntoInBoundsAddress) {
   prosched::Interpreter interp;
@@ -451,9 +437,7 @@ TEST(InterpreterReadWriteAddressValidation,
   auto read_result = interp.ExecuteRead(
       makeStmt(prosched::Keyword::kRead, {"result", "50"}));
   ASSERT_TRUE(read_result.has_value());
-  EXPECT_EQ(read_result->second, 0)
-      << "address 50 should be untouched; got the oversized write's value instead, "
-         "proving it silently wrapped to this address";
+  EXPECT_EQ(read_result->second, 0) << "address 50 should be untouched";
 }
 
 // Sanity contrast: a normal in-bounds address never sets the violation flag
@@ -463,6 +447,24 @@ TEST(InterpreterReadWriteAddressValidation, InBoundsAddressDoesNotSetViolation) 
   auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"50", "5"}));
   EXPECT_TRUE(result.has_value());
   EXPECT_FALSE(interp.GetLastInstructionAccessViolation());
+}
+
+// mem_end_ itself is one-past-the-end and must violate (half-open range)
+TEST(InterpreterReadWriteAddressValidation, BoundaryAddressAtMemEndIsViolation) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"100", "5"}));
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
+}
+
+// A negative address string ("-5") wraps via std::stoul but still violates
+TEST(InterpreterReadWriteAddressValidation, NegativeAddressStringIsTreatedAsViolation) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"-5", "5"}));
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
 }
 
 } // namespace InterpreterReadWriteAddressValidation
