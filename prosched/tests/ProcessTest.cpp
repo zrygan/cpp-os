@@ -711,13 +711,7 @@ TEST(ProcessMalformedAddressTermination, OutOfBoundsWriteDoesTerminateProcess) {
   EXPECT_TRUE(p.IsTerminated());
 }
 
-// EXPECTED behavior (currently FAILS): a WRITE with a malformed (non-numeric)
-// address should be at least as fatal as an out-of-bounds one and terminate the
-// process. Instead, ParseAddress's std::invalid_argument exception is swallowed
-// inside Interpreter::ExecuteStatement's own try/catch before it ever reaches
-// CheckAccess, so the access-violation flag never gets set.
-// Process::ExecuteInstructions then advances past the instruction and marks the
-// process FINISHED — as if it had executed successfully — instead of TERMINATED.
+// A malformed WRITE address should terminate the process, same as an out-of-bounds one
 TEST(ProcessMalformedAddressTermination,
      MalformedWriteAddressShouldTerminateProcessButDoesNot) {
   prosched::Process p("bad_addr", 2, 0);
@@ -727,9 +721,7 @@ TEST(ProcessMalformedAddressTermination,
   p.ExecuteInstructions(1);
 
   EXPECT_TRUE(p.IsTerminated())
-      << "process state is " << static_cast<int>(p.GetState())
-      << " (READY=0, RUNNING=1, WAITING=2, FINISHED=3, TERMINATED=4) — it "
-         "silently completed instead of terminating";
+      << "state is " << static_cast<int>(p.GetState()) << ", expected TERMINATED=4";
 }
 
 } // namespace ProcessMalformedAddressTermination
