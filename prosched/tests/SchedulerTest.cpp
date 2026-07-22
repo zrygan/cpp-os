@@ -1371,3 +1371,33 @@ TEST(SchedulerFreeFinishedProcesses,
 }
 
 } // namespace SchedulerFreeFinishedProcesses
+
+// ─── SchedulerTerminatedProcessDisplay ────────────────────────────────────
+
+namespace SchedulerTerminatedProcessDisplay {
+
+// Sanity: a normal FINISHED process appears under "Finished processes:"
+TEST(SchedulerTerminatedProcessDisplay, FinishedProcessAppearsInOutput) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process *p = new prosched::Process("normal_finish", 1, 0);
+  p->SetState(prosched::FINISHED);
+  scheduler.AddProcess(p);
+
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("normal_finish"), std::string::npos);
+}
+
+// TERMINATED should be visibly distinguished from FINISHED in the output
+TEST(SchedulerTerminatedProcessDisplay, TerminatedProcessIsDistinguishedInOutput) {
+  prosched::Scheduler scheduler(makeTestCtx());
+  prosched::Process *p = new prosched::Process("crashed_proc", 2, 0);
+  p->SetState(prosched::TERMINATED);
+  scheduler.AddProcess(p);
+
+  std::ostringstream out;
+  scheduler.PrintProcesses(out);
+  EXPECT_NE(out.str().find("TERMINATED"), std::string::npos);
+}
+
+} // namespace SchedulerTerminatedProcessDisplay
