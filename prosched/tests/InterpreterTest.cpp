@@ -382,6 +382,82 @@ TEST(InterpreterExecuteDebug, ReturnsMemoryMapWithAllDeclaredVars) {
 
 } // namespace InterpreterExecuteDebug
 
+// ─── ExecuteRead / ExecuteWrite address validation ─────────────────────────
+
+namespace InterpreterReadWriteAddressValidation {
+
+// Case 1: well-formed but out-of-bounds address — WRITE fails and flags a violation
+TEST(InterpreterReadWriteAddressValidation, OutOfBoundsWriteSetsViolationAndFails) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"200", "5"}));
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
+  EXPECT_EQ(interp.GetLastViolationAddress(), 200u);
+}
+
+// Case 1: same, for READ
+TEST(InterpreterReadWriteAddressValidation, OutOfBoundsReadSetsViolationAndFails) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 100);
+  auto result = interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "500"}));
+  EXPECT_FALSE(result.has_value());
+  EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
+  EXPECT_EQ(interp.GetLastViolationAddress(), 500u);
+}
+
+// Case 2: garbage (non-numeric) address throws when ExecuteWrite is called directly —
+// documents that ParseAddress performs no input validation before std::stoul
+TEST(InterpreterReadWriteAddressValidation, MalformedAddressThrowsWhenCalledDirectly) {
+  prosched::Interpreter interp;
+  EXPECT_THROW(
+      interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"notanumber", "5"})),
+      std::exception);
+}
+
+// Case 2: the same garbage address via ExecuteString is silently swallowed as a generic
+// error instead of surfacing as an access violation — Process would treat this as a
+// completed instruction, not a fatal one, unlike case 1
+TEST(InterpreterReadWriteAddressValidation,
+     MalformedAddressViaExecuteStringIsSwallowedSilently) {
+  prosched::Interpreter interp;
+  interp.ExecuteString("WRITE(notanumber, 5)");
+  auto buf = interp.FlushBuffer();
+  ASSERT_FALSE(buf.empty());
+  EXPECT_NE(buf[0].find("[!]"), std::string::npos);
+  EXPECT_FALSE(interp.GetLastInstructionAccessViolation());
+}
+
+// Case 3: an address too large for uint32_t doesn't throw (fits in 64-bit unsigned long)
+// but silently truncates — 2^32 + 50 becomes 50, which is in-bounds, so the write
+// silently succeeds at the wrong (wrapped) address instead of failing or violating
+TEST(InterpreterReadWriteAddressValidation, OversizedAddressSilentlyWrapsToInBoundsAddress) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 100);
+
+  auto write_result = interp.ExecuteWrite(
+      makeStmt(prosched::Keyword::kWrite, {"4294967346", "123"}));  // 2^32 + 50
+  ASSERT_TRUE(write_result.has_value());
+  EXPECT_FALSE(interp.GetLastInstructionAccessViolation());
+
+  // Prove it landed at the wrapped address (50), not rejected or ignored
+  auto read_result = interp.ExecuteRead(
+      makeStmt(prosched::Keyword::kRead, {"result", "50"}));
+  ASSERT_TRUE(read_result.has_value());
+  EXPECT_EQ(read_result->second, 123);
+}
+
+// Sanity contrast: a normal in-bounds address never sets the violation flag
+TEST(InterpreterReadWriteAddressValidation, InBoundsAddressDoesNotSetViolation) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"50", "5"}));
+  EXPECT_TRUE(result.has_value());
+  EXPECT_FALSE(interp.GetLastInstructionAccessViolation());
+}
+
+} // namespace InterpreterReadWriteAddressValidation
+
 // ─── parse ─────────────────────────────────────────────────────────────────
 
 namespace InterpreterParse {
