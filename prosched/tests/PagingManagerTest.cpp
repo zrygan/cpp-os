@@ -1,16 +1,18 @@
 #include "memory/PagingManager.h"
 #include <gtest/gtest.h>
 
+// MO2 config: memory sizes are powers of 2; total frames = max-overall-mem /
+// mem-per-frame. Invalid memory config should be rejected, not crash.
 namespace PagingManagerConstruction {
 
-// A normal, valid construction produces the expected frame count
+// MO2: total frames = max-overall-mem / mem-per-frame (16384 / 16 = 1024)
 TEST(PagingManagerConstruction, ValidConfigProducesExpectedFrameCount) {
   prosched::PagingManager pm(16, 16384);
   EXPECT_EQ(pm.GetTotalFrameCount(), 1024);
 }
 
-// mem-per-frame of 0 should not reach an unguarded division by zero (run as a death
-// test so a crash is contained instead of killing the whole test binary)
+// MO2: mem-per-frame is a power of 2, so 0 is an invalid config that should be
+// rejected — not reach an unguarded division by zero (death test contains a crash)
 TEST(PagingManagerConstruction, ZeroMemPerFrameShouldNotCrash) {
   EXPECT_EXIT(
       {
@@ -20,7 +22,8 @@ TEST(PagingManagerConstruction, ZeroMemPerFrameShouldNotCrash) {
       ::testing::ExitedWithCode(0), ".*");
 }
 
-// max-overall-mem smaller than mem-per-frame should not yield zero usable frames
+// MO2: max-overall-mem smaller than mem-per-frame is an invalid config that must
+// not silently yield zero usable frames
 TEST(PagingManagerConstruction, OverallMemLessThanFrameSizeShouldHaveAtLeastOneFrame) {
   prosched::PagingManager pm(64, 32);
   EXPECT_GT(pm.GetTotalFrameCount(), 0);
@@ -29,10 +32,11 @@ TEST(PagingManagerConstruction, OverallMemLessThanFrameSizeShouldHaveAtLeastOneF
 } // namespace PagingManagerConstruction
 
 // ─── PagingManagerBasic ───────────────────────────────────────────────────
-
+// MO2 demand paging: pages load into frames on demand; when frames are full a
+// replacement algorithm evicts a victim to the backing store.
 namespace PagingManagerBasic {
 
-// PageIn brings a page into a free frame and makes it resident
+// MO2: a referenced page is brought into a free frame (demand paging)
 TEST(PagingManagerBasic, PageInLoadsPageIntoFrame) {
   prosched::PagingManager pm(16, 64);
   EXPECT_TRUE(pm.PageIn(1, 0));
@@ -80,7 +84,8 @@ TEST(PagingManagerBasic, FreeAllPagesReleasesFramesAndPages) {
   EXPECT_EQ(pm.GetMemoryStats().usedFrames, 0);
 }
 
-// With only one frame, paging in a second page evicts the first (FIFO)
+// MO2: with no free frames, a page replacement evicts a victim to the backing
+// store so the new page can be loaded
 TEST(PagingManagerBasic, FifoEvictionReusesFrameForNewPage) {
   prosched::PagingManager pm(16, 16);
   EXPECT_TRUE(pm.PageIn(1, 0));

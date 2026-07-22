@@ -384,29 +384,33 @@ TEST(InterpreterExecuteDebug, ReturnsMemoryMapWithAllDeclaredVars) {
 
 // ─── ExecuteRead / ExecuteWrite address validation ─────────────────────────
 
+// MO2: memory_address is hexadecimal; reading/writing an address outside the
+// process's dedicated space "will throw an access violation error and shut down
+// the process." Process memory is 256 bytes (power of 2, >= 64), so [0, 0x100).
 namespace InterpreterReadWriteAddressValidation {
 
-// Case 1: well-formed but out-of-bounds address — WRITE fails and flags a violation
+// Out-of-bounds WRITE (0x200 vs a 0x100-byte space) is an access violation
 TEST(InterpreterReadWriteAddressValidation, OutOfBoundsWriteSetsViolationAndFails) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 100);
-  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"200", "5"}));
+  interp.SetMemoryBounds(0, 0x100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x200", "5"}));
   EXPECT_FALSE(result.has_value());
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
-  EXPECT_EQ(interp.GetLastViolationAddress(), 200u);
+  EXPECT_EQ(interp.GetLastViolationAddress(), 0x200u);
 }
 
-// Case 1: same, for READ
+// Out-of-bounds READ (0x1F4) is an access violation
 TEST(InterpreterReadWriteAddressValidation, OutOfBoundsReadSetsViolationAndFails) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 100);
-  auto result = interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "500"}));
+  interp.SetMemoryBounds(0, 0x100);
+  auto result = interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "0x1F4"}));
   EXPECT_FALSE(result.has_value());
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
-  EXPECT_EQ(interp.GetLastViolationAddress(), 500u);
+  EXPECT_EQ(interp.GetLastViolationAddress(), 0x1F4u);
 }
 
-// A malformed address should fail gracefully (nullopt), not throw uncaught
+// MO2: an invalid (non-hex) address is still an invalid address — it must fail
+// gracefully (nullopt) rather than throw an uncaught exception
 TEST(InterpreterReadWriteAddressValidation,
      MalformedAddressShouldFailGracefullyNotThrow) {
   prosched::Interpreter interp;
@@ -417,7 +421,8 @@ TEST(InterpreterReadWriteAddressValidation,
   EXPECT_FALSE(result.has_value());
 }
 
-// A malformed address via ExecuteString should violate like an out-of-bounds one
+// MO2: an invalid address must shut the process down — so via ExecuteString a
+// malformed address should raise the access violation, like an out-of-bounds one
 TEST(InterpreterReadWriteAddressValidation,
      MalformedAddressShouldSetViolationLikeOutOfBounds) {
   prosched::Interpreter interp;
@@ -425,43 +430,44 @@ TEST(InterpreterReadWriteAddressValidation,
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
 }
 
-// An oversized address (2^32 + 50) should violate, not silently truncate to 50
+// MO2: 0x100000032 (2^32 + 0x32) is outside any real address space and must
+// violate, not silently truncate to the in-bounds address 0x32
 TEST(InterpreterReadWriteAddressValidation,
      OversizedAddressShouldNotSilentlyWrapIntoInBoundsAddress) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 100);
+  interp.SetMemoryBounds(0, 0x100);
 
   interp.ExecuteWrite(
-      makeStmt(prosched::Keyword::kWrite, {"4294967346", "123"}));  // 2^32 + 50
+      makeStmt(prosched::Keyword::kWrite, {"0x100000032", "123"}));
 
   auto read_result = interp.ExecuteRead(
-      makeStmt(prosched::Keyword::kRead, {"result", "50"}));
+      makeStmt(prosched::Keyword::kRead, {"result", "0x32"}));
   ASSERT_TRUE(read_result.has_value());
-  EXPECT_EQ(read_result->second, 0) << "address 50 should be untouched";
+  EXPECT_EQ(read_result->second, 0) << "address 0x32 should be untouched";
 }
 
-// Sanity contrast: a normal in-bounds address never sets the violation flag
+// A normal in-bounds address never raises a violation
 TEST(InterpreterReadWriteAddressValidation, InBoundsAddressDoesNotSetViolation) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 100);
-  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"50", "5"}));
+  interp.SetMemoryBounds(0, 0x100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x32", "5"}));
   EXPECT_TRUE(result.has_value());
   EXPECT_FALSE(interp.GetLastInstructionAccessViolation());
 }
 
-// mem_end_ itself is one-past-the-end and must violate (half-open range)
+// The one-past-the-end address (0x100 for a 0x100-byte space) is out of bounds
 TEST(InterpreterReadWriteAddressValidation, BoundaryAddressAtMemEndIsViolation) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 100);
-  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"100", "5"}));
+  interp.SetMemoryBounds(0, 0x100);
+  auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x100", "5"}));
   EXPECT_FALSE(result.has_value());
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
 }
 
-// A negative address string ("-5") wraps via std::stoul but still violates
+// A negative address is not a valid hex address and must violate
 TEST(InterpreterReadWriteAddressValidation, NegativeAddressStringIsTreatedAsViolation) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 100);
+  interp.SetMemoryBounds(0, 0x100);
   auto result = interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"-5", "5"}));
   EXPECT_FALSE(result.has_value());
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
@@ -469,45 +475,75 @@ TEST(InterpreterReadWriteAddressValidation, NegativeAddressStringIsTreatedAsViol
 
 } // namespace InterpreterReadWriteAddressValidation
 
+// ─── Symbol table cap (MO2: 64-byte segment, max 32 variables) ──────────────
+
+namespace InterpreterSymbolTableCap {
+
+// MO2: DECLARE already honors the 32-variable cap (excess is ignored)
+TEST(InterpreterSymbolTableCap, DeclareRespectsMaxThirtyTwoVariables) {
+  prosched::Interpreter interp;
+  for (int i = 0; i < 40; ++i)
+    interp.ExecuteDeclare(
+        makeStmt(prosched::Keyword::kDeclare, {"d" + std::to_string(i), "1"}));
+  EXPECT_EQ(interp.ExecuteDebug().size(), 32u);
+}
+
+// MO2: "a maximum of 32 variables. If the limit is reached, succeeding
+// instructions involving variable declarations will be ignored." READ creates a
+// variable, so it must honor the same cap — currently it does not.
+TEST(InterpreterSymbolTableCap, ReadRespectsMaxThirtyTwoVariables) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x100);
+  for (int i = 0; i < 40; ++i)
+    interp.ExecuteRead(
+        makeStmt(prosched::Keyword::kRead, {"r" + std::to_string(i), "0x0"}));
+  EXPECT_LE(interp.ExecuteDebug().size(), 32u);
+}
+
+} // namespace InterpreterSymbolTableCap
+
 // ─── ExecuteRead / ExecuteWrite happy path ─────────────────────────────────
 
 namespace InterpreterReadWriteHappyPath {
 
-// A value written to an address can be read straight back out
+// MO2: WRITE stores a uint16 to a hex address; READ retrieves it back
 TEST(InterpreterReadWriteHappyPath, WriteThenReadReturnsStoredValue) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 256);
+  interp.SetMemoryBounds(0, 0x100);
 
   auto write_result =
-      interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"50", "123"}));
+      interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x32", "123"}));
   ASSERT_TRUE(write_result.has_value());
   EXPECT_EQ(write_result->second, 123);
 
   auto read_result =
-      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "50"}));
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "0x32"}));
   ASSERT_TRUE(read_result.has_value());
   EXPECT_EQ(read_result->first, "x");
   EXPECT_EQ(read_result->second, 123);
 }
 
-// Reading an address that was never written yields 0
+// MO2: "If 0x1000 is uninitialized, returns a 0."
 TEST(InterpreterReadWriteHappyPath, ReadUnwrittenAddressReturnsZero) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 256);
+  interp.SetMemoryBounds(0, 0x100);
   auto read_result =
-      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "50"}));
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "0x32"}));
   ASSERT_TRUE(read_result.has_value());
   EXPECT_EQ(read_result->second, 0);
 }
 
-// WRITE → READ → PRINT works end-to-end through the string parser
-TEST(InterpreterReadWriteHappyPath, WriteReadPrintPipelineViaExecuteString) {
+// MO2 worked example: DECLARE/ADD/WRITE/READ/PRINT pipeline yields "Result: 15"
+// (0x500 requires a 2048-byte space, a power of 2 >= 64).
+TEST(InterpreterReadWriteHappyPath, WriteReadPrintMatchesSpecExample) {
   prosched::Interpreter interp;
-  interp.SetMemoryBounds(0, 256);
-  interp.ExecuteString("WRITE(50, 123), READ(x, 50), PRINT(x)");
+  interp.SetMemoryBounds(0, 0x800);
+  interp.ExecuteString(
+      "DECLARE(varA, 10), DECLARE(varB, 5), ADD(varA, varA, varB), "
+      "WRITE(0x500, varA), READ(varC, 0x500), PRINT(\"Result: \" + varC)");
   auto buf = interp.FlushBuffer();
   ASSERT_EQ(buf.size(), 1u);
-  EXPECT_EQ(buf[0], "123");
+  EXPECT_EQ(buf[0], "Result: 15");
 }
 
 } // namespace InterpreterReadWriteHappyPath

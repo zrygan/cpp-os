@@ -1374,9 +1374,12 @@ TEST(SchedulerFreeFinishedProcesses,
 
 // ─── SchedulerTerminatedProcessDisplay ────────────────────────────────────
 
+// MO2 requires a process that shut down from a memory access violation to be
+// reported as such ("Process <name> shut down due to memory access violation
+// error..."), i.e. distinguishable from one that finished normally.
 namespace SchedulerTerminatedProcessDisplay {
 
-// Sanity: a normal FINISHED process appears under "Finished processes:"
+// A normally FINISHED process is listed
 TEST(SchedulerTerminatedProcessDisplay, FinishedProcessAppearsInOutput) {
   prosched::Scheduler scheduler(makeTestCtx());
   prosched::Process *p = new prosched::Process("normal_finish", 1, 0);
@@ -1388,7 +1391,8 @@ TEST(SchedulerTerminatedProcessDisplay, FinishedProcessAppearsInOutput) {
   EXPECT_NE(out.str().find("normal_finish"), std::string::npos);
 }
 
-// TERMINATED should be visibly distinguished from FINISHED in the output
+// MO2: a TERMINATED (access-violation) process must be distinguishable from a
+// normal finish in the listing — currently both print identically.
 TEST(SchedulerTerminatedProcessDisplay, TerminatedProcessIsDistinguishedInOutput) {
   prosched::Scheduler scheduler(makeTestCtx());
   prosched::Process *p = new prosched::Process("crashed_proc", 2, 0);

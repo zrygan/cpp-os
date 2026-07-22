@@ -697,25 +697,27 @@ TEST(ProcessQuantum, ResetReturnsToZero) {
 } // namespace ProcessQuantum
 
 // ─── ProcessMalformedAddressTermination ──────────────────────────────────
+// MO2: an access to an invalid address "will throw an access violation error and
+// shut down the process." Process memory is 0x100 bytes (power of 2, >= 64).
 namespace ProcessMalformedAddressTermination {
 
-// Sanity check the working case: a genuinely out-of-bounds WRITE address DOES
-// terminate the process, via Interpreter::CheckAccess's violation flag.
+// An out-of-bounds WRITE (0x200 vs a 0x100-byte space) shuts the process down
 TEST(ProcessMalformedAddressTermination, OutOfBoundsWriteDoesTerminateProcess) {
   prosched::Process p("oob_addr", 1, 0);
-  p.SetMemoryBounds(0, 100);
-  AddRaw(p, "WRITE(500, 5)");
+  p.SetMemoryBounds(0, 0x100);
+  AddRaw(p, "WRITE(0x200, 5)");
 
   p.ExecuteInstructions(1);
 
   EXPECT_TRUE(p.IsTerminated());
 }
 
-// A malformed WRITE address should terminate the process, same as an out-of-bounds one
+// MO2: an invalid address must shut the process down. A malformed (non-hex)
+// address is invalid, so it should terminate too — currently it does not.
 TEST(ProcessMalformedAddressTermination,
      MalformedWriteAddressShouldTerminateProcessButDoesNot) {
   prosched::Process p("bad_addr", 2, 0);
-  p.SetMemoryBounds(0, 100);
+  p.SetMemoryBounds(0, 0x100);
   AddRaw(p, "WRITE(notanumber, 5)");
 
   p.ExecuteInstructions(1);
