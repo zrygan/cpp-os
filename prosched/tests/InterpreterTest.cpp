@@ -469,6 +469,49 @@ TEST(InterpreterReadWriteAddressValidation, NegativeAddressStringIsTreatedAsViol
 
 } // namespace InterpreterReadWriteAddressValidation
 
+// ─── ExecuteRead / ExecuteWrite happy path ─────────────────────────────────
+
+namespace InterpreterReadWriteHappyPath {
+
+// A value written to an address can be read straight back out
+TEST(InterpreterReadWriteHappyPath, WriteThenReadReturnsStoredValue) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 256);
+
+  auto write_result =
+      interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"50", "123"}));
+  ASSERT_TRUE(write_result.has_value());
+  EXPECT_EQ(write_result->second, 123);
+
+  auto read_result =
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "50"}));
+  ASSERT_TRUE(read_result.has_value());
+  EXPECT_EQ(read_result->first, "x");
+  EXPECT_EQ(read_result->second, 123);
+}
+
+// Reading an address that was never written yields 0
+TEST(InterpreterReadWriteHappyPath, ReadUnwrittenAddressReturnsZero) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 256);
+  auto read_result =
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "50"}));
+  ASSERT_TRUE(read_result.has_value());
+  EXPECT_EQ(read_result->second, 0);
+}
+
+// WRITE → READ → PRINT works end-to-end through the string parser
+TEST(InterpreterReadWriteHappyPath, WriteReadPrintPipelineViaExecuteString) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 256);
+  interp.ExecuteString("WRITE(50, 123), READ(x, 50), PRINT(x)");
+  auto buf = interp.FlushBuffer();
+  ASSERT_EQ(buf.size(), 1u);
+  EXPECT_EQ(buf[0], "123");
+}
+
+} // namespace InterpreterReadWriteHappyPath
+
 // ─── parse ─────────────────────────────────────────────────────────────────
 
 namespace InterpreterParse {
