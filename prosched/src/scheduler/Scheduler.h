@@ -175,6 +175,7 @@ public:
    * @param out output stream
    */
   void PrintProcesses(std::ostream &out = std::cout) {
+
     std::lock_guard<std::mutex> lock(schedulerMutex);
 
     int coresUsed = 0, coresAvail = 0;
@@ -193,11 +194,13 @@ public:
     out << "Cores used: " << coresUsed << "\n";
     out << "Cores available: " << coresAvail << "\n";
 
-    std::vector<Process *> running, finished;
+    std::vector<Process *> running, finished, terminated;
     for (Process *p : processes) {
       if (p == nullptr)
         continue;
-      if (p->IsFinished())
+      if (p->IsTerminated())
+        terminated.push_back(p);
+      else if (p->IsFinished())
         finished.push_back(p);
       else
         running.push_back(p);

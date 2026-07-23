@@ -689,7 +689,16 @@ std::optional<std::pair<std::string, uint16_t>> Interpreter::ExecuteRead(
 
   const std::string variable_name = Trim(stmt.args[0]);
   const uint32_t address = ParseAddress(stmt.args[1]);
-  if (CheckAccess(address) != AccessStatus::kOk) {
+  AccessStatus status = CheckAccess(address);
+
+  if (status == AccessStatus::kViolation) {
+    last_instruction_access_violation_ = true;
+    last_violation_address_ = address;
+    return std::nullopt;
+  }
+
+  if (status == AccessStatus::kFault) {
+    last_instruction_page_fault_ = true;
     return std::nullopt;
   }
 
@@ -699,7 +708,9 @@ std::optional<std::pair<std::string, uint16_t>> Interpreter::ExecuteRead(
     value = it->second;
   }
 
-  memory_[variable_name] = value;
+  if (!SetVariable(variable_name, value)) {
+    return std::nullopt;
+  }
   return std::make_pair(variable_name, value);
 }
 
@@ -711,13 +722,14 @@ std::optional<std::pair<uint32_t, uint16_t>> Interpreter::ExecuteWrite(
   }
 
   const uint32_t address = ParseAddress(stmt.args[0]);
-  if (CheckAccess(address) == AccessStatus::kViolation) {
+  AccessStatus status = CheckAccess(address);
+  if (status == AccessStatus::kViolation) {
     last_instruction_access_violation_ = true;
     last_violation_address_ = address;
     return std::nullopt;
   }
 
-  if (CheckAccess(address)  == AccessStatus::kFault) {
+  if (status == AccessStatus::kFault) {
     last_instruction_page_fault_ = true;
     return std::nullopt;
   }
