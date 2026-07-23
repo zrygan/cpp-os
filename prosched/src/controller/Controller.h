@@ -50,6 +50,18 @@ public:
   CLI_COMMAND IdentifyCommand(const std::vector<std::string> &command);
   static long ParseMemorySize(const std::string &token);
   static bool IsValidMemoryAllocation(long bytes);
+
+  /**
+   * @brief Builds the "screen -r" notice for a process killed by a memory
+   * access violation.
+   *
+   * Only ever called for a TERMINATED process, which by construction always
+   * carries both a violation time and a violation address (Process.h sets all
+   * three together).
+   */
+  static std::string FormatAccessViolationNotice(const std::string &name,
+                                                 const std::string &clockTime,
+                                                 uint32_t address);
   void ExitOS();
   void EnterProcessScreen(prosched::Process *p);
   void PrintReportUtil();

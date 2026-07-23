@@ -412,6 +412,30 @@ public:
   }
 
   /**
+   * @brief Finds the most recent process with the given name that was shut
+   * down by a memory access violation.
+   *
+   * FindProcessByName deliberately ignores such processes because they can no
+   * longer be attached to; 
+   * 
+   * @param name The process name to search for
+   * @return Pointer to the matching terminated process, or nullptr if none
+   *
+   * @note "screen -r" uses this to tell a violation apart
+   * from a name that was simply never created.
+   */
+  prosched::Process *FindTerminatedProcessByName(const std::string &name) {
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+    for (auto it = processes.rbegin(); it != processes.rend(); ++it) {
+      Process *p = *it;
+      if (p && p->GetName() == name && p->IsTerminated()) {
+        return p;
+      }
+    }
+    return nullptr;
+  }
+
+  /**
    * @brief Returns a snapshot of all known processes (running and finished).
    *
    * @return Vector of process pointers
