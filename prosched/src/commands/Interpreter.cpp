@@ -34,6 +34,78 @@ constexpr std::size_t kForBodyScanStart = 4;
 /** @brief One SLEEP tick, in milliseconds. */
 constexpr int kTickMs = 10;
 
+/** @brief Number of arguments each keyword requires.
+
+    A user-supplied instruction that does not carry exactly this many
+    arguments is rejected instead of silently executing as a no-op.
+
+    @param kw The keyword to describe
+    @return The expected argument count
+*/
+std::size_t ExpectedArgCount(Keyword kw) {
+  switch (kw) {
+    case Keyword::kPrint:
+    case Keyword::kSleep:
+      return 1;
+    case Keyword::kDeclare:
+    case Keyword::kRead:
+    case Keyword::kWrite:
+    case Keyword::kFor:
+      return 2;
+    case Keyword::kAdd:
+    case Keyword::kSubtract:
+      return 3;
+    case Keyword::kDebug:
+    case Keyword::kUnknown:
+      return 0;
+  }
+  return 0;
+}
+
+/** @brief Checks a canonical instruction carries exactly the arguments its
+           keyword takes.
+
+    ExtractArgs stops at the expected number of separators, so a trailing
+    "ADD(a, b, c, d)" would otherwise parse as three arguments with the excess
+    silently folded into the last one. Counting the separators the caller
+    actually wrote catches that. Separators nested inside quotes, parentheses
+    or brackets belong to an argument and are not counted.
+
+    @param canonical A single instruction in canonical parenthesised form
+    @param kw Its keyword
+    @return true when the argument count matches exactly
+*/
+bool ArgListMatchesArity(const std::string& canonical, Keyword kw) {
+  const std::size_t expected = ExpectedArgCount(kw);
+  if (expected == 0) {
+    return true;  // "DBG!" takes no argument list at all.
+  }
+
+  const std::size_t open = canonical.find('(');
+  const std::size_t close = canonical.rfind(')');
+  if (open == std::string::npos || close == std::string::npos ||
+      close < open) {
+    return false;
+  }
+
+  std::size_t separators = 0;
+  int depth = 0;
+  bool in_quotes = false;
+  for (std::size_t i = open + 1; i < close; ++i) {
+    const char c = canonical[i];
+    if (c == '"') {
+      in_quotes = !in_quotes;
+    } else if (!in_quotes && (c == '(' || c == '[')) {
+      ++depth;
+    } else if (!in_quotes && (c == ')' || c == ']')) {
+      --depth;
+    } else if (c == ',' && depth == 0 && !in_quotes) {
+      ++separators;
+    }
+  }
+  return separators + 1 == expected;
+}
+
 }  // namespace
 
 void Interpreter::SetMemoryBounds(uint32_t start, uint32_t end) {
@@ -73,6 +145,103 @@ void Interpreter::ResetLastInstructionAccessViolation() {
 
 std::vector<Statement> Interpreter::Parse(const std::string& program) {
   return ParseBlock(program);
+}
+
+std::vector<std::string> Interpreter::SplitUserInstructions(
+    const std::string& program) {
+  std::vector<std::string> instructions;
+  std::string current;
+  int depth = 0;
+  bool in_quotes = false;
+
+  for (char c : program) {
+    if (c == '"') {
+      in_quotes = !in_quotes;
+    } else if (!in_quotes && (c == '(' || c == '[')) {
+      ++depth;
+    } else if (!in_quotes && (c == ')' || c == ']')) {
+      --depth;
+    } else if (c == ';' && depth == 0 && !in_quotes) {
+      if (!Trim(current).empty()) {
+        instructions.push_back(Trim(current));
+      }
+      current.clear();
+      continue;
+    }
+    current += c;
+  }
+
+  if (!Trim(current).empty()) {
+    instructions.push_back(Trim(current));
+  }
+  return instructions;
+}
+
+std::string Interpreter::CanonicalizeUserInstruction(
+    const std::string& instruction) {
+  const std::string trimmed = Trim(instruction);
+  if (trimmed.empty()) {
+    return "";
+  }
+
+  const std::size_t first_space = trimmed.find_first_of(" \t");
+  const std::size_t first_paren = trimmed.find('(');
+
+  // Already parenthesised ("PRINT(...)", "FOR([...], 3)") or a bare token
+  // such as "DBG!" — the canonical parser handles both as they stand.
+  if (first_space == std::string::npos || first_paren < first_space) {
+    return trimmed;
+  }
+
+  const std::string keyword = trimmed.substr(0, first_space);
+  std::string canonical = keyword + "(";
+
+  std::size_t pos = first_space;
+  bool first_arg = true;
+  while (pos < trimmed.size()) {
+    const std::size_t start = trimmed.find_first_not_of(" \t", pos);
+    if (start == std::string::npos) {
+      break;
+    }
+    const std::size_t end = trimmed.find_first_of(" \t", start);
+    const std::string arg = trimmed.substr(
+        start, end == std::string::npos ? std::string::npos : end - start);
+
+    if (!first_arg) {
+      canonical += ", ";
+    }
+    canonical += arg;
+    first_arg = false;
+
+    pos = (end == std::string::npos) ? trimmed.size() : end;
+  }
+
+  return canonical + ")";
+}
+
+bool Interpreter::ParseUserProgram(const std::string& program,
+                                   std::vector<Statement>& out) {
+  const std::vector<std::string> instructions = SplitUserInstructions(program);
+  if (instructions.empty()) {
+    return false;
+  }
+
+  std::vector<Statement> parsed;
+  parsed.reserve(instructions.size());
+
+  for (const std::string& instruction : instructions) {
+    const std::string canonical = CanonicalizeUserInstruction(instruction);
+    const Statement stmt = ParseStatement(canonical);
+    if (stmt.keyword == Keyword::kUnknown ||
+        stmt.args.size() != ExpectedArgCount(stmt.keyword) ||
+        !ArgListMatchesArity(canonical, stmt.keyword)) {
+      return false;
+    }
+    parsed.push_back(stmt);
+  }
+
+  out = std::move(parsed);
+  return true;
 }
 
 void Interpreter::ExecuteStatements(const std::vector<Statement>& stmts) {

@@ -395,6 +395,38 @@ public:
   }
 
   /**
+   * @brief Creates a new process running a caller-supplied program.
+   *
+   * Identical to CreateNamedProcess except that the instructions come from the
+   * caller instead of the random generator. Used by "screen -c".
+   *
+   * @note The caller is responsible for validating memoryBytes and for
+   * enforcing the instruction-count limits.
+   *
+   * @param name The name to give the new process
+   * @param memoryBytes Memory to allocate to the process, in bytes
+   * @param instructions The program the process should execute
+   * @return Pointer to the newly created process
+   */
+  prosched::Process *
+  CreateProcessWithInstructions(const std::string &name, long memoryBytes,
+                                const std::vector<Statement> &instructions) {
+    int pid;
+    {
+      std::lock_guard<std::mutex> lock(schedulerMutex);
+      pid = nextPID++;
+    }
+    Process *p = new Process(name, pid, 0);
+    p->SetMemoryBounds(0, static_cast<size_t>(memoryBytes));
+    attachPaging(p);
+    p->SetOwnedByScheduler(true);
+    for (Statement instruction : instructions) {
+      p->AddInstruction(instruction);
+    }
+    return p;
+  }
+
+  /**
    * @brief Finds the first non-finished process matching the given name.
    *
    * @param name The process name to search for
