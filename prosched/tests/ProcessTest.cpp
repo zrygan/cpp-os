@@ -713,9 +713,8 @@ TEST(ProcessMalformedAddressTermination, OutOfBoundsWriteDoesTerminateProcess) {
 }
 
 // MO2: an invalid address must shut the process down. A malformed (non-hex)
-// address is invalid, so it should terminate too — currently it does not.
-TEST(ProcessMalformedAddressTermination,
-     MalformedWriteAddressShouldTerminateProcessButDoesNot) {
+// address is invalid, so it terminates the process, same as an out-of-bounds one.
+TEST(ProcessMalformedAddressTermination, MalformedWriteAddressTerminatesProcess) {
   prosched::Process p("bad_addr", 2, 0);
   p.SetMemoryBounds(0, 0x100);
   AddRaw(p, "WRITE(notanumber, 5)");

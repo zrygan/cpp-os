@@ -1,6 +1,8 @@
 #include "commands/Interpreter.h"
 #include <chrono>
+#include <functional>
 #include <gtest/gtest.h>
+#include <memory>
 
 static prosched::Statement
 makeStmt(prosched::Keyword kw, std::vector<std::string> args = {},
@@ -409,11 +411,13 @@ TEST(InterpreterReadWriteAddressValidation, OutOfBoundsReadSetsViolationAndFails
   EXPECT_EQ(interp.GetLastViolationAddress(), 0x1F4u);
 }
 
-// MO2: an invalid (non-hex) address is still an invalid address — it must fail
-// gracefully (nullopt) rather than throw an uncaught exception
+// MO2: an invalid (non-hex) address must fail gracefully (nullopt), not throw.
+// A real process always has memory bounds set, so a malformed address parses out
+// of range and is rejected rather than written.
 TEST(InterpreterReadWriteAddressValidation,
      MalformedAddressShouldFailGracefullyNotThrow) {
   prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x100);
   std::optional<std::pair<uint32_t, uint16_t>> result;
   EXPECT_NO_THROW(
       result = interp.ExecuteWrite(
@@ -421,11 +425,12 @@ TEST(InterpreterReadWriteAddressValidation,
   EXPECT_FALSE(result.has_value());
 }
 
-// MO2: an invalid address must shut the process down — so via ExecuteString a
-// malformed address should raise the access violation, like an out-of-bounds one
+// MO2: an invalid address must shut the process down — a malformed address (out
+// of any real range) raises the access violation, like an out-of-bounds one
 TEST(InterpreterReadWriteAddressValidation,
      MalformedAddressShouldSetViolationLikeOutOfBounds) {
   prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x100);
   interp.ExecuteString("WRITE(notanumber, 5)");
   EXPECT_TRUE(interp.GetLastInstructionAccessViolation());
 }
@@ -547,6 +552,71 @@ TEST(InterpreterReadWriteHappyPath, WriteReadPrintMatchesSpecExample) {
 }
 
 } // namespace InterpreterReadWriteHappyPath
+
+// ─── Page-fault retry (MO2) ─────────────────────────────────────────────────
+// MO2: "instructions can only be performed when a valid page has been found.
+// Page fault handling continuously occurs until a valid page has been returned,
+// before an instruction is performed." A page fault must NOT be treated as an
+// access violation (which shuts the process down) — the instruction is retried
+// once the page is resident. This applies to both WRITE and READ memory access.
+
+namespace InterpreterReadWritePageFault {
+
+// A handler that faults the first time a page is touched, then reports it
+// resident — mimicking a demand pager bringing the page in for the retry.
+static std::function<bool(int)> faultOnceHandler() {
+  auto faulted = std::make_shared<bool>(false);
+  return [faulted](int) {
+    if (!*faulted) {
+      *faulted = true;
+      return true; // not resident yet -> page fault, retry
+    }
+    return false; // resident now -> proceed
+  };
+}
+
+// A faulting WRITE must page-fault (retryable), not raise an access violation;
+// the retry then performs the write.
+TEST(InterpreterReadWritePageFault, WriteFaultRetriesInsteadOfViolating) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x100);
+  interp.SetPageSize(16);
+  interp.SetPageFaultHandler(faultOnceHandler());
+
+  auto first =
+      interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x32", "123"}));
+  EXPECT_FALSE(first.has_value());
+  EXPECT_TRUE(interp.GetLastInstructionPageFault());
+  EXPECT_FALSE(interp.GetLastInstructionAccessViolation())
+      << "a page fault must not be treated as an access violation";
+
+  auto retry =
+      interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x32", "123"}));
+  ASSERT_TRUE(retry.has_value());
+  EXPECT_EQ(retry->second, 123);
+}
+
+// Same requirement for READ: a faulting READ retries, it does not violate.
+TEST(InterpreterReadWritePageFault, ReadFaultRetriesInsteadOfViolating) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x100);
+  interp.SetPageSize(16);
+  interp.SetPageFaultHandler(faultOnceHandler());
+
+  auto first =
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "0x32"}));
+  EXPECT_FALSE(first.has_value());
+  EXPECT_TRUE(interp.GetLastInstructionPageFault());
+  EXPECT_FALSE(interp.GetLastInstructionAccessViolation())
+      << "a page fault must not be treated as an access violation";
+
+  auto retry =
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"x", "0x32"}));
+  ASSERT_TRUE(retry.has_value());
+  EXPECT_EQ(retry->second, 0); // unwritten address reads as 0
+}
+
+} // namespace InterpreterReadWritePageFault
 
 // ─── parse ─────────────────────────────────────────────────────────────────
 
