@@ -702,7 +702,7 @@ std::optional<std::pair<uint32_t, uint16_t>> Interpreter::ExecuteWrite(
   }
 
   const uint32_t address = ParseAddress(stmt.args[0]);
-  if (CheckAccess(address) != AccessStatus::kOk) {
+  if (CheckAccess(address) == AccessStatus::kViolation) {
     last_instruction_access_violation_ = true;
     last_violation_address_ = address;
     return std::nullopt;
