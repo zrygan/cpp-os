@@ -33,6 +33,7 @@ private:
   bool ownedByScheduler = false;
   std::string StartTime;
   std::string lastViolationTime;
+  std::string lastViolationClockTime;
   uint32_t lastViolationAddress = 0;
 
   int cyclesRemainingForSleep = 0;
@@ -62,6 +63,23 @@ private:
     std::tm *tm = std::localtime(&t);
     std::ostringstream oss;
     oss << std::put_time(tm, "(%m/%d/%Y %I:%M:%S%p)");
+    return oss.str();
+  }
+
+  /**
+   * @brief Generates a time-of-day string for the current system clock.
+   *
+   * Used for the memory access violation notice, which reports only the
+   * wall-clock time rather than a full timestamp.
+   *
+   * @return A string of the form "HH:MM:SS" in 24-hour time, e.g. "14:15:30"
+   */
+  std::string GetClockTime() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::tm *tm = std::localtime(&t);
+    std::ostringstream oss;
+    oss << std::put_time(tm, "%H:%M:%S");
     return oss.str();
   }
 
@@ -188,6 +206,7 @@ public:
 
     if (interpreter.GetLastInstructionAccessViolation()) {
       lastViolationTime = GetTimestamp();
+      lastViolationClockTime = GetClockTime();
       lastViolationAddress = interpreter.GetLastViolationAddress();
       currentState = TERMINATED;
       if (finishTime.empty()) {
@@ -322,6 +341,15 @@ public:
   std::string GetProcessTimeFinish() { return finishTime; }
   /** @brief Gets the timestamp of the last access violation, if any. */
   std::string GetLastViolationTime() const { return lastViolationTime; }
+
+  /**
+   * @brief Gets the time of day of the last access violation, if any.
+   *
+   * @return "HH:MM:SS" in 24-hour time, or empty if the process never faulted
+   */
+  std::string GetLastViolationClockTime() const {
+    return lastViolationClockTime;
+  }
 
   /** @brief Gets the offending address of the last access violation, if any. */
   uint32_t GetLastViolationAddress() const { return lastViolationAddress; }

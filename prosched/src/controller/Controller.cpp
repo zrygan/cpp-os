@@ -172,6 +172,17 @@ long Controller::ParseMemorySize(const std::string &token) {
   }
 }
 
+std::string Controller::FormatAccessViolationNotice(const std::string &name,
+                                                    const std::string &clockTime,
+                                                    uint32_t address) {
+  std::ostringstream oss;
+  oss << "Process " << name
+      << " shut down due to memory access violation error that occurred at "
+      << clockTime << ". 0x" << std::uppercase << std::hex << address
+      << " invalid.";
+  return oss.str();
+}
+
 bool Controller::IsValidMemoryAllocation(long bytes) {
   if (bytes < prosched::kMinProcessMemoryBytes ||
       bytes > prosched::kMaxProcessMemoryBytes) {
@@ -220,10 +231,23 @@ void Controller::ExecuteCommand(const Command &command) {
       }
       prosched::Process *p =
           this->scheduler->FindProcessByName(command.processName);
-      if (p == nullptr) {
-        std::cout << "Process " << command.processName << " not found.\n\n";
-      } else {
+      if (p != nullptr) {
         EnterProcessScreen(p);
+        break;
+      }
+
+      // A process killed by a memory access violation reports why it is gone
+      // instead of the generic "not found".
+      prosched::Process *terminated =
+          this->scheduler->FindTerminatedProcessByName(command.processName);
+      if (terminated != nullptr) {
+        std::cout << FormatAccessViolationNotice(
+                         terminated->GetName(),
+                         terminated->GetLastViolationClockTime(),
+                         terminated->GetLastViolationAddress())
+                  << "\n\n";
+      } else {
+        std::cout << "Process " << command.processName << " not found.\n\n";
       }
       break;
     }
