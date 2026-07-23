@@ -88,6 +88,44 @@ class Interpreter {
   */
   std::vector<Statement> Parse(const std::string& program);
 
+  /** @brief Parse a user-supplied instruction list from "screen -c".
+
+      Unlike Parse, this rejects anything it cannot understand rather than
+      producing kUnknown nodes, so a bad program never becomes a process. An
+      instruction fails when its keyword is unrecognised or it carries the
+      wrong number of arguments.
+
+      @param program Raw instruction string, with the surrounding quotes
+                     already stripped
+      @param out Receives the parsed statements; left untouched on failure
+      @return true if the program was non-empty and every instruction parsed
+  */
+  bool ParseUserProgram(const std::string& program, std::vector<Statement>& out);
+
+  /** @brief Split a user program on top-level semicolons.
+
+      Semicolons inside quotes, parentheses or brackets are part of an
+      instruction and do not split it.
+
+      @param program The raw instruction string
+      @return The individual instruction strings, trimmed, empties dropped
+  */
+  static std::vector<std::string> SplitUserInstructions(
+      const std::string& program);
+
+  /** @brief Rewrite one user instruction into the canonical parenthesised
+             form.
+
+      "DECLARE varA 10" becomes "DECLARE(varA, 10)". Instructions already
+      written with parentheses, and bare tokens such as "DBG!", are returned
+      unchanged.
+
+      @param instruction A single trimmed instruction
+      @return The canonical form, or an empty string for empty input
+  */
+  static std::string CanonicalizeUserInstruction(
+      const std::string& instruction);
+
   /** @brief Execute a pre-parsed AST (vector of Statements).
 
       Useful if you want to parse once and execute multiple times.
