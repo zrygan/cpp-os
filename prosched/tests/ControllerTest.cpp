@@ -1,4 +1,5 @@
 #include "controller/Controller.h"
+#include "Constants.hpp"
 #include <gtest/gtest.h>
 
 namespace ControllerIdentifyCommand {
@@ -303,3 +304,69 @@ TEST(ControllerGetParsedInputMemory, ScreenSExtractsMemorySize) {
 }
 
 } // namespace ControllerGetParsedInputMemory
+
+// ─── screen -c user-defined instructions (MO2) ──────────────────────────────
+// MO2: screen -c <name> <size> "<instructions>" runs a caller-supplied program
+// of 1-50 semicolon-separated instructions.
+
+namespace ControllerScreenC {
+
+// "screen -c" maps to CLI_SCREEN_C
+TEST(ControllerScreenC, IdentifyScreenC) {
+  Controller c;
+  EXPECT_EQ(c.IdentifyCommand({"screen", "-c"}), CLI_COMMAND::CLI_SCREEN_C);
+}
+
+// Name, size, and the quoted instruction list are all extracted
+TEST(ControllerScreenC, GetParsedInputExtractsNameSizeInstructions) {
+  Controller c;
+  Command cmd = c.GetParsedInput(R"~(screen -c myproc 256 "PRINT(x)")~");
+  EXPECT_EQ(cmd.cliCommand, CLI_COMMAND::CLI_SCREEN_C);
+  EXPECT_EQ(cmd.processName, "myproc");
+  EXPECT_EQ(cmd.memorySize, 256);
+  EXPECT_EQ(cmd.instructions, "PRINT(x)");
+}
+
+// The instruction list is taken from between the first and last quote
+TEST(ControllerScreenC, ExtractQuotedBetweenQuotes) {
+  EXPECT_EQ(
+      Controller::ExtractQuotedInstructions(R"~(screen -c p 64 "DECLARE varA 10")~"),
+      "DECLARE varA 10");
+}
+
+// Escaped inner quotes (\") are unescaped to real quotes
+TEST(ControllerScreenC, ExtractQuotedUnescapesInnerQuotes) {
+  EXPECT_EQ(
+      Controller::ExtractQuotedInstructions(R"~(screen -c p 64 "PRINT(\"hi\")")~"),
+      R"~(PRINT("hi"))~");
+}
+
+// No quoted section yields an empty instruction string
+TEST(ControllerScreenC, ExtractQuotedNoQuotesReturnsEmpty) {
+  EXPECT_EQ(Controller::ExtractQuotedInstructions("screen -c p 64"), "");
+}
+
+// MO2: the user-instruction count limit is 1-50
+TEST(ControllerScreenC, UserInstructionLimitsAreOneToFifty) {
+  EXPECT_EQ(prosched::kMinUserInstructions, 1u);
+  EXPECT_EQ(prosched::kMaxUserInstructions, 50u);
+}
+
+} // namespace ControllerScreenC
+
+// ─── screen -r access-violation notice (MO2) ────────────────────────────────
+// MO2: a process that prematurely shut down from a memory access violation is
+// reported by screen -r as: "Process <name> shut down due to memory access
+// violation error that occurred at <HH:MM:SS>. <Hex address> invalid."
+
+namespace ControllerAccessViolationNotice {
+
+// The notice matches the MO2 wording exactly, with an uppercase-hex address
+TEST(ControllerAccessViolationNotice, MatchesSpecFormat) {
+  EXPECT_EQ(
+      Controller::FormatAccessViolationNotice("myproc", "14:15:30", 0x1F4),
+      "Process myproc shut down due to memory access violation error that "
+      "occurred at 14:15:30. 0x1F4 invalid.");
+}
+
+} // namespace ControllerAccessViolationNotice

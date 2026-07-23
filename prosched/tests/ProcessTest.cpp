@@ -726,3 +726,22 @@ TEST(ProcessMalformedAddressTermination, MalformedWriteAddressTerminatesProcess)
 }
 
 } // namespace ProcessMalformedAddressTermination
+
+// ─── ProcessMemoryBounds ───────────────────────────────────────────────────
+namespace ProcessMemoryBounds {
+
+// Valid bounds (start <= end) are accepted
+TEST(ProcessMemoryBounds, ValidBoundsSucceed) {
+  prosched::Process p("mb_ok", 1, 0);
+  EXPECT_TRUE(p.SetMemoryBounds(0, 0x100));
+  EXPECT_FALSE(p.IsTerminated());
+}
+
+// Inverted bounds (start > end) are rejected and terminate the process
+TEST(ProcessMemoryBounds, InvertedBoundsFailAndTerminate) {
+  prosched::Process p("mb_bad", 2, 0);
+  EXPECT_FALSE(p.SetMemoryBounds(0x100, 0x10));
+  EXPECT_TRUE(p.IsTerminated());
+}
+
+} // namespace ProcessMemoryBounds

@@ -551,6 +551,19 @@ TEST(InterpreterReadWriteHappyPath, WriteReadPrintMatchesSpecExample) {
   EXPECT_EQ(buf[0], "Result: 15");
 }
 
+// MO2: "uint16 variables are clamped between (0, max(uint16))." DECLARE clamps an
+// out-of-range value to 65535; WRITE should store the same clamped value. It
+// currently WRAPS instead (ResolveOperand static_casts: 70000 -> 4464).
+TEST(InterpreterReadWriteHappyPath, WriteClampsUint16OverflowLikeDeclare) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x100);
+  interp.ExecuteWrite(makeStmt(prosched::Keyword::kWrite, {"0x10", "70000"}));
+  auto read_result =
+      interp.ExecuteRead(makeStmt(prosched::Keyword::kRead, {"v", "0x10"}));
+  ASSERT_TRUE(read_result.has_value());
+  EXPECT_EQ(read_result->second, 65535);
+}
+
 } // namespace InterpreterReadWriteHappyPath
 
 // ─── Page-fault retry (MO2) ─────────────────────────────────────────────────
@@ -617,6 +630,70 @@ TEST(InterpreterReadWritePageFault, ReadFaultRetriesInsteadOfViolating) {
 }
 
 } // namespace InterpreterReadWritePageFault
+
+// ─── ParseUserProgram (screen -c, MO2) ──────────────────────────────────────
+// MO2: screen -c instructions are semicolon-separated with space-separated args
+// (e.g. "DECLARE varA 10; ADD varA varA varB").
+
+namespace InterpreterParseUserProgram {
+
+// A valid semicolon-separated program parses to one Statement per instruction
+TEST(InterpreterParseUserProgram, ParsesValidSemicolonProgram) {
+  prosched::Interpreter interp;
+  std::vector<prosched::Statement> out;
+  EXPECT_TRUE(interp.ParseUserProgram(
+      "DECLARE varA 10; DECLARE varB 5; ADD varA varA varB", out));
+  EXPECT_EQ(out.size(), 3u);
+}
+
+// MO2: at least 1 instruction — an empty program is rejected
+TEST(InterpreterParseUserProgram, EmptyProgramReturnsFalse) {
+  prosched::Interpreter interp;
+  std::vector<prosched::Statement> out;
+  EXPECT_FALSE(interp.ParseUserProgram("", out));
+}
+
+// Any unrecognized instruction invalidates the whole program
+TEST(InterpreterParseUserProgram, InvalidInstructionReturnsFalse) {
+  prosched::Interpreter interp;
+  std::vector<prosched::Statement> out;
+  EXPECT_FALSE(
+      interp.ParseUserProgram("DECLARE varA 10; NOTACOMMAND foo", out));
+}
+
+// MO2 worked example, executed through the screen -c parser (space-separated
+// args, semicolons, hex addresses) — yields "Result: 15" end-to-end.
+TEST(InterpreterParseUserProgram, Mo2ExampleExecutesToResultFifteen) {
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 0x800); // 2048 bytes covers 0x500
+  std::vector<prosched::Statement> program;
+  ASSERT_TRUE(interp.ParseUserProgram(
+      "DECLARE varA 10; DECLARE varB 5; ADD varA varA varB; "
+      "WRITE 0x500 varA; READ varC 0x500; PRINT(\"Result: \" + varC)",
+      program));
+  ASSERT_EQ(program.size(), 6u);
+  interp.ExecuteStatements(program);
+  auto buf = interp.FlushBuffer();
+  ASSERT_EQ(buf.size(), 1u);
+  EXPECT_EQ(buf[0], "Result: 15");
+}
+
+// ParseUserProgram itself does NOT cap at 50 — a 51-instruction program parses
+// fine; the <=50 limit is enforced by the caller (Controller::ExecuteCommand).
+TEST(InterpreterParseUserProgram, AboveFiftyParsesCallerEnforcesUpperLimit) {
+  prosched::Interpreter interp;
+  std::string program;
+  for (int i = 0; i < 51; ++i) {
+    if (i)
+      program += "; ";
+    program += "DECLARE varA 10";
+  }
+  std::vector<prosched::Statement> out;
+  EXPECT_TRUE(interp.ParseUserProgram(program, out));
+  EXPECT_EQ(out.size(), 51u);
+}
+
+} // namespace InterpreterParseUserProgram
 
 // ─── parse ─────────────────────────────────────────────────────────────────
 

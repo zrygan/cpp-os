@@ -1,5 +1,21 @@
 #include "memory/PagingManager.h"
+#include "commands/Interpreter.h"
 #include <gtest/gtest.h>
+
+static prosched::Statement pmWrite(const std::string &addr,
+                                   const std::string &val) {
+  prosched::Statement s;
+  s.keyword = prosched::Keyword::kWrite;
+  s.args = {addr, val};
+  return s;
+}
+static prosched::Statement pmRead(const std::string &var,
+                                  const std::string &addr) {
+  prosched::Statement s;
+  s.keyword = prosched::Keyword::kRead;
+  s.args = {var, addr};
+  return s;
+}
 
 // MO2 config: memory sizes are powers of 2; total frames = max-overall-mem /
 // mem-per-frame. Invalid memory config should be rejected, not crash.
@@ -111,3 +127,37 @@ TEST(PagingManagerBasic, FrameSnapshotShowsResidentOwnership) {
 }
 
 } // namespace PagingManagerBasic
+
+// ─── Backing-store round-trip (MO2 demand paging) ───────────────────────────
+// MO2: an evicted page is written to the backing store and restored on the next
+// page-in. A value written before eviction must survive being paged out and back.
+namespace PagingManagerBackingStore {
+
+TEST(PagingManagerBackingStore, EvictedValueSurvivesRoundTrip) {
+  prosched::PagingManager pm(16, 16); // exactly ONE frame
+  prosched::Interpreter interp;
+  interp.SetMemoryBounds(0, 256);
+  pm.RegisterProcessInterpreter(1, &interp);
+  interp.SetPageSize(16);
+  interp.SetPageFaultHandler([&pm](int pageNum) {
+    if (pm.IsPageResident(1, pageNum))
+      return false;
+    return pm.PageIn(1, pageNum);
+  });
+
+  // Store 123 at address 0x32 (page 3). Two attempts: fault-in, then write.
+  interp.ExecuteWrite(pmWrite("0x32", "123"));
+  interp.ExecuteWrite(pmWrite("0x32", "123"));
+
+  // Force page 3 out of its only frame -> serialized to the backing store.
+  pm.PageIn(1, 0);
+  ASSERT_FALSE(pm.IsPageResident(1, 3));
+
+  // Reading 0x32 faults it back in from the backing store, then returns 123.
+  interp.ExecuteRead(pmRead("x", "0x32"));
+  auto result = interp.ExecuteRead(pmRead("x", "0x32"));
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->second, 123);
+}
+
+} // namespace PagingManagerBackingStore
