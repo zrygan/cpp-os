@@ -297,10 +297,15 @@ Statement Interpreter::ParseStatement(const std::string& stmt_str) {
 
 uint32_t Interpreter::ParseAddress(const std::string& address_string) {
   const std::string t = Trim(address_string);
-  if (t.size() >= 2 && t[0] == '0' && (t[1] == 'x' || t[1] == 'X')) {
-    return static_cast<uint32_t>(std::stoul(t, nullptr, 16));
+  try {
+    if (t.size() >= 2 && t[0] == '0' && (t[1] == 'x' || t[1] == 'X')) {
+      return static_cast<uint32_t>(std::stoul(t, nullptr, 16));
+    }
+    return static_cast<uint32_t>(std::stoul(t));
+  } catch(const std::exception&) {
+    return UINT32_MAX;
   }
-  return static_cast<uint32_t>(std::stoul(t));
+  
 }
 
 uint16_t Interpreter::ResolveOperand(const std::string& op) {
@@ -529,6 +534,13 @@ std::optional<std::pair<uint32_t, uint16_t>> Interpreter::ExecuteWrite(
 
   const uint32_t address = ParseAddress(stmt.args[0]);
   if (CheckAccess(address) != AccessStatus::kOk) {
+    last_instruction_access_violation_ = true;
+    last_violation_address_ = address;
+    return std::nullopt;
+  }
+
+  if (CheckAccess(address)  == AccessStatus::kFault) {
+    last_instruction_page_fault_ = true;
     return std::nullopt;
   }
 
