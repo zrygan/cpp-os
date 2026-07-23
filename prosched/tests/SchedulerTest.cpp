@@ -702,9 +702,11 @@ TEST(SchedulerFindProcessByName, ReturnsNullForFinishedProcess) {
 
 namespace SchedulerCreateNamedProcess {
 
+// MO2: CreateNamedProcess now takes a per-process memory size (screen -s
+// <name> <size>). 256 bytes is a valid allocation (power of 2, >= 64).
 TEST(SchedulerCreateNamedProcess, HasCorrectName) {
   prosched::Scheduler scheduler(makeTestCtx());
-  prosched::Process *p = scheduler.CreateNamedProcess("my_process");
+  prosched::Process *p = scheduler.CreateNamedProcess("my_process", 256);
   ASSERT_NE(p, nullptr);
   EXPECT_EQ(p->GetName(), "my_process");
   delete p;
@@ -713,7 +715,7 @@ TEST(SchedulerCreateNamedProcess, HasCorrectName) {
 TEST(SchedulerCreateNamedProcess, InstructionCountInRange) {
   AlgoContext ctx = makeTestCtx();
   prosched::Scheduler scheduler(ctx);
-  prosched::Process *p = scheduler.CreateNamedProcess("count_test");
+  prosched::Process *p = scheduler.CreateNamedProcess("count_test", 256);
   ASSERT_NE(p, nullptr);
   EXPECT_GE(p->GetTotalInstructions(), ctx.min_ins);
   EXPECT_LE(p->GetTotalInstructions(), ctx.max_ins);
@@ -722,7 +724,7 @@ TEST(SchedulerCreateNamedProcess, InstructionCountInRange) {
 
 TEST(SchedulerCreateNamedProcess, IsOwnedByScheduler) {
   prosched::Scheduler scheduler(makeTestCtx());
-  prosched::Process *p = scheduler.CreateNamedProcess("owned");
+  prosched::Process *p = scheduler.CreateNamedProcess("owned", 256);
   ASSERT_NE(p, nullptr);
   EXPECT_TRUE(p->IsOwnedByScheduler());
   delete p;
@@ -731,8 +733,8 @@ TEST(SchedulerCreateNamedProcess, IsOwnedByScheduler) {
 // Consecutive calls must produce strictly increasing PIDs
 TEST(SchedulerCreateNamedProcess, PIDIncrements) {
   prosched::Scheduler scheduler(makeTestCtx());
-  prosched::Process *p1 = scheduler.CreateNamedProcess("first");
-  prosched::Process *p2 = scheduler.CreateNamedProcess("second");
+  prosched::Process *p1 = scheduler.CreateNamedProcess("first", 256);
+  prosched::Process *p2 = scheduler.CreateNamedProcess("second", 256);
   ASSERT_NE(p1, nullptr);
   ASSERT_NE(p2, nullptr);
   EXPECT_EQ(p2->GetPID(), p1->GetPID() + 1);
