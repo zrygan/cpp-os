@@ -230,3 +230,76 @@ TEST(ControllerInitialize, CalledTwiceDoesNotCrash) {
 }
 
 } // namespace ControllerInitialize
+
+// ─── screen -s memory size (MO2) ────────────────────────────────────────────
+// MO2: screen -s <name> <size>. Memory sizes are decimal, a power of 2, and at
+// least 64 bytes; an invalid size must be rejected as an allocation error.
+
+namespace ControllerParseMemorySize {
+
+// A plain decimal size parses to its numeric value
+TEST(ControllerParseMemorySize, DecimalSizeParses) {
+  EXPECT_EQ(Controller::ParseMemorySize("256"), 256);
+}
+
+// Empty token is not a size
+TEST(ControllerParseMemorySize, EmptyReturnsZero) {
+  EXPECT_EQ(Controller::ParseMemorySize(""), 0);
+}
+
+// Non-numeric token is rejected (returns 0)
+TEST(ControllerParseMemorySize, NonNumericReturnsZero) {
+  EXPECT_EQ(Controller::ParseMemorySize("abc"), 0);
+}
+
+// MO2: memory SIZE is decimal (only addresses are hex) — "0x100" is not a size
+TEST(ControllerParseMemorySize, HexTokenIsRejected) {
+  EXPECT_EQ(Controller::ParseMemorySize("0x100"), 0);
+}
+
+// A value far past long range does not throw; it is rejected as 0
+TEST(ControllerParseMemorySize, OverflowReturnsZero) {
+  EXPECT_EQ(Controller::ParseMemorySize("999999999999999999999999"), 0);
+}
+
+} // namespace ControllerParseMemorySize
+
+namespace ControllerValidMemoryAllocation {
+
+// A power of 2 within range is valid (spec sample: 256)
+TEST(ControllerValidMemoryAllocation, PowerOfTwoInRangeIsValid) {
+  EXPECT_TRUE(Controller::IsValidMemoryAllocation(256));
+}
+
+// MO2: minimum is 64 bytes — 64 is valid, 32 is not
+TEST(ControllerValidMemoryAllocation, SixtyFourIsValidMinimum) {
+  EXPECT_TRUE(Controller::IsValidMemoryAllocation(64));
+}
+TEST(ControllerValidMemoryAllocation, BelowSixtyFourIsInvalid) {
+  EXPECT_FALSE(Controller::IsValidMemoryAllocation(32));
+}
+
+// MO2: must be a power of 2 — 100 is in range but not a power of 2
+TEST(ControllerValidMemoryAllocation, NonPowerOfTwoIsInvalid) {
+  EXPECT_FALSE(Controller::IsValidMemoryAllocation(100));
+}
+
+// Zero (e.g. a missing/malformed size) is invalid
+TEST(ControllerValidMemoryAllocation, ZeroIsInvalid) {
+  EXPECT_FALSE(Controller::IsValidMemoryAllocation(0));
+}
+
+} // namespace ControllerValidMemoryAllocation
+
+namespace ControllerGetParsedInputMemory {
+
+// The 4th token is parsed into Command.memorySize for screen -s
+TEST(ControllerGetParsedInputMemory, ScreenSExtractsMemorySize) {
+  Controller c;
+  Command cmd = c.GetParsedInput("screen -s myproc 256");
+  EXPECT_EQ(cmd.cliCommand, CLI_COMMAND::CLI_SCREEN_S);
+  EXPECT_EQ(cmd.processName, "myproc");
+  EXPECT_EQ(cmd.memorySize, 256);
+}
+
+} // namespace ControllerGetParsedInputMemory
