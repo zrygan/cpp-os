@@ -1415,12 +1415,12 @@ TEST(SchedulerTerminatedProcessDisplay, FinishedProcessAppearsInOutput) {
   EXPECT_NE(out.str().find("normal_finish"), std::string::npos);
 }
 
-// A TERMINATED process still appears in the listing (IsFinished() covers it).
-// NOTE: MO2 does NOT require screen -ls to mark it as an access violation — that
-// notice is a screen -r concern, verified by
-// ControllerAccessViolationNotice.MatchesSpecFormat +
-// SchedulerFindTerminatedProcess below. So we only assert it is listed, not that
-// PrintProcesses distinguishes it.
+// A TERMINATED process must still appear in the screen -ls listing (before, it
+// showed under "Finished processes:"). REGRESSION: commit 994b5f8 split
+// terminated processes into their own bucket in PrintProcesses but never prints
+// that bucket, so they now vanish from the listing entirely. This test guards
+// against that. (The access-violation notice itself is a screen -r concern —
+// see ControllerAccessViolationNotice.MatchesSpecFormat + SchedulerFindTerminatedProcess.)
 TEST(SchedulerTerminatedProcessDisplay, TerminatedProcessStillAppearsInListing) {
   prosched::Scheduler scheduler(makeTestCtx());
   prosched::Process *p = new prosched::Process("crashed_proc", 2, 0);

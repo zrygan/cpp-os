@@ -495,7 +495,7 @@ TEST(InterpreterSymbolTableCap, DeclareRespectsMaxThirtyTwoVariables) {
 
 // MO2: "a maximum of 32 variables. If the limit is reached, succeeding
 // instructions involving variable declarations will be ignored." READ creates a
-// variable, so it must honor the same cap — currently it does not.
+// variable, so it must honor the same cap (now routed through SetVariable).
 TEST(InterpreterSymbolTableCap, ReadRespectsMaxThirtyTwoVariables) {
   prosched::Interpreter interp;
   interp.SetMemoryBounds(0, 0x100);
