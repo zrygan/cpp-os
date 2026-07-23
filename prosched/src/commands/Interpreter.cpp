@@ -467,10 +467,19 @@ Statement Interpreter::ParseStatement(const std::string& stmt_str) {
 uint32_t Interpreter::ParseAddress(const std::string& address_string) {
   const std::string t = Trim(address_string);
   try {
+    uint64_t raw;
     if (t.size() >= 2 && t[0] == '0' && (t[1] == 'x' || t[1] == 'X')) {
-      return static_cast<uint32_t>(std::stoul(t, nullptr, 16));
+      raw= std::stoul(t, nullptr, 16);
+    } else {
+      raw= std::stoul(t);
     }
-    return static_cast<uint32_t>(std::stoul(t));
+
+    if (raw > UINT32_MAX) {
+      return UINT32_MAX;
+    }
+
+    return static_cast<uint32_t>(raw);
+
   } catch(const std::exception&) {
     return UINT32_MAX;
   }
