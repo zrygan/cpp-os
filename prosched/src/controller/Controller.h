@@ -12,6 +12,7 @@ enum class CLI_COMMAND {
   CLI_SCREEN_LS,
   CLI_SCREEN_S,
   CLI_SCREEN_R,
+  CLI_SCREEN_C,
   CLI_SCHEDULER_START,
   CLI_SCHEDULER_STOP,
   CLI_REPORT_UTIL,
@@ -26,6 +27,10 @@ struct Command {
   // speicfically for screen -s
   std::string processName;
   long memorySize = 0;
+
+  // specifically for screen -c: the quoted instruction list, with the
+  // surrounding quotes stripped. Empty when none was supplied.
+  std::string instructions;
 };
 
 class Controller {
@@ -50,6 +55,18 @@ public:
   CLI_COMMAND IdentifyCommand(const std::vector<std::string> &command);
   static long ParseMemorySize(const std::string &token);
   static bool IsValidMemoryAllocation(long bytes);
+
+  /**
+   * @brief Extracts the quoted instruction list from a raw "screen -c" input.
+   *
+   * Takes everything between the first and last double quote, so quotes that
+   * belong to the instructions themselves are preserved. Backslash-escaped
+   * quotes are unescaped, which lets a program be pasted in verbatim.
+   *
+   * @param input The whole command line
+   * @return The instruction list, or an empty string when unquoted
+   */
+  static std::string ExtractQuotedInstructions(const std::string &input);
 
   /**
    * @brief Builds the "screen -r" notice for a process killed by a memory

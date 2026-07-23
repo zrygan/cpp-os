@@ -124,7 +124,11 @@ Command Controller::GetParsedInput(const std::string &input) {
     return commands;
   }
 
-  std::vector<std::string> trimmed = trim(input, ' ');
+  const std::size_t quote = input.find('"');
+  const std::string head = (quote == std::string::npos) ? input
+                                                        : input.substr(0, quote);
+
+  std::vector<std::string> trimmed = trim(head, ' ');
 
   if (trimmed.empty()) {
     commands.cliCommand = CLI_COMMAND::UNKNOWN;
@@ -139,18 +143,42 @@ Command Controller::GetParsedInput(const std::string &input) {
   }
 
   if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S ||
-      commands.cliCommand == CLI_COMMAND::CLI_SCREEN_R) {
+      commands.cliCommand == CLI_COMMAND::CLI_SCREEN_R ||
+      commands.cliCommand == CLI_COMMAND::CLI_SCREEN_C) {
     if (trimmed.size() >= 3) {
       commands.processName = trimmed[2];
     }
-    if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S &&
+    if (commands.cliCommand != CLI_COMMAND::CLI_SCREEN_R &&
         trimmed.size() >= 4) {
       commands.memorySize = ParseMemorySize(trimmed[3]);
+    }
+    if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_C) {
+      commands.instructions = ExtractQuotedInstructions(input);
     }
     return commands;
   }
 
   return commands;
+}
+
+std::string Controller::ExtractQuotedInstructions(const std::string &input) {
+  const std::size_t first = input.find('"');
+  const std::size_t last = input.rfind('"');
+  if (first == std::string::npos || last <= first) {
+    return "";
+  }
+
+  const std::string quoted = input.substr(first + 1, last - first - 1);
+
+  std::string unescaped;
+  unescaped.reserve(quoted.size());
+  for (std::size_t i = 0; i < quoted.size(); ++i) {
+    if (quoted[i] == '\\' && i + 1 < quoted.size() && quoted[i + 1] == '"') {
+      continue;
+    }
+    unescaped += quoted[i];
+  }
+  return unescaped;
 }
 
 long Controller::ParseMemorySize(const std::string &token) {
@@ -219,6 +247,33 @@ void Controller::ExecuteCommand(const Command &command) {
       }
       prosched::Process *p = this->scheduler->CreateNamedProcess(
           command.processName, command.memorySize);
+      this->scheduler->AddProcess(p);
+      EnterProcessScreen(p);
+      break;
+    }
+
+    case CLI_COMMAND::CLI_SCREEN_C: {
+      if (command.processName.empty()) {
+        std::cout << "screen -c: usage: screen -c <process_name> "
+                     "<process_memory_size> \"<instructions>\"\n\n";
+        break;
+      }
+      if (!IsValidMemoryAllocation(command.memorySize)) {
+        std::cout << "invalid memory allocation\n\n";
+        break;
+      }
+
+      std::vector<prosched::Statement> program;
+      prosched::Interpreter parser;
+      if (!parser.ParseUserProgram(command.instructions, program) ||
+          program.size() < prosched::kMinUserInstructions ||
+          program.size() > prosched::kMaxUserInstructions) {
+        std::cout << "invalid command\n\n";
+        break;
+      }
+
+      prosched::Process *p = this->scheduler->CreateProcessWithInstructions(
+          command.processName, command.memorySize, program);
       this->scheduler->AddProcess(p);
       EnterProcessScreen(p);
       break;
@@ -528,6 +583,8 @@ Controller::IdentifyCommand(const std::vector<std::string> &command) {
       return CLI_COMMAND::CLI_SCREEN_S;
     } else if (command[1] == "-r") {
       return CLI_COMMAND::CLI_SCREEN_R;
+    } else if (command[1] == "-c") {
+      return CLI_COMMAND::CLI_SCREEN_C;
     } else {
       return CLI_COMMAND::UNKNOWN;
     }
