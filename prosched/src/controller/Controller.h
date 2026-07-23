@@ -25,6 +25,7 @@ struct Command {
 
   // speicfically for screen -s
   std::string processName;
+  long memorySize = 0;
 };
 
 class Controller {
@@ -47,6 +48,8 @@ public:
   Command GetParsedInput(const std::string &input);
   void ExecuteCommand(const Command &command);
   CLI_COMMAND IdentifyCommand(const std::vector<std::string> &command);
+  static long ParseMemorySize(const std::string &token);
+  static bool IsValidMemoryAllocation(long bytes);
   void ExitOS();
   void EnterProcessScreen(prosched::Process *p);
   void PrintReportUtil();

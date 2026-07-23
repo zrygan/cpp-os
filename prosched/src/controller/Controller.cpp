@@ -16,6 +16,7 @@
 #include "Config.h"
 #include "Context.h"
 #include "Controller.h"
+#include "src/Constants.hpp"
 #include "src/scheduler/Scheduler.h"
 
 Controller::~Controller() {
@@ -142,10 +143,41 @@ Command Controller::GetParsedInput(const std::string &input) {
     if (trimmed.size() >= 3) {
       commands.processName = trimmed[2];
     }
+    if (commands.cliCommand == CLI_COMMAND::CLI_SCREEN_S &&
+        trimmed.size() >= 4) {
+      commands.memorySize = ParseMemorySize(trimmed[3]);
+    }
     return commands;
   }
 
   return commands;
+}
+
+long Controller::ParseMemorySize(const std::string &token) {
+  if (token.empty()) {
+    return 0;
+  }
+
+  for (char c : token) {
+    if (!std::isdigit(static_cast<unsigned char>(c))) {
+      return 0;
+    }
+  }
+
+  try {
+    return std::stol(token);
+  } catch (const std::exception &) {
+    // Out of range for a long — far past the upper bound anyway.
+    return 0;
+  }
+}
+
+bool Controller::IsValidMemoryAllocation(long bytes) {
+  if (bytes < prosched::kMinProcessMemoryBytes ||
+      bytes > prosched::kMaxProcessMemoryBytes) {
+    return false;
+  }
+  return (bytes & (bytes - 1)) == 0;
 }
 
 void Controller::ExecuteCommand(const Command &command) {
@@ -166,11 +198,16 @@ void Controller::ExecuteCommand(const Command &command) {
 
     case CLI_COMMAND::CLI_SCREEN_S: {
       if (command.processName.empty()) {
-        std::cout << "screen -s: a process name is required.\n\n";
+        std::cout << "screen -s: usage: screen -s <process_name> "
+                     "<process_memory_size>\n\n";
         break;
       }
-      prosched::Process *p =
-          this->scheduler->CreateNamedProcess(command.processName);
+      if (!IsValidMemoryAllocation(command.memorySize)) {
+        std::cout << "invalid memory allocation\n\n";
+        break;
+      }
+      prosched::Process *p = this->scheduler->CreateNamedProcess(
+          command.processName, command.memorySize);
       this->scheduler->AddProcess(p);
       EnterProcessScreen(p);
       break;

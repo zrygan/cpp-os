@@ -287,6 +287,13 @@ public:
   std::string GetName() { return processName; }
 
   /**
+   * @brief Gets the memory allocated to the Process
+   *
+   * @return the size of the Process' address space in bytes
+   */
+  size_t GetMemorySize() { return memEnd - memStart; }
+
+  /**
    * @brief Gets the assigned CPU core number
    *
    * @return the assigned CPU core number

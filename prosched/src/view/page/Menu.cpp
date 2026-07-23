@@ -50,7 +50,7 @@ void CommandSet() {
   std::cout << "Initialized successfully.\n\n";
   std::cout << "List of accessible commands:\n"
             << "- exit\n"
-            << "- screen -s <process name>\n"
+            << "- screen -s <process name> <process memory size>\n"
             << "- screen -r <process name>\n"
             << "- screen -ls\n"
             << "- scheduler-start\n"

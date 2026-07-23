@@ -368,15 +368,21 @@ public:
    * the next available PID.
    *
    * @param name The name to give the new process
+   * @param memoryBytes Memory to allocate to the process, in bytes
    * @return Pointer to the newly created process
+   *
+   * @note [for: screen -s] The caller is responsible for validating 
+   * memoryBytes.
    */
-  prosched::Process *CreateNamedProcess(const std::string &name) {
+  prosched::Process *CreateNamedProcess(const std::string &name,
+                                        long memoryBytes) {
     int pid;
     {
       std::lock_guard<std::mutex> lock(schedulerMutex);
       pid = nextPID++;
     }
     Process *p = new Process(name, pid, 0);
+    p->SetMemoryBounds(0, static_cast<size_t>(memoryBytes));
     attachPaging(p);
     p->SetOwnedByScheduler(true);
     int commandAmount = this->ctx.min_ins +
